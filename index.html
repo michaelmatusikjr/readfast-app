@@ -89,6 +89,9 @@ h2{font-size:1.15rem;font-weight:600}
 #scrollText.manual{transition:none}
 #scrollText .w{display:inline;cursor:pointer}
 #scrollText .cur{color:var(--ink);opacity:.75;font-weight:600}
+#scrollText figure.scroll-img{margin:12px 0;text-align:center}
+#scrollText figure.scroll-img img{max-width:100%;height:auto;border-radius:8px;background:var(--img-bg)}
+
 #scrollLine{position:absolute;left:0;right:0;height:2px;background:var(--accent);opacity:.5;z-index:1;pointer-events:none}
 #stage .reticle{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;background:var(--surface);border-radius:12px;padding:18px 8px;box-shadow:0 -4px 16px rgba(0,0,0,.12)}
 
@@ -258,7 +261,6 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
       <button class="icon-btn" id="rBack" type="button" aria-label="Back to library"></button>
       <div class="title"><span id="rTitle"></span><span class="sub" id="rSub"></span></div>
       <button class="icon-btn" id="rChapters" type="button" aria-label="Chapters"></button>
-      <button class="icon-btn" id="rFull" type="button" aria-label="Full text"></button>
       <button class="icon-btn" id="rMarks" type="button" aria-label="Bookmarks"></button>
     </div>
     <div id="stage" role="button" tabindex="0" aria-label="Tap to play or pause">
@@ -300,16 +302,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 <div id="backdrop" hidden></div>
 <div id="sheet" role="dialog" aria-modal="true" hidden></div>
 
-<div id="fulltext" hidden>
-  <div class="ft-head">
-    <button class="icon-btn" id="ftClose" type="button" aria-label="Close full text"></button>
-    <button class="icon-btn" id="ftPrev" type="button" aria-label="Previous section"></button>
-    <div class="grow"><b id="ftTitle"></b><span id="ftSub"></span></div>
-    <button class="icon-btn" id="ftNext" type="button" aria-label="Next section"></button>
-  </div>
-  <div class="ft-tip">Tap any word to start there. Reading waits until you press play.</div>
-  <div id="ftBody"><div class="txt" id="ftText"></div></div>
-</div>
+
 
 <div id="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button></div>
 <input type="file" id="fileIn" accept=".epub,.pdf,.txt,.md,.markdown,.html,.htm,.xhtml,application/epub+zip,application/pdf,text/plain,text/markdown,text/html" hidden>
@@ -785,10 +778,16 @@ function buildScrollText(){
   if(!R.words) return;
   const box=$('#scrollText');
   if(!box) return;
-  let h='';
-  for(let i=0;i<R.words.length;i++){
-    h+=`<span class="w" data-i="${i}">${esc(R.words[i])}</span> `;
+  const fig=(k)=>{ const arr=R.imgAt.get(k); if(!arr) return ''; return arr.map(idx=>{ const a=R.imgList[idx]; const src=R.imgUrls[a.f]; if(!src) return ''; return `<figure class="scroll-img" data-img="${idx}"><img src="${src}" alt="${esc(a.alt||'Illustration')}" loading="lazy"></figure>`; }).join(''); };
+  let h='', open=false;
+  for(let k=0;k<R.n;k++){
+    const f=fig(k); if(f){ if(open){ h+='</p>'; open=false; } h+=f; }
+    if(!open){ h+='<p>'; open=true; }
+    h+=`<span class="w" data-i="${k}">${esc(R.words[k])}</span>`;
+    if(R.ends.has(k)){ h+='</p>'; open=false; } else h+=' ';
   }
+  if(open) h+='</p>';
+  if(R.n) h+=fig(R.n);
   box.innerHTML=h;
   syncScroll();
 }
@@ -810,7 +809,6 @@ function syncScroll(force){
   if(!span) return;
   positionLine();
   const lineY=line.offsetTop;
-  // Find the visual line containing this word
   const spans=Array.from(box.querySelectorAll('.w'));
   const myTop=span.offsetTop;
   const lineSpans=spans.filter(s=>Math.abs(s.offsetTop - myTop)<4);
@@ -820,8 +818,12 @@ function syncScroll(force){
   const lineBottom=last.offsetTop + last.offsetHeight;
   const idx=lineSpans.indexOf(span);
   const progress=lineSpans.length<=1 ? 0.5 : idx/(lineSpans.length-1);
-  // When progress=0, lineTop aligns with lineY; when progress=1, lineBottom aligns with lineY
-  const alignAt=lineTop + progress*(lineBottom-lineTop);
+  let alignAt=lineTop + progress*(lineBottom-lineTop);
+  // If the current word is immediately after an image, jump so the top of this line aligns
+  const prevFig=span.parentElement && span.parentElement.previousElementSibling;
+  if(prevFig && prevFig.tagName==='FIGURE' && idx===0){
+    alignAt=lineTop;
+  }
   const target=alignAt - lineY;
   box.style.transform=`translateY(${-target}px)`;
   box.querySelectorAll('.cur').forEach(el=>el.classList.remove('cur'));
@@ -853,6 +855,15 @@ function enableManualScroll(){
   });
   bg.addEventListener('pointercancel', ()=>{ manualScroll=false; box.classList.remove('manual'); });
   box.addEventListener('click', e=>{
+    const fig=e.target.closest('figure.scroll-img');
+    if(fig){
+      e.stopPropagation();
+      if(R.playing) pause();
+      const idx=+fig.dataset.img;
+      const a=R.imgList[idx];
+      if(a) openImageFull(a);
+      return;
+    }
     const w=e.target.closest('.w');
     if(!w) return;
     e.stopPropagation();
@@ -864,6 +875,14 @@ function enableManualScroll(){
     updateProgress();
     syncScroll(true);
   });
+function openImageFull(a){
+  const ov=document.createElement('div');
+  ov.id='imgOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:12px;';
+  ov.innerHTML=`<img src="${R.imgUrls[a.f]}" alt="${esc(a.alt||'Illustration')}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px">`;
+  ov.onclick=()=>ov.remove();
+  document.body.appendChild(ov);
+}
 }
 function showChunk(i){ const j=chunkEnd(i); renderWord(R.words.slice(i,j).join(' ')); syncScroll(); return j; }
 function sentStart(i){ let k=i; while(k>0 && !isSentEnd(k-1)) k--; return k; }
@@ -1090,7 +1109,6 @@ $('#ftText').addEventListener('click',e=>{
 $('#ftClose').onclick=()=>{ $('#fulltext').hidden=true; };
 $('#ftPrev').onclick=()=>{ if(FT.k>0){ FT.k--; renderFull(false); } };
 $('#ftNext').onclick=()=>{ if(FT.k<FT.secs.length-1){ FT.k++; renderFull(false); } };
-$('#rFull').onclick=openFull;
 
 /* ---------- stats ---------- */
 function recordStats(ms, words){
@@ -1292,7 +1310,7 @@ function showView(v){
 }
 const TABS={library:['book','Library'], words:['words','Words'], stats:['stats','Stats'], settings:['gear','Settings']};
 document.querySelectorAll('#tabs button').forEach(b=>{ const [ic,l]=TABS[b.dataset.tab]; b.innerHTML=ICON[ic]+l; b.onclick=()=>showView(b.dataset.tab); });
-$('#rBack').innerHTML=ICON.back; $('#rChapters').innerHTML=ICON.list; $('#rFull').innerHTML=ICON.doc; $('#rMarks').innerHTML=ICON.mark;
+$('#rBack').innerHTML=ICON.back; $('#rChapters').innerHTML=ICON.list; $('#rMarks').innerHTML=ICON.mark;
 $('#bSent').innerHTML=ICON.bsent; $('#bWord').innerHTML=ICON.back; $('#fWord').innerHTML=ICON.fwd; $('#fSent').innerHTML=ICON.fsent;
 $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus;
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmark';
