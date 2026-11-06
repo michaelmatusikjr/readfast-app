@@ -715,7 +715,7 @@ function extractArticle(html, url){
 $('#fileIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
   const ext=(f.name.split('.').pop()||'').toLowerCase();
-  toast('Reading “'+f.name+'”…', null, 60000, 5);
+  toast(ext==='epub'?'Opening EPUB…':'Opening file…', null, 120000, 2);
   try{
     let d;
     if(ext==='epub'){
@@ -728,11 +728,13 @@ $('#fileIn').addEventListener('change',async e=>{
     if(meta.imageCount) msg+=' with '+meta.imageCount+' image'+(meta.imageCount===1?'':'s');
     if(d.imagesMissing) msg+='. '+d.imagesMissing+' image'+(d.imagesMissing===1?' was':'s were')+' missing from the file and left out';
     toast(msg, null, d.imagesMissing?7000:3200);
-  }catch(err){ toast(err.message||'That file couldn’t be opened.'); }
+  }catch(err){ console.error(err); toast(err.message||'That file couldn’t be opened.'); }
 });
 
 async function parseEpubWithProgress(file){
+  toast('Opening EPUB…', null, 120000, 5);
   const buf=await file.arrayBuffer();
+  toast('Reading EPUB…', null, 120000, 10);
   await loadScript(CDN.jszip);
   const zip=await JSZip.loadAsync(buf);
   const files={}; zip.forEach((p,f)=>{ files[p]=f; files[p.toLowerCase()]=files[p.toLowerCase()]||f; });
@@ -742,7 +744,7 @@ async function parseEpubWithProgress(file){
   const opfPath=rf.getAttribute('full-path'); const base=dirOf(opfPath);
   const opf=parseXML(await read(opfPath)||'');
   const title=(byTag(opf,'title')[0]?.textContent||'').trim() || file.name.replace(/\.[^.]+$/,'');
-  toast('Reading “'+title+'”…', null, 60000, 15);
+  toast('Reading “'+title+'”…', null, 120000, 20);
   const items={}; let navHref=null;
   for(const it of byTag(opf,'item')){ const href=resolvePath(base,it.getAttribute('href')||''); items[it.getAttribute('id')]={href, type:it.getAttribute('media-type')||'', props:it.getAttribute('properties')||''}; if(/\bnav\b/.test(it.getAttribute('properties')||'')) navHref=href; }
   const spineEl=byTag(opf,'spine')[0]; if(!spineEl) throw new Error('This EPUB has no readable chapters.');
