@@ -364,7 +364,7 @@ const Store = {
 };
 
 /* ---------- settings ---------- */
-const DEFAULTS = { wpm:350, multi:false, charBudget:14, ramp:true, rampSecs:6, commaPause:1.6, sentPause:2.3, paraPause:3.0, longWord:true, autoRewind:3, font:'atkinson', fontSize:44, focusColor:'#E0303F', theme:'system', context:true };
+const DEFAULTS = { wpm:350, multi:false, charBudget:14, ramp:true, rampSecs:6, commaPause:1.6, sentPause:2.3, paraPause:3.0, longWord:true, autoRewind:3, font:'atkinson', fontSize:44, focusColor:'#E0303F', theme:'system', context:true , linkService:''};
 const S = Object.assign({}, DEFAULTS, LS.get('settings',{}));
 const saveSettings=()=>LS.set('settings',S);
 const FONTS = { atkinson:{label:'Atkinson', css:'"Atkinson Hyperlegible",-apple-system,system-ui,sans-serif', note:'Built for legibility'}, literata:{label:'Literata', css:'"Literata",Georgia,serif', note:'Book serif'}, lexend:{label:'Lexend', css:'"Lexend",-apple-system,system-ui,sans-serif', note:'Dyslexia-friendly'}, system:{label:'System', css:'-apple-system,BlinkMacSystemFont,system-ui,sans-serif', note:'iPhone default'} };
@@ -556,7 +556,9 @@ async function parsePdf(buf, fname, onP){
   P('Loading the PDF reader\u2026', 6);
   await loadScript(CDN.pdf); await loadScript(CDN.pdfw);
   pdfjsLib.GlobalWorkerOptions.workerSrc=CDN.pdfw;
-  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf), isEvalSupported:false, disableFontFace:true}).promise;
+  let pdf;
+  try{ pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf), isEvalSupported:false, disableFontFace:true}).promise; }
+  catch(e){ throw new Error(e&&e.name==='PasswordException' ? 'This PDF is password-protected, so its text can\u2019t be read.' : 'This PDF couldn\u2019t be read. It may be damaged or incomplete. If it\u2019s stored in iCloud, download it in the Files app first.'); }
   let title=fname.replace(/\.[^.]+$/,'');
   try{ const md=await pdf.getMetadata(); const t=md?.info?.Title; if(t&&t.trim().length>2) title=t.trim(); }catch(e){}
   const words=[], ends=[], chapters=[];
@@ -602,10 +604,10 @@ async function addDoc(d){
   const text={id, words:d.words, ends:d.ends, images:d.images||null};
   await Store.put('texts',text);
   const now=Date.now();
-  const meta={id, title:d.title||'Untitled', kind:d.kind, count:d.words.length, pos:0, added:now, lastRead:0, mod:now, chapters:d.chapters||[], bookmarks:[], finished:false, imageCount:d.images?d.images.at.length:0};
+  const meta={id, title:d.title||'Untitled', kind:d.kind, source:d.source||null, count:d.words.length, pos:0, added:now, lastRead:0, mod:now, chapters:d.chapters||[], bookmarks:[], finished:false, imageCount:d.images?d.images.at.length:0};
   await Store.put('meta',meta); LIB.push(meta); renderLibrary(); return meta;
 }
-const KIND={epub:'EPUB', pdf:'PDF', text:'Text', md:'Text', web:'Web', paste:'Pasted', sample:'Sample'};
+const KIND={epub:'EPUB', pdf:'PDF', text:'Text', md:'Text', web:'Web', link:'Web', paste:'Pasted', sample:'Sample'};
 function renderLibrary(){
   const el=$('#docList');
   if(!LIB.length){ el.innerHTML=`<div class="empty">Nothing here yet. Paste some text or open a file to start reading.</div>`; return; }
@@ -644,13 +646,22 @@ function docOptions(id){
 /* ---------- paste ---------- */
 function openPaste(fromShare){
   openSheet('Paste text', `
-    ${fromShare?'<p class="note">Your shortcut copied the text. Tap and hold in the box below, then choose <b>Paste</b>.</p>':''}
+    ${fromShare?'<p class="note">Your shortcut copied the text or link. Tap <b>Paste from clipboard</b>.</p>':''}
+    <button class="btn block" type="button" data-act="clip">${ICON.paste} Paste from clipboard</button>
     <div class="field"><label for="pasteTitle">Title <span class="muted" style="font-weight:400">(optional)</span></label><input class="input" id="pasteTitle" placeholder="Untitled"></div>
-    <div class="field"><label for="pasteText">Text</label><textarea id="pasteText" placeholder="Tap and hold, then Paste"></textarea></div>
+    <div class="field"><label for="pasteText">Text</label><textarea id="pasteText" placeholder="Tap and hold, then Paste. A link on its own loads that article."></textarea></div>
     <p class="note">Lines starting with # become chapters you can jump between.</p>
     <button class="btn primary block" type="button" data-act="add">Add to library</button>`, {
+    clip: async()=>{
+      let t='';
+      try{ t=await navigator.clipboard.readText(); }catch(e){ toast('Couldn’t read the clipboard. Tap and hold in the Text box, then choose Paste.', null, 6000); return; }
+      if(!t.trim()){ toast('The clipboard is empty'); return; }
+      if(isLoneUrl(t)){ closeSheet(); loadLink(t); return; }
+      $('#pasteText').value=t;
+    },
     add: async()=>{
       const t=$('#pasteText').value; if(!t.trim()){ toast('Paste some text first'); return; }
+      if(isLoneUrl(t)){ closeSheet(); loadLink(t); return; }
       const m=fromPlainText(t); let title=$('#pasteTitle').value.trim();
       if(!title){ title=m.chapters[0]?.t || m.words.slice(0,6).join(' ').replace(/[,.;:]$/,''); if(m.words.length>6&&!m.chapters[0]) title+='…'; }
       try{ const meta=await addDoc({title, kind:'paste', ...m}); closeSheet(); openDoc(meta.id); }catch(err){ toast(err.message); }
@@ -666,92 +677,153 @@ $('#addFile').onclick=()=>{ $('#fileIn').value=''; $('#fileIn').click(); };
 
 function openLink(){
   openSheet('Paste a link', `
-    <div class="field"><label for="linkUrl">Article or blog URL</label><input class="input" id="linkUrl" type="url" placeholder="https://…" inputmode="url"></div>
-    <p class="note">The page must allow public access. Some sites block loading from other apps.</p>
-    <button class="btn primary block" type="button" data-act="load">Load article</button>`, {
+    <div class="field"><label for="linkUrl">Article, EPUB or PDF link</label><input class="input" id="linkUrl" type="url" placeholder="https://…" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <p class="note">If a site doesn’t let apps load it directly, ReadFast asks a public reader service to fetch it for you. Pages behind a login can’t be loaded.</p>
+    <button class="btn primary block" type="button" data-act="load">Load</button>`, {
     load: async()=>{
-      const url=$('#linkUrl').value.trim();
-      if(!url){ toast('Enter a URL'); return; }
-      try{ new URL(url); }catch(e){ toast('That doesn’t look like a valid URL'); return; }
-      toast('Loading article…', null, 60000);
-      try{
-        const text=await fetchArticle(url);
-        if(!text||text.length<80){ toast('Couldn’t find readable article text on that page'); return; }
-        const m=fromPlainText(text);
-        let title=$('#linkUrl').value.replace(/^https?:\/\//,'').split('/')[0] || 'Article';
-        try{
-          const docTitle=await fetchTitle(url);
-          if(docTitle) title=docTitle;
-        }catch(e){}
-        const meta=await addDoc({title, kind:'link', source:url, ...m});
-        closeSheet(); openDoc(meta.id);
-        toast('Added “'+meta.title+'”');
-      }catch(err){
-        toast(err.message||'Couldn’t load that page. The site may block external apps.');
-      }
+      const raw=$('#linkUrl').value;
+      if(!raw.trim()){ toast('Enter a link'); return; }
+      if(!normalizeUrl(raw)){ toast('That doesn’t look like a web address. Try copying the link again.'); return; }
+      closeSheet(); loadLink(raw);
     }
   });
 }
 
-async function fetchArticle(url){
-  // Try direct first, then fall back to a CORS proxy
-  const proxies = [
-    (u)=>u,
-    (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    (u)=>`https://corsproxy.io/?${encodeURIComponent(u)}`
-  ];
-  let lastErr;
-  for(const make of proxies){
+const isLoneUrl=(t)=>/^\s*(https?:\/\/|www\.)\S+\s*$/i.test(t);
+function normalizeUrl(raw){
+  const m=String(raw).match(/https?:\/\/[^\s<>"']+/i);
+  let u=(m?m[0]:String(raw)).trim().replace(/[)\]}>.,;:!?'"”’]+$/,'');
+  if(!u) return null;
+  if(!/^[a-z][\w+.-]*:/i.test(u)) u='https://'+u;
+  let x; try{ x=new URL(u); }catch(e){ return null; }
+  if(!/^https?:$/.test(x.protocol) || !(x.hostname.includes('.')||x.hostname==='localhost')) return null;
+  return x.href;
+}
+const fmtSize=(n)=>n<1048576? Math.max(1,Math.round(n/1024))+' KB' : (n/1048576).toFixed(1)+' MB';
+function linkServices(){
+  const out=[];
+  const custom=(S.linkService||'').trim();
+  if(custom && /^https:\/\//i.test(custom)) out.push(u=> custom.includes('{url}') ? custom.replace('{url}',encodeURIComponent(u)) : custom+encodeURIComponent(u));
+  out.push(u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`);
+  out.push(u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`);
+  return out;
+}
+/* fetch with its own timeout (covering the download too), the user's cancel, and byte progress */
+async function fetchTimed(url, signal, ms, onBytes){
+  const ctl=new AbortController(); let timedOut=false;
+  const t=setTimeout(()=>{ timedOut=true; ctl.abort(); }, ms);
+  const onAbort=()=>ctl.abort(); signal.addEventListener('abort', onAbort);
+  try{
+    const res=await fetch(url, {signal:ctl.signal, credentials:'omit', redirect:'follow'});
+    const total=+res.headers.get('content-length')||0;
+    let buf;
+    if(res.body && res.body.getReader){
+      const rd=res.body.getReader(); const parts=[]; let got=0;
+      for(;;){ const {done,value}=await rd.read(); if(done) break; parts.push(value); got+=value.length; onBytes&&onBytes(got,total); }
+      buf=new Uint8Array(got); let o=0; for(const c of parts){ buf.set(c,o); o+=c.length; }
+    } else buf=new Uint8Array(await res.arrayBuffer());
+    return {res, buf};
+  }catch(e){
+    if(signal.aborted){ const er=new Error('cancelled'); er.cancelled=true; throw er; }
+    if(timedOut){ const er=new Error('timeout'); er.timeout=true; throw er; }
+    throw e;
+  }finally{ clearTimeout(t); signal.removeEventListener('abort', onAbort); }
+}
+function decodeHtml(buf, ctype){
+  let cs=(ctype.match(/charset=["']?([\w:.-]+)/i)||[])[1];
+  if(!cs){ const head=new TextDecoder('windows-1252').decode(buf.subarray(0,4096)); cs=(head.match(/<meta[^>]+charset\s*=\s*["']?([\w:.-]+)/i)||[])[1]; }
+  try{ return new TextDecoder(cs||'utf-8').decode(buf); }catch(e){ return new TextDecoder('utf-8').decode(buf); }
+}
+async function fetchLinkData(url, signal, P){
+  const host=new URL(url).hostname.replace(/^www\./,'');
+  const services=linkServices();
+  const routes=[{direct:true, make:u=>u}, ...services.map(make=>({direct:false, make}))];
+  const why=[];
+  for(let k=0;k<routes.length;k++){
+    const r=routes[k];
+    const base=k===0?8:15+k*10;
+    const label=r.direct? host : 'reader service '+k;
+    P(r.direct? 'Contacting '+host+'…' : (k===1? host+' doesn’t let apps load it directly. Trying reader service 1 of '+services.length+'…' : 'Trying reader service '+k+' of '+services.length+'…'), base);
+    let got;
     try{
-      const res=await fetch(make(url), {mode:'cors', credentials:'omit'});
-      if(!res.ok){ lastErr=new Error('Page returned '+res.status); continue; }
-      const html=await res.text();
-      const text=extractArticle(html, url);
-      if(text && text.length>=80) return text;
-    }catch(e){ lastErr=e; }
+      got=await fetchTimed(r.make(url), signal, r.direct?15000:20000, (n,total)=>P('Downloading from '+label+'… '+fmtSize(n)+(total?' of '+fmtSize(total):''), total? base+25*n/total : base+3));
+    }catch(e){
+      if(e.cancelled) throw e;
+      why.push(r.direct? (e.timeout? host+' didn’t answer' : host+' doesn’t allow apps to load it directly') : 'reader service '+k+(e.timeout?' timed out':' was unavailable'));
+      continue;
+    }
+    const {res,buf}=got;
+    if(r.direct && (res.status===404||res.status===410)) throw new Error('That page wasn’t found ('+res.status+'). Check the link.');
+    if(!res.ok){ why.push(r.direct? host+' answered with error '+res.status : 'reader service '+k+' refused ('+res.status+')'); continue; }
+    const ct=(res.headers.get('content-type')||'').toLowerCase();
+    const isZip=buf[0]===0x50&&buf[1]===0x4B, isPdf=buf[0]===0x25&&buf[1]===0x50&&buf[2]===0x44&&buf[3]===0x46;
+    const kind=isZip?'epub' : isPdf?'pdf' : /epub/.test(ct)?'epub' : /\/pdf/.test(ct)?'pdf' : 'html';
+    if(kind!=='html'){ let name=new URL(url).pathname.split('/').pop()||host; try{ name=decodeURIComponent(name); }catch(e){} return {kind, buf, name}; }
+    const html=decodeHtml(buf, ct);
+    if(!r.direct && html.replace(/<[^>]*>/g,'').trim().length<200){ why.push('reader service '+k+' returned an empty page'); continue; }
+    return {kind:'html', html, host};
   }
-  throw lastErr || new Error('Couldn’t load that page');
+  throw new Error('Couldn’t load that link: '+why.join('; ')+'. You can open the page in Safari, copy the article text, and use Paste text.');
+}
+let linkBusy=false;
+async function loadLink(raw){
+  const url=normalizeUrl(raw);
+  if(!url){ toast('That doesn’t look like a web address. Try copying the link again.'); return null; }
+  if(linkBusy){ toast('A link is already loading'); return null; }
+  linkBusy=true;
+  const ctl=new AbortController();
+  const cancel={label:'Cancel', fn:()=>ctl.abort()};
+  const P=(m,p)=>{ if(!ctl.signal.aborted) progress(m,p,cancel); };
+  try{
+    const got=await fetchLinkData(url, ctl.signal, P);
+    let d;
+    if(got.kind==='epub') d=await parseEpub(got.buf.buffer, got.name, (m,p)=>P(m,45+p*0.5));
+    else if(got.kind==='pdf') d=await parsePdf(got.buf.buffer, got.name, (m,p)=>P(m,45+p*0.5));
+    else {
+      P('Finding the article text…', 85); await yieldUI();
+      const a=extractArticle(got.html, url);
+      if(a.words.length<20) throw new Error('The page loaded, but ReadFast couldn’t find article text on it. It may need a login or only show the story after scripts run. Try copying the text and using Paste text.');
+      d={...a, title:a.title||got.host, kind:'link'};
+    }
+    if(ctl.signal.aborted){ const er=new Error('cancelled'); er.cancelled=true; throw er; }
+    d.source=url;
+    P('Saving to your library…', 96);
+    const meta=await addDoc(d);
+    toast('Added “'+meta.title+'”', {label:'Read', fn:()=>openDoc(meta.id)}, 6000);
+    return meta;
+  }catch(e){
+    if(e&&e.cancelled||ctl.signal.aborted) toast('Stopped loading the link');
+    else{ console.error(e); toast(e&&e.message||'Couldn’t load that link.', null, 9000); }
+    return null;
+  }finally{ linkBusy=false; }
 }
 
-async function fetchTitle(url){
-  const proxies = [
-    (u)=>u,
-    (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
-  ];
-  for(const make of proxies){
-    try{
-      const res=await fetch(make(url), {mode:'cors', credentials:'omit'});
-      if(!res.ok) continue;
-      const html=await res.text();
-      const m=html.match(/<title[^>]*>([^<]+)<\/title>/i);
-      if(m) return m[1].trim().replace(/\s+/g,' ');
-    }catch(e){}
-  }
-  return null;
-}
-
+/* picks the container holding the most paragraph text, keeps block boundaries, skips nested duplicates */
 function extractArticle(html, url){
   const doc=new DOMParser().parseFromString(html, 'text/html');
-  // Remove non-content
-  doc.querySelectorAll('script,style,nav,header,footer,aside,form,iframe,noscript,.sidebar,.menu,.nav,.ads,.advert,.social,.share,.comments,#comments').forEach(el=>el.remove());
-  // Prefer article, main, or content-like containers
-  let root=doc.querySelector('article')||doc.querySelector('main')||doc.querySelector('[role="main"]')||doc.querySelector('.post')||doc.querySelector('.entry')||doc.querySelector('.content')||doc.body;
-  if(!root) root=doc.body;
-  // Collect paragraphs and headings
-  const parts=[];
-  root.querySelectorAll('h1,h2,h3,h4,p,li').forEach(el=>{
-    const t=el.innerText.trim();
-    if(t.length>20){
-      if(/^H[1-3]$/.test(el.tagName)) parts.push('# '+t);
-      else parts.push(t);
-    }
+  const metaC=(sel)=>(doc.querySelector(sel)?.getAttribute('content')||'').trim();
+  const title=(metaC('meta[property="og:title"]')||metaC('meta[name="twitter:title"]')||(doc.querySelector('head > title')?.textContent||'')).replace(/\s+/g,' ').trim();
+  doc.querySelectorAll('script,style,noscript,template,svg,iframe,form,button,select,nav,footer,aside,[hidden],[aria-hidden="true"],.sidebar,.menu,.nav,.ads,.advert,.social,.share,.comments,#comments,[class*="related"],[class*="subscribe"],[class*="newsletter"],[class*="cookie"],[class*="promo"]').forEach(el=>el.remove());
+  doc.querySelectorAll('header').forEach(el=>{ if(!el.closest('article')) el.remove(); });
+  const body=doc.body||doc.documentElement;
+  const pLen=(el)=>{ let n=0; el.querySelectorAll('p').forEach(p=>{ n+=p.textContent.trim().length; }); return n; };
+  const cands=[...new Set(doc.querySelectorAll('[itemprop="articleBody"],.entry-content,.post-content,.post-body,.article-body,.article-content,.story-body,.c-entry-content,article,main,[role="main"],.post,.entry,.content,#content'))];
+  let best=0; const scored=cands.map(c=>{ const sc=pLen(c); if(sc>best) best=sc; return [c,sc]; });
+  let root=body;
+  if(best>=200){ let tight=Infinity; for(const [c,sc] of scored){ if(sc>=best*0.85){ const len=c.textContent.length; if(len<tight){ tight=len; root=c; } } } }
+  const paras=[];
+  root.querySelectorAll('h1,h2,h3,h4,p,li,blockquote,pre').forEach(el=>{
+    if(el.parentElement && el.parentElement.closest('p,li,blockquote,pre,h1,h2,h3,h4')) return;
+    const t=el.textContent.replace(/\s+/g,' ').trim(); if(!t) return;
+    if(/^H[1-4]$/.test(el.tagName)){ paras.push({text:t, heading:true, level:+el.tagName[1]-1}); return; }
+    if(el.tagName==='LI'){ const a=el.querySelector('a'); if(t.length<25 || (a && a.textContent.replace(/\s+/g,' ').trim()===t)) return; }
+    paras.push({text:t});
   });
-  let text=parts.join('\n\n').replace(/\n{3,}/g,'\n\n').trim();
-  if(text.length<100){
-    // Fallback: all visible text
-    text=root.innerText.replace(/\s+/g,' ').trim();
-  }
-  return text;
+  const h1=(root.querySelector('h1')||doc.querySelector('h1'))?.textContent.replace(/\s+/g,' ').trim()||'';
+  let out=fromParagraphs(paras);
+  const textLen=paras.reduce((n,p)=>n+(p.heading?0:p.text.length),0);
+  if(textLen<300){ const ctx={words:[],ends:[],anchors:null,firstHeading:null}; walkHTML(root,ctx,''); if(ctx.words.length>out.words.length) out={words:ctx.words, ends:ctx.ends, chapters:[]}; }
+  return {title:title||h1.slice(0,120), ...out};
 }
 $('#fileIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -1183,14 +1255,20 @@ function renderSettings(){
     </div>
     <h2>Send text from other apps</h2>
     <div class="group"><div class="set">
-      <div class="desc" style="color:var(--ink)">Make a shortcut once, and “ReadFast” shows up in the iPhone share sheet.</div>
+      <div class="desc" style="color:var(--ink)">Make a shortcut once, and “Send to ReadFast” shows up in the iPhone share sheet.</div>
       <ol class="steps">
-        <li>Open the <b>Shortcuts</b> app and tap <b>+</b>. Name it <b>ReadFast</b>.</li>
-        <li>Tap the <b>ⓘ</b> button and turn on <b>Show in Share Sheet</b>. Set it to receive <b>Text</b>, <b>Articles</b> and <b>Safari web pages</b>.</li>
+        <li>Open the <b>Shortcuts</b> app and tap <b>+</b>. Name it <b>Send to ReadFast</b>.</li>
+        <li>Tap the <b>ⓘ</b> button and turn on <b>Show in Share Sheet</b>. Set it to receive <b>Text</b>, <b>URLs</b> and <b>Safari web pages</b>.</li>
         <li>Add the action <b>Copy to Clipboard</b> (it copies the Shortcut Input).</li>
-        <li>Add <b>Open URLs</b> and paste this app’s link with <code>#paste</code> on the end.</li>
-        <li>Now select text anywhere, tap <b>Share</b>, then <b>ReadFast</b>. Paste into the box that opens.</li>
+        <li>Share any text or link to <b>Send to ReadFast</b>, open ReadFast from your Home Screen, tap <b>Paste text</b>, then <b>Paste from clipboard</b>. A link loads the article; text is added as is.</li>
       </ol>
+      <div class="desc">A shortcut can’t open the Home Screen app directly. It would open Safari, which keeps a separate library.</div>
+    </div></div>
+    <h2>Loading links</h2>
+    <div class="group"><div class="set">
+      <div class="hd"><label for="sLinkSvc">Your own reader service <span class="muted" style="font-weight:400">(optional)</span></label></div>
+      <input class="input" id="sLinkSvc" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://my-proxy.example.workers.dev/?url={url}" value="${esc(S.linkService||'')}">
+      <div class="desc">When a site won’t let apps load it, ReadFast tries a reader service. Public ones are free but sometimes down. If you run your own, enter its address here with {url} where the link goes; it’s tried first.</div>
     </div></div>
     <h2>Your library</h2>
     <div class="group"><div class="set">
@@ -1240,6 +1318,7 @@ function bindSettings(){
   $('#themeSeg').addEventListener('click',e=>{ const b=e.target.closest('[data-theme-pick]'); if(!b) return; S.theme=b.dataset.themePick; saveSettings(); applyLook(); document.querySelectorAll('#themeSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.themePick===S.theme)); });
   $('#diagRun').onclick=runDiag;
   $('#persistBtn').onclick=async()=>{ try{ const ok=navigator.storage&&navigator.storage.persist?await navigator.storage.persist():false; toast(ok?'iPhone will keep ReadFast’s data':'iPhone didn’t agree to keep the data permanently'); }catch(e){ toast('This view can’t ask for that'); } runDiag(); };
+  $('#sLinkSvc').addEventListener('change',e=>{ S.linkService=e.target.value.trim(); saveSettings(); toast(S.linkService?'Reader service saved':'Reader service cleared'); });
   $('#backupBtn').onclick=backup;
   $('#restoreBtn').onclick=()=>{ $('#restoreIn').value=''; $('#restoreIn').click(); };
   $('#resetBtn').onclick=()=>{ Object.assign(S,DEFAULTS); saveSettings(); applyLook(); setWpm(S.wpm); renderSettings(); toast('Settings reset'); };
@@ -1354,8 +1433,8 @@ async function boot(){
   try{ if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
   if(!LS.get('seeded',false) && !LIB.length){ try{ await addDoc({title:'Welcome to ReadFast (sample)', kind:'sample', ...fromPlainText(SAMPLE)}); LS.set('seeded',true); }catch(e){} }
   renderLibrary(); renderWords();
-  if(location.hash==='#paste') openPaste(true);
-  window.addEventListener('hashchange',()=>{ if(location.hash==='#paste') openPaste(true); });
+  const onHash=()=>{ if(location.hash==='#paste'){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} openPaste(true); } };
+  onHash(); window.addEventListener('hashchange', onHash);
   try{ const c=window.claude; if(c&&c.use){ c.use('downloads').then(d=>{ downloadsApi=d; }).catch(()=>{}); } }catch(e){}
   if(document.fonts) document.fonts.ready.then(()=>{ if(R.meta&&!$('#v-reader').hidden) showChunk(R.pos); });
   showView('library');
