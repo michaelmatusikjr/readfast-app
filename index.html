@@ -14,6 +14,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@500;700&family=Lexend:wght@400;600&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap">
 <style>
 /* Layout: one-screen phone app. Library-level views scroll above a tab bar; the reader is an instrument panel with a reticle stage. */
+
+/* Critical: ensure hidden attribute actually hides elements even when CSS sets display */
+[hidden]:not([hidden=until-found i]){display:none!important}
 :root{
   --paper:#E9EDF2; --surface:#FFFFFF; --raise:#F4F6F9; --ink:#15202D; --muted:#5A6779;
   --line:#CED6E0; --accent:#2244B5; --accent-soft:#DCE4FA; --accent-ink:#FFFFFF; --danger:#B3262F;
@@ -1118,6 +1121,7 @@ async function boot(){
   window.addEventListener('hashchange',()=>{ if(location.hash==='#paste') openPaste(true); });
   try{ const c=window.claude; if(c&&c.use){ c.use('downloads').then(d=>{ downloadsApi=d; }).catch(()=>{}); } }catch(e){}
   if(document.fonts) document.fonts.ready.then(()=>{ if(R.meta&&!$('#v-reader').hidden) showChunk(R.pos); });
+  showView('library');
 }
 boot();
 </script>
