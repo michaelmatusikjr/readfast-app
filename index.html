@@ -150,7 +150,6 @@ textarea{min-height:42vh;resize:vertical;line-height:1.45}
 ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
 code{font-family:var(--f-mono);font-size:.85em;background:var(--raise);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
 
-#fulltext{position:fixed;inset:0;z-index:15;background:var(--paper);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .ft-head{display:flex;align-items:center;gap:4px;padding:6px max(8px,env(safe-area-inset-right,0px)) 6px max(8px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);background:var(--surface)}
 .ft-head .grow{flex:1;min-width:0;text-align:center}
 .ft-head .grow b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.92rem}
@@ -438,10 +437,22 @@ function walkHTML(root, ctx, path){
   visit(root); flush();
 }
 
+/* ---------- progress ---------- */
+let toastT;
+/* shows a message with a bar that stays up until the next message; pct may be null for "working" */
+function progress(msg, pct, action){ toast(msg, action||null, 0, pct==null?null:Math.round(pct)); }
+const yieldUI=()=>new Promise(r=>setTimeout(r,0));
+
 /* ---------- file parsing ---------- */
 const CDN={ jszip:'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', pdf:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', pdfw:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js' };
 const scriptCache={};
-function loadScript(src){ return scriptCache[src] || (scriptCache[src]=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>{ delete scriptCache[src]; rej(new Error('Could not load the file reader. Check your connection and try again.')); }; document.head.appendChild(s); })); }
+function loadScript(src){ return scriptCache[src] || (scriptCache[src]=new Promise((res,rej)=>{
+  const s=document.createElement('script'); s.src=src;
+  const fail=(why)=>{ clearTimeout(t); delete scriptCache[src]; s.remove(); rej(new Error(why)); };
+  const t=setTimeout(()=>fail('The file reader took too long to download. Check your connection and try again.'), 25000);
+  s.onload=()=>{ clearTimeout(t); res(); };
+  s.onerror=()=>fail('Could not load the file reader. Check your connection and try again.');
+  document.head.appendChild(s); })); }
 const parseXML=(s)=>new DOMParser().parseFromString(s,'application/xml');
 function parseXHTML(s){ let d=new DOMParser().parseFromString(s,'application/xhtml+xml'); if(d.getElementsByTagName('parsererror').length) d=new DOMParser().parseFromString(s,'text/html'); return d; }
 const dirOf=(p)=>p.includes('/')?p.slice(0,p.lastIndexOf('/')):'';
@@ -457,23 +468,45 @@ function guessImgType(p){ const e=(p.split('.').pop()||'').toLowerCase(); return
 function blobToDataURL(b){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsDataURL(b); }); }
 function dataURLToBlob(u){ const [h,d]=u.split(','); const type=(h.match(/data:([^;]+)/)||[])[1]||'application/octet-stream'; const bin=atob(d); const a=new Uint8Array(bin.length); for(let k=0;k<bin.length;k++) a[k]=bin.charCodeAt(k); return new Blob([a],{type}); }
 
-async function parseEpub(buf, fname){
+async function parseEpub(buf, fname, onP){
+  const P=onP||(()=>{});
+  P('Loading the EPUB reader…', 6);
   await loadScript(CDN.jszip);
-  const zip=await JSZip.loadAsync(buf);
-  const files={}; zip.forEach((p,f)=>{ files[p]=f; files[p.toLowerCase()]=files[p.toLowerCase()]||f; });
+  P('Unzipping…', 10);
+  let zip;
+  try{ zip=await JSZip.loadAsync(buf); }
+  catch(e){ throw new Error('This file isn’t a complete EPUB. If it’s stored in iCloud, download it in the Files app first, then try again.'); }
+  const files={}; zip.forEach((p,f)=>{ if(f.dir) return; files[p]=f; files[p.toLowerCase()]=files[p.toLowerCase()]||f; });
   const read=async(p)=>{ const f=files[p]||files[p.toLowerCase()]; return f? f.async('string'):null; };
   const cont=await read('META-INF/container.xml'); if(!cont) throw new Error('This EPUB is missing its table of contents file.');
-  const rf=byTag(parseXML(cont),'rootfile')[0]; if(!rf) throw new Error('This EPUB could not be read.');
+  const rf=byTag(parseXML(cont),'rootfile')[0]; if(!rf||!rf.getAttribute('full-path')) throw new Error('This EPUB could not be read.');
   const opfPath=rf.getAttribute('full-path'); const base=dirOf(opfPath);
-  const opf=parseXML(await read(opfPath)||'');
+  const opfText=await read(opfPath); if(!opfText) throw new Error('This EPUB could not be read.');
+  const opf=parseXML(opfText);
   const title=(byTag(opf,'title')[0]?.textContent||'').trim() || fname.replace(/\.[^.]+$/,'');
   const items={}; let navHref=null;
   for(const it of byTag(opf,'item')){ const href=resolvePath(base,it.getAttribute('href')||''); items[it.getAttribute('id')]={href, type:it.getAttribute('media-type')||'', props:it.getAttribute('properties')||''}; if(/\bnav\b/.test(it.getAttribute('properties')||'')) navHref=href; }
   const spineEl=byTag(opf,'spine')[0]; if(!spineEl) throw new Error('This EPUB has no readable chapters.');
   const tocId=spineEl.getAttribute('toc');
+  /* copy protection: refuse up front instead of importing scrambled text */
+  const DRM_MSG='This book is copy-protected (DRM), so its text can’t be read.';
+  if(files['META-INF/rights.xml']||files['META-INF/sinf.xml']) throw new Error(DRM_MSG);
+  const encXml=await read('META-INF/encryption.xml');
+  if(encXml){
+    const enc=parseXML(encXml); const spinePaths=new Set(byTag(spineEl,'itemref').map(r=>items[r.getAttribute('idref')]?.href.toLowerCase()).filter(Boolean));
+    for(const ed of byTag(enc,'EncryptedData')){
+      const alg=byTag(ed,'EncryptionMethod')[0]?.getAttribute('Algorithm')||'';
+      if(/idpf\.org\/2008\/embedding|ns\.adobe\.com\/pdf\/enc#RC/.test(alg)) continue; /* font obfuscation only */
+      const uri=byTag(ed,'CipherReference')[0]?.getAttribute('URI')||'';
+      if(spinePaths.has(resolvePath('',uri).toLowerCase())) throw new Error(DRM_MSG);
+    }
+  }
+  const refs=byTag(spineEl,'itemref');
   const ctx={words:[], ends:[], anchors:{}, firstHeading:{}, images:[]}; const fileStarts=[];
-  if(byTag(opf,'encryption').length || files['META-INF/encryption.xml']){ /* may be DRM; we try anyway */ }
-  for(const ref of byTag(spineEl,'itemref')){
+  let done=0;
+  for(const ref of refs){
+    done++;
+    if(done%8===0){ P('Reading chapter '+done+' of '+refs.length+'…', 20+50*done/refs.length); await yieldUI(); }
     const it=items[ref.getAttribute('idref')]; if(!it) continue;
     if(it.type && !/html|xml/.test(it.type)) continue;
     const html=await read(it.href); if(html==null) continue;
@@ -481,40 +514,46 @@ async function parseEpub(buf, fname){
     ctx.anchors[it.href]=ctx.words.length; fileStarts.push({path:it.href, i:ctx.words.length});
     walkHTML(body, ctx, it.href);
   }
-  if(!ctx.words.length) throw new Error(files['META-INF/encryption.xml'] ? 'This book is copy-protected (DRM), so its text can’t be read.' : 'No readable text was found in this EPUB.');
+  if(!ctx.words.length) throw new Error(encXml ? DRM_MSG : 'No readable text was found in this EPUB.');
+  P('Building the chapter list…', 70);
   const lookup=(full)=>{ if(full in ctx.anchors) return ctx.anchors[full]; const p=full.split('#')[0]; return p in ctx.anchors? ctx.anchors[p] : undefined; };
   let chapters=[];
   try{
     if(navHref){
       const nd=parseXHTML(await read(navHref)||''); const nbase=dirOf(navHref);
-      const navs=byTag(nd,'nav'); let nav=navs.find(n=>(n.getAttribute('epub:type')||n.getAttributeNS('http://www.idpf.org/2007/ops','type')||'').includes('toc')) || navs[0];
-      const walkOl=(ol,depth)=>{ for(const li of [...ol.children].filter(c=>c.localName==='li')){ const a=[...li.children].find(c=>c.localName==='a'||c.localName==='span'); if(a&&a.getAttribute('href')){ const i=lookup(resolvePath(nbase,a.getAttribute('href'))); const t=(a.textContent||'').replace(/\s+/g,' ').trim(); if(i!==undefined&&t) chapters.push({t:t.slice(0,100),i,d:depth}); } const sub=[...li.children].find(c=>c.localName==='ol'); if(sub) walkOl(sub,depth+1); } };
+      const navs=byTag(nd,'nav'); const nav=navs.find(n=>(n.getAttribute('epub:type')||n.getAttributeNS('http://www.idpf.org/2007/ops','type')||'').includes('toc')) || navs[0];
+      const kids=(el,name)=>[...el.children].filter(c=>c.localName===name);
+      const walkOl=(ol,depth)=>{ for(const li of kids(ol,'li')){ const a=[...li.children].find(c=>c.localName==='a'||c.localName==='span'); if(a&&a.getAttribute('href')){ const i=lookup(resolvePath(nbase,a.getAttribute('href'))); const t=(a.textContent||'').replace(/\s+/g,' ').trim(); if(i!==undefined&&t) chapters.push({t:t.slice(0,100),i,d:depth}); } const sub=kids(li,'ol')[0]; if(sub) walkOl(sub,depth+1); } };
       const ol=nav&&byTag(nav,'ol')[0]; if(ol) walkOl(ol,0);
     }
     if(!chapters.length && tocId && items[tocId]){
       const np=items[tocId].href; const nx=parseXML(await read(np)||''); const nbase=dirOf(np);
-      const walkNp=(el,depth)=>{ for(const pt of [...el.children].filter(c=>c.localName==='navPoint')){ const t=(byTag(pt,'text')[0]?.textContent||'').trim(); const src=byTag(pt,'content')[0]?.getAttribute('src'); if(src&&t){ const i=lookup(resolvePath(nbase,src)); if(i!==undefined) chapters.push({t:t.slice(0,100),i,d:depth}); } walkNp(pt,depth+1); } };
+      const walkNp=(el,depth)=>{ for(const pt of [...el.children].filter(c=>c.localName==='navPoint')){ const t=(byTag(pt,'text')[0]?.textContent||'').replace(/\s+/g,' ').trim(); const src=byTag(pt,'content')[0]?.getAttribute('src'); if(src&&t){ const i=lookup(resolvePath(nbase,src)); if(i!==undefined) chapters.push({t:t.slice(0,100),i,d:depth}); } walkNp(pt,depth+1); } };
       const nm=byTag(nx,'navMap')[0]; if(nm) walkNp(nm,0);
     }
   }catch(e){ chapters=[]; }
   if(!chapters.length){ fileStarts.forEach((f,k)=>{ if(k===0||f.i!==fileStarts[k-1].i) chapters.push({t:ctx.firstHeading[f.path]||('Section '+(chapters.length+1)), i:f.i, d:0}); }); }
   chapters=chapters.filter(c=>c.i<ctx.words.length).sort((a,b)=>a.i-b.i);
-  /* images: keep each picture file once, plus every place it appears */
+  /* images: each picture file once (kept as a Blob, not text), plus every place it appears */
   const typeByHref={}; for(const k in items) typeByHref[items[k].href]=items[k].type;
-  const imgFiles=[], fidx={}, at=[]; let missing=0;
+  const imgFiles=[], fidx={}, at=[]; let missing=0, n=0;
+  const uniq=new Set(ctx.images.map(im=>im.path.split('#')[0])).size;
   for(const im of ctx.images){
     const p=im.path.split('#')[0];
     if(!(p in fidx)){
+      n++; P('Loading picture '+n+' of '+uniq+'…', 72+20*n/Math.max(1,uniq));
       const f=files[p]||files[p.toLowerCase()];
       if(!f){ fidx[p]=-1; }
-      else { try{ const b64=await f.async('base64'); fidx[p]=imgFiles.length; imgFiles.push({path:p, data:'data:'+(typeByHref[p]||guessImgType(p))+';base64,'+b64}); }catch(e){ fidx[p]=-1; } }
+      else { try{ const raw=await f.async('blob'); fidx[p]=imgFiles.length; imgFiles.push({path:p, blob:new Blob([raw],{type:typeByHref[p]||guessImgType(p)})}); }catch(e){ fidx[p]=-1; } }
     }
     if(fidx[p]>=0) at.push({i:Math.min(im.i,ctx.words.length), f:fidx[p], alt:im.alt}); else missing++;
   }
   return {title, kind:'epub', words:ctx.words, ends:ctx.ends, chapters, images: at.length?{files:imgFiles, at}:null, imagesMissing:missing};
 }
 
-async function parsePdf(buf, fname){
+async function parsePdf(buf, fname, onP){
+  const P=onP||(()=>{});
+  P('Loading the PDF reader\u2026', 6);
   await loadScript(CDN.pdf); await loadScript(CDN.pdfw);
   pdfjsLib.GlobalWorkerOptions.workerSrc=CDN.pdfw;
   const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf), isEvalSupported:false, disableFontFace:true}).promise;
@@ -522,6 +561,7 @@ async function parsePdf(buf, fname){
   try{ const md=await pdf.getMetadata(); const t=md?.info?.Title; if(t&&t.trim().length>2) title=t.trim(); }catch(e){}
   const words=[], ends=[], chapters=[];
   for(let p=1;p<=pdf.numPages;p++){
+    if(p===1||p%5===0) P('Reading page '+p+' of '+pdf.numPages+'\u2026', 12+80*p/pdf.numPages);
     const page=await pdf.getPage(p); const tc=await page.getTextContent();
     let para='', lastY=null, prevEOL=false; const paras=[];
     for(const it of tc.items){
@@ -541,12 +581,13 @@ async function parsePdf(buf, fname){
   return {title, kind:'pdf', words, ends, chapters};
 }
 
-async function parseFile(file){
+async function parseFile(file, onP){
   const name=file.name||'Document'; const ext=(name.split('.').pop()||'').toLowerCase();
+  (onP||(()=>{}))('Opening \u201c'+name+'\u201d\u2026', 3);
   const buf=await file.arrayBuffer(); const head=new Uint8Array(buf.slice(0,5));
   const isZip=head[0]===0x50&&head[1]===0x4B; const isPdf=head[0]===0x25&&head[1]===0x50&&head[2]===0x44&&head[3]===0x46;
-  if(ext==='epub'||(isZip&&ext!=='docx')) return parseEpub(buf,name);
-  if(ext==='pdf'||isPdf) return parsePdf(buf,name);
+  if(ext==='epub'||(isZip&&ext!=='docx')) return parseEpub(buf,name,onP);
+  if(ext==='pdf'||isPdf) return parsePdf(buf,name,onP);
   if(ext==='docx') throw new Error('Word files aren’t supported yet. Open the document, copy the text, and use Paste text.');
   const text=new TextDecoder('utf-8').decode(buf);
   if(ext==='html'||ext==='htm'||ext==='xhtml'){ const d=new DOMParser().parseFromString(text,'text/html'); const ctx={words:[],ends:[],anchors:null,firstHeading:null}; walkHTML(d.body,ctx,''); return {title:(d.title||name.replace(/\.[^.]+$/,'')).trim(), kind:'web', words:ctx.words, ends:ctx.ends, chapters:[]}; }
@@ -714,80 +755,17 @@ function extractArticle(html, url){
 }
 $('#fileIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
-  const ext=(f.name.split('.').pop()||'').toLowerCase();
-  toast(ext==='epub'?'Opening EPUB…':'Opening file…', null, 120000, 2);
+  e.target.value='';
   try{
-    let d;
-    if(ext==='epub'){
-      d=await parseEpubWithProgress(f);
-    } else {
-      d=await parseFile(f);
-    }
+    const d=await parseFile(f, (msg,pct)=>progress(msg,pct));
+    progress('Saving to your library…', 95);
     const meta=await addDoc(d);
     let msg='Added “'+meta.title+'”';
     if(meta.imageCount) msg+=' with '+meta.imageCount+' image'+(meta.imageCount===1?'':'s');
     if(d.imagesMissing) msg+='. '+d.imagesMissing+' image'+(d.imagesMissing===1?' was':'s were')+' missing from the file and left out';
     toast(msg, null, d.imagesMissing?7000:3200);
-  }catch(err){ console.error(err); toast(err.message||'That file couldn’t be opened.'); }
+  }catch(err){ console.error(err); toast(err&&err.message||'That file couldn’t be opened.', null, 7000); }
 });
-
-async function parseEpubWithProgress(file){
-  toast('Opening EPUB…', null, 120000, 5);
-  const buf=await file.arrayBuffer();
-  toast('Reading EPUB…', null, 120000, 10);
-  await loadScript(CDN.jszip);
-  const zip=await JSZip.loadAsync(buf);
-  const files={}; zip.forEach((p,f)=>{ files[p]=f; files[p.toLowerCase()]=files[p.toLowerCase()]||f; });
-  const read=async(p)=>{ const f=files[p]||files[p.toLowerCase()]; return f? f.async('string'):null; };
-  const cont=await read('META-INF/container.xml'); if(!cont) throw new Error('This EPUB is missing its table of contents file.');
-  const rf=byTag(parseXML(cont),'rootfile')[0]; if(!rf) throw new Error('This EPUB could not be read.');
-  const opfPath=rf.getAttribute('full-path'); const base=dirOf(opfPath);
-  const opf=parseXML(await read(opfPath)||'');
-  const title=(byTag(opf,'title')[0]?.textContent||'').trim() || file.name.replace(/\.[^.]+$/,'');
-  toast('Reading “'+title+'”…', null, 120000, 20);
-  const items={}; let navHref=null;
-  for(const it of byTag(opf,'item')){ const href=resolvePath(base,it.getAttribute('href')||''); items[it.getAttribute('id')]={href, type:it.getAttribute('media-type')||'', props:it.getAttribute('properties')||''}; if(/\bnav\b/.test(it.getAttribute('properties')||'')) navHref=href; }
-  const spineEl=byTag(opf,'spine')[0]; if(!spineEl) throw new Error('This EPUB has no readable chapters.');
-  const refs=byTag(spineEl,'itemref');
-  const ctx={words:[], ends:[], anchors:{}, firstHeading:{}, images:[]}; const fileStarts=[];
-  let done=0;
-  for(const ref of refs){
-    const it=items[ref.getAttribute('idref')]; if(!it) continue;
-    if(it.type && !/html|xml/.test(it.type)) continue;
-    const html=await read(it.href); if(html==null) continue;
-    const d=parseXHTML(html); const body=d.body||d.getElementsByTagNameNS('*','body')[0]||d.documentElement;
-    ctx.anchors[it.href]=ctx.words.length; fileStarts.push({path:it.href, i:ctx.words.length});
-    walkHTML(body, ctx, it.href);
-    done++;
-    toast('Reading “'+title+'”…', null, 60000, 15+Math.round(70*done/Math.max(1,refs.length)));
-  }
-  if(!ctx.words.length) throw new Error(files['META-INF/encryption.xml'] ? 'This book is copy-protected (DRM), so its text can’t be read.' : 'No readable text was found in this EPUB.');
-  toast('Reading “'+title+'”…', null, 60000, 90);
-  const lookup=(full)=>{ if(full in ctx.anchors) return ctx.anchors[full]; const p=full.split('#')[0]; return p in ctx.anchors? ctx.anchors[p] : undefined; };
-  let chapters=[];
-  try{
-    if(navHref){
-      const nd=parseXHTML(await read(navHref)||''); const nbase=dirOf(navHref);
-      const navs=byTag(nd,'nav'); let nav=navs.find(n=>(n.getAttribute('epub:type')||n.getAttributeNS('http://www.idpf.org/2007/ops','type')||'').includes('toc')) || navs[0];
-      if(nav){ const walk=(ol,d)=>{ for(const li of byTag(ol,'li')){ const a=byTag(li,'a')[0]; if(a){ const href=resolvePath(nbase,a.getAttribute('href')||''); const i=lookup(href); if(i!=null) chapters.push({t:(a.textContent||'').trim()||'Chapter', i, d}); } const sub=byTag(li,'ol')[0]; if(sub) walk(sub,d+1); } }; walk(byTag(nav,'ol')[0],0); }
-    }
-  }catch(e){ chapters=[]; }
-  if(!chapters.length){ fileStarts.forEach((f,k)=>{ if(k===0||f.i!==fileStarts[k-1].i) chapters.push({t:ctx.firstHeading[f.path]||('Section '+(chapters.length+1)), i:f.i, d:0}); }); }
-  chapters=chapters.filter(c=>c.i<ctx.words.length).sort((a,b)=>a.i-b.i);
-  const typeByHref={}; for(const k in items) typeByHref[items[k].href]=items[k].type;
-  const imgFiles=[], fidx={}, at=[]; let missing=0;
-  for(const im of ctx.images){
-    const p=im.path.split('#')[0];
-    if(!(p in fidx)){
-      const f=files[p]||files[p.toLowerCase()];
-      if(!f){ fidx[p]=-1; }
-      else { try{ const b64=await f.async('base64'); fidx[p]=imgFiles.length; imgFiles.push({path:p, data:'data:'+(typeByHref[p]||guessImgType(p))+';base64,'+b64}); }catch(e){ fidx[p]=-1; } }
-    }
-    if(fidx[p]>=0) at.push({i:Math.min(im.i,ctx.words.length), f:fidx[p], alt:im.alt}); else missing++;
-  }
-  toast('Reading “'+title+'”…', null, 60000, 100);
-  return {title, kind:'epub', words:ctx.words, ends:ctx.ends, chapters, images: at.length?{files:imgFiles, at}:null, imagesMissing:missing};
-}
 
 /* ---------- reader ---------- */
 const R={ meta:null, words:[], ends:new Set(), n:0, pos:0, playing:false, timer:null, t0:0, runWords:0, lastNav:true, wake:null, lastSave:0 };
@@ -800,8 +778,9 @@ async function openDoc(id){
   if(R.meta && R.meta.id!==id && R.playing) pause();
   applySavedPos(meta);
   R.meta=meta; R.words=text.words; R.ends=new Set(text.ends); R.n=text.words.length;
+  (R.imgUrls||[]).forEach(u=>{ if(u&&u.startsWith('blob:')) try{ URL.revokeObjectURL(u); }catch(e){} });
   R.imgUrls=[]; R.imgList=[]; R.imgAt=new Map();
-  if(text.images){ R.imgUrls=await Promise.all(text.images.files.map(f=>f.data?f.data:(f.blob?blobToDataURL(f.blob).catch(()=>''):''))); R.imgList=text.images.at;
+  if(text.images){ R.imgUrls=text.images.files.map(f=>f.blob?URL.createObjectURL(f.blob):(f.data||'')); R.imgList=text.images.at;
     text.images.at.forEach((a,idx)=>{ if(!R.imgAt.has(a.i)) R.imgAt.set(a.i,[]); R.imgAt.get(a.i).push(idx); }); }
   R.pos=clamp(meta.finished?0:meta.pos,0,R.n-1); if(meta.finished){ meta.finished=false; }
   R.lastNav=false; R.playing=false;
@@ -809,7 +788,9 @@ async function openDoc(id){
   $('#rTitle').textContent=meta.title;
   $('#rChapters').hidden=!meta.chapters.length;
   el.scrub.max=Math.max(1,R.n-1);
-  showView('reader'); requestAnimationFrame(()=>{ showPaused(); buildScrollText(); enableManualScroll(); positionLine(); });
+  const big=R.n>15000;
+  if(big){ progress('Opening \u201c'+meta.title+'\u201d ('+R.n.toLocaleString()+' words)\u2026', null); await yieldUI(); }
+  showView('reader'); requestAnimationFrame(()=>{ showPaused(); buildScrollText(); enableManualScroll(); positionLine(); if(big) $('#toast').hidden=true; });
 }
 function closeReader(){ pause(); saveProgress(true); showView('library'); renderLibrary(); }
 
@@ -855,6 +836,7 @@ function buildScrollText(){
   if(open) h+='</p>';
   if(R.n) h+=fig(R.n);
   box.innerHTML=h;
+  R.spans=box.getElementsByClassName('w'); R.curSpan=null;
   syncScroll();
 }
 function positionLine(){
@@ -871,19 +853,18 @@ function syncScroll(force){
   if(manualScroll && !force) return;
   const box=$('#scrollText'); const line=$('#scrollLine');
   if(!box||!R.words||R.pos==null) return;
-  const span=box.querySelector(`[data-i="${R.pos}"]`);
+  const span=(R.spans&&R.spans[R.pos]&&+R.spans[R.pos].dataset.i===R.pos)?R.spans[R.pos]:box.querySelector(`[data-i="${R.pos}"]`);
   if(!span) return;
   positionLine();
   const lineY=line.offsetTop;
-  const spans=Array.from(box.querySelectorAll('.w'));
   const myTop=span.offsetTop;
-  const lineSpans=spans.filter(s=>Math.abs(s.offsetTop - myTop)<4);
-  if(!lineSpans.length) return;
-  const first=lineSpans[0], last=lineSpans[lineSpans.length-1];
+  const same=(s)=>s&&s.classList&&s.classList.contains('w')&&Math.abs(s.offsetTop-myTop)<4;
+  let first=span, last=span, idx=0, count=1;
+  for(let s=span.previousElementSibling; same(s); s=s.previousElementSibling){ first=s; idx++; count++; }
+  for(let s=span.nextElementSibling; same(s); s=s.nextElementSibling){ last=s; count++; }
   const lineTop=first.offsetTop;
   const lineBottom=last.offsetTop + last.offsetHeight;
-  const idx=lineSpans.indexOf(span);
-  const progress=lineSpans.length<=1 ? 0.5 : idx/(lineSpans.length-1);
+  const progress=count<=1 ? 0.5 : idx/(count-1);
   let alignAt=lineTop + progress*(lineBottom-lineTop);
   // If the current word is immediately after an image, jump so the top of this line aligns
   const prevFig=span.parentElement && span.parentElement.previousElementSibling;
@@ -892,14 +873,15 @@ function syncScroll(force){
   }
   const target=alignAt - lineY;
   box.style.transform=`translateY(${-target}px)`;
-  box.querySelectorAll('.cur').forEach(el=>el.classList.remove('cur'));
-  span.classList.add('cur');
+  if(R.curSpan&&R.curSpan!==span) R.curSpan.classList.remove('cur'); else if(!R.curSpan) box.querySelectorAll('.cur').forEach(el=>el.classList.remove('cur'));
+  span.classList.add('cur'); R.curSpan=span;
 }
 let manualScroll=false;
 let dragStartY=0, dragStartTrans=0;
 function enableManualScroll(){
   const bg=$('#scrollBg'); const box=$('#scrollText');
-  if(!bg||!box) return;
+  if(!bg||!box||bg.dataset.bound) return;
+  bg.dataset.bound='1';
   bg.addEventListener('pointerdown', e=>{
     if(e.target.closest('.reticle')) return;
     manualScroll=true; box.classList.add('manual');
@@ -1045,7 +1027,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden){ pause();
 const leaving=()=>{ if(R.meta){ pause(); saveProgress(true); } };
 window.addEventListener('pagehide',leaving); window.addEventListener('beforeunload',leaving); document.addEventListener('freeze',leaving);
 document.addEventListener('keydown',e=>{
-  if($('#v-reader').hidden||!$('#sheet').hidden||!$('#fulltext').hidden) return;
+  if($('#v-reader').hidden||!$('#sheet').hidden||$('#imgOverlay')) return;
   if(e.target.matches('input,textarea')) return;
   if(e.key===' '){ e.preventDefault(); toggle(); } else if(e.key==='ArrowLeft') $('#bWord').click(); else if(e.key==='ArrowRight') $('#fWord').click();
 });
@@ -1133,48 +1115,6 @@ const endSwipe=()=>{ const r=swipe.row; if(!r) return; swipe.row=null; r.classLi
 $('#wordList').addEventListener('pointerup',endSwipe); $('#wordList').addEventListener('pointercancel',endSwipe);
 
 /* ---------- full text ---------- */
-let FT={secs:[], k:0};
-function sectionsFor(){
-  const starts=[...new Set([0,...R.meta.chapters.map(c=>c.i)])].filter(i=>i<R.n).sort((a,b)=>a-b); const out=[];
-  for(let k=0;k<starts.length;k++){ const s=starts[k], e=starts[k+1]??R.n; for(let x=s;x<e;x+=2500) out.push(x); }
-  return out;
-}
-function openFull(){
-  pause(); FT.secs=sectionsFor(); let k=0; for(let q=0;q<FT.secs.length;q++){ if(FT.secs[q]<=R.pos) k=q; } FT.k=k;
-  $('#fulltext').hidden=false; renderFull(true);
-}
-function renderFull(scrollToCur){
-  const s=FT.secs[FT.k], e=FT.secs[FT.k+1]??R.n; const j=chunkEnd(R.pos);
-  const ch=currentChapter(s);
-  $('#ftTitle').textContent=ch?ch.t:R.meta.title;
-  $('#ftSub').textContent=`Section ${FT.k+1} of ${FT.secs.length} · words ${(s+1).toLocaleString()}–${e.toLocaleString()}`;
-  $('#ftPrev').disabled=FT.k===0; $('#ftNext').disabled=FT.k>=FT.secs.length-1;
-  $('#ftPrev').classList.toggle('dim',FT.k===0); $('#ftNext').classList.toggle('dim',FT.k>=FT.secs.length-1);
-  const fig=(k)=>{ const arr=R.imgAt.get(k); if(!arr) return ''; return arr.map(idx=>{ const a=R.imgList[idx]; const src=R.imgUrls[a.f]; if(!src) return ''; return `<figure data-img="${idx}"><img src="${src}" alt="${esc(a.alt||'Illustration')}" loading="lazy"></figure>`; }).join(''); };
-  let h='', open=false;
-  for(let k=s;k<e;k++){
-    const f=fig(k); if(f){ if(open){ h+='</p>'; open=false; } h+=f; }
-    if(!open){ h+='<p>'; open=true; }
-    h+=`<span data-i="${k}"${k>=R.pos&&k<j?' class="cur"':''}>${esc(R.words[k])}</span>`;
-    if(R.ends.has(k)){ h+='</p>'; open=false; } else h+=' ';
-  }
-  if(open) h+='</p>';
-  if(e===R.n) h+=fig(R.n);
-  $('#ftText').innerHTML=h;
-  const body=$('#ftBody'); body.scrollTop=0;
-  if(scrollToCur){ const c=$('#ftText .cur'); if(c) c.scrollIntoView({block:'center'}); }
-}
-$('#ftText').addEventListener('error',e=>{ const im=e.target; if(im&&im.tagName==='IMG'&&im.parentNode){ const p=document.createElement('p'); p.className='note'; p.style.textAlign='center'; p.textContent='This image couldn’t be shown.'; im.parentNode.replaceWith(p); } }, true);
-$('#ftText').addEventListener('click',e=>{
-  const fg=e.target.closest('[data-img]');
-  if(fg){ const a=R.imgList[+fg.dataset.img]; const startAt=Math.min(a.i,R.n-1);
-    openSheet(a.alt||'Image', `<img src="${R.imgUrls[a.f]}" alt="${esc(a.alt||'Illustration')}" style="width:100%;height:auto;border-radius:10px;background:var(--img-bg)"><button class="btn primary block" type="button" data-act="start">Start reading after this image</button>`,
-      { start:()=>{ closeSheet(); goTo(startAt); $('#fulltext').hidden=true; } });
-    return; }
-  const s=e.target.closest('[data-i]'); if(!s) return; goTo(+s.dataset.i); $('#fulltext').hidden=true; });
-$('#ftClose').onclick=()=>{ $('#fulltext').hidden=true; };
-$('#ftPrev').onclick=()=>{ if(FT.k>0){ FT.k--; renderFull(false); } };
-$('#ftNext').onclick=()=>{ if(FT.k<FT.secs.length-1){ FT.k++; renderFull(false); } };
 
 /* ---------- stats ---------- */
 function recordStats(ms, words){
@@ -1360,13 +1300,12 @@ function openSheet(title, body, acts){
 function closeSheet(){ $('#sheet').hidden=true; $('#backdrop').hidden=true; sheetActs={}; }
 $('#sheet').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act; if(a==='__close'){ closeSheet(); return; } const fn=sheetActs[a]; if(fn) fn(b,e); });
 $('#backdrop').onclick=closeSheet;
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!$('#sheet').hidden) closeSheet(); else if(!$('#fulltext').hidden) $('#fulltext').hidden=true; } });
-let toastT;
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!$('#sheet').hidden) closeSheet(); else if($('#imgOverlay')) $('#imgOverlay').remove(); } });
 function toast(msg, action, ms, progress){
   $('#toastMsg').textContent=msg; const a=$('#toastAct'); const prog=$('#toastProg'); const bar=$('#toastBar');
   if(action){ a.hidden=false; a.textContent=action.label; a.onclick=()=>{ action.fn(); $('#toast').hidden=true; }; } else a.hidden=true;
   if(progress!=null){ prog.hidden=false; bar.style.width=Math.max(0,Math.min(100,progress))+'%'; } else { prog.hidden=true; }
-  $('#toast').hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{ $('#toast').hidden=true; }, ms||(action?5000:3200));
+  $('#toast').hidden=false; clearTimeout(toastT); if(ms!==0) toastT=setTimeout(()=>{ $('#toast').hidden=true; }, ms||(action?5000:3200));
 }
 const VIEWS=['library','words','stats','settings'];
 function showView(v){
@@ -1381,7 +1320,6 @@ $('#rBack').innerHTML=ICON.back; $('#rChapters').innerHTML=ICON.list; $('#rMarks
 $('#bSent').innerHTML=ICON.bsent; $('#bWord').innerHTML=ICON.back; $('#fWord').innerHTML=ICON.fwd; $('#fSent').innerHTML=ICON.fsent;
 $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus;
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmark';
-$('#ftClose').innerHTML=ICON.close; $('#ftPrev').innerHTML=ICON.back; $('#ftNext').innerHTML=ICON.fwd;
 window.addEventListener('resize',()=>{ if(R.meta&&!$('#v-reader').hidden){ showChunk(R.pos); positionLine(); } });
 
 /* ---------- sample document ---------- */
@@ -1413,6 +1351,7 @@ async function boot(){
   LIB=LIB.filter(m=>m.id!=='__probe');
   for(const m of LIB){ if(applySavedPos(m)) Store.put('meta',m).catch(()=>{}); }
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
+  try{ if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
   if(!LS.get('seeded',false) && !LIB.length){ try{ await addDoc({title:'Welcome to ReadFast (sample)', kind:'sample', ...fromPlainText(SAMPLE)}); LS.set('seeded',true); }catch(e){} }
   renderLibrary(); renderWords();
   if(location.hash==='#paste') openPaste(true);
