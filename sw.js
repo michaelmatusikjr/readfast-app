@@ -32,12 +32,20 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin === self.location.origin) {
-    e.respondWith(
-      fetch(req).then(r => {
-        if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
-        return r;
-      }).catch(async () => (await caches.match(req, { ignoreSearch: true })) || (await caches.match('index.html')) || Response.error())
-    );
+    /* Network first so updates show up, but on a weak signal fall back to the saved copy after 3 seconds
+       (the network answer still refreshes the cache for next time). */
+    const net = fetch(req).then(async r => {
+      if (r.ok) { const c = await caches.open(CACHE); await c.put(req, r.clone()); }
+      return r;
+    });
+    e.waitUntil(net.catch(() => {}));
+    e.respondWith((async () => {
+      const fallback = async () => (await caches.match(req, { ignoreSearch: true })) || (req.mode === 'navigate' ? await caches.match('index.html') : undefined);
+      const cached = await fallback();
+      if (!cached) return net.catch(() => Response.error());
+      const slow = new Promise(r => setTimeout(() => r(null), 3000));
+      try { return (await Promise.race([net, slow])) || cached; } catch (err) { return cached; }
+    })());
     return;
   }
   if (CACHE_HOSTS.includes(url.hostname)) {

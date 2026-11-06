@@ -541,7 +541,7 @@ async function parseEpub(buf, fname, onP){
   for(const im of ctx.images){
     const p=im.path.split('#')[0];
     if(!(p in fidx)){
-      n++; P('Loading picture '+n+' of '+uniq+'…', 72+20*n/Math.max(1,uniq));
+      n++; P('Loading picture '+n+' of '+uniq+'\u2026', 72+20*n/Math.max(1,uniq)); if(n%4===0) await yieldUI();
       const f=files[p]||files[p.toLowerCase()];
       if(!f){ fidx[p]=-1; }
       else { try{ const raw=await f.async('blob'); fidx[p]=imgFiles.length; imgFiles.push({path:p, blob:new Blob([raw],{type:typeByHref[p]||guessImgType(p)})}); }catch(e){ fidx[p]=-1; } }
@@ -562,6 +562,7 @@ async function parsePdf(buf, fname, onP){
   let title=fname.replace(/\.[^.]+$/,'');
   try{ const md=await pdf.getMetadata(); const t=md?.info?.Title; if(t&&t.trim().length>2) title=t.trim(); }catch(e){}
   const words=[], ends=[], chapters=[];
+  try{
   for(let p=1;p<=pdf.numPages;p++){
     if(p===1||p%5===0) P('Reading page '+p+' of '+pdf.numPages+'\u2026', 12+80*p/pdf.numPages);
     const page=await pdf.getPage(p); const tc=await page.getTextContent();
@@ -579,6 +580,7 @@ async function parsePdf(buf, fname, onP){
     if(words.length>startI) chapters.push({t:'Page '+p, i:startI, d:0});
     page.cleanup&&page.cleanup();
   }
+  }catch(e){ try{ pdf.destroy(); }catch(_){} throw e; }
   if(!words.length) throw new Error('This PDF has no selectable text. It may be scanned pages saved as images.');
   return {title, kind:'pdf', words, ends, chapters};
 }
@@ -692,7 +694,13 @@ function openLink(){
 const isLoneUrl=(t)=>/^\s*(https?:\/\/|www\.)\S+\s*$/i.test(t);
 function normalizeUrl(raw){
   const m=String(raw).match(/https?:\/\/[^\s<>"']+/i);
-  let u=(m?m[0]:String(raw)).trim().replace(/[)\]}>.,;:!?'"”’]+$/,'');
+  let u=(m?m[0]:String(raw)).trim();
+  for(;;){
+    const c=u.slice(-1);
+    if(/[\]}>.,;:!?'"”’]/.test(c)){ u=u.slice(0,-1); continue; }
+    if(c===')' && (u.match(/\(/g)||[]).length < (u.match(/\)/g)||[]).length){ u=u.slice(0,-1); continue; }
+    break;
+  }
   if(!u) return null;
   if(!/^[a-z][\w+.-]*:/i.test(u)) u='https://'+u;
   let x; try{ x=new URL(u); }catch(e){ return null; }
@@ -710,24 +718,28 @@ function linkServices(){
 }
 /* fetch with its own timeout (covering the download too), the user's cancel, and byte progress */
 async function fetchTimed(url, signal, ms, onBytes){
-  const ctl=new AbortController(); let timedOut=false;
-  const t=setTimeout(()=>{ timedOut=true; ctl.abort(); }, ms);
+  const ctl=new AbortController(); let why=null, got=0, idle;
+  const arm=()=>{ clearTimeout(idle); idle=setTimeout(()=>{ why=got?'stalled':'timeout'; ctl.abort(); }, ms); };
+  const cap=setTimeout(()=>{ why='toolong'; ctl.abort(); }, 180000);
   const onAbort=()=>ctl.abort(); signal.addEventListener('abort', onAbort);
+  arm();
   try{
     const res=await fetch(url, {signal:ctl.signal, credentials:'omit', redirect:'follow'});
-    const total=+res.headers.get('content-length')||0;
+    arm();
+    /* a compressed response's length is the compressed size, which can't be compared with what we count */
+    let total=res.headers.get('content-encoding')? 0 : (+res.headers.get('content-length')||0);
     let buf;
     if(res.body && res.body.getReader){
-      const rd=res.body.getReader(); const parts=[]; let got=0;
-      for(;;){ const {done,value}=await rd.read(); if(done) break; parts.push(value); got+=value.length; onBytes&&onBytes(got,total); }
+      const rd=res.body.getReader(); const parts=[];
+      for(;;){ const {done,value}=await rd.read(); if(done) break; arm(); parts.push(value); got+=value.length; if(total&&got>total) total=0; onBytes&&onBytes(got,total); }
       buf=new Uint8Array(got); let o=0; for(const c of parts){ buf.set(c,o); o+=c.length; }
     } else buf=new Uint8Array(await res.arrayBuffer());
     return {res, buf};
   }catch(e){
     if(signal.aborted){ const er=new Error('cancelled'); er.cancelled=true; throw er; }
-    if(timedOut){ const er=new Error('timeout'); er.timeout=true; throw er; }
+    if(why){ const er=new Error(why); er.timeout=true; er.why=why; throw er; }
     throw e;
-  }finally{ clearTimeout(t); signal.removeEventListener('abort', onAbort); }
+  }finally{ clearTimeout(idle); clearTimeout(cap); signal.removeEventListener('abort', onAbort); }
 }
 function decodeHtml(buf, ctype){
   let cs=(ctype.match(/charset=["']?([\w:.-]+)/i)||[])[1];
@@ -749,7 +761,8 @@ async function fetchLinkData(url, signal, P){
       got=await fetchTimed(r.make(url), signal, r.direct?15000:20000, (n,total)=>P('Downloading from '+label+'… '+fmtSize(n)+(total?' of '+fmtSize(total):''), total? base+25*n/total : base+3));
     }catch(e){
       if(e.cancelled) throw e;
-      why.push(r.direct? (e.timeout? host+' didn’t answer' : host+' doesn’t allow apps to load it directly') : 'reader service '+k+(e.timeout?' timed out':' was unavailable'));
+      const tw= e.why==='stalled'?' stopped sending data partway through' : e.why==='toolong'?' took more than 3 minutes' : e.timeout?' didn\u2019t answer':null;
+      why.push(r.direct? (tw? host+tw : host+' doesn\u2019t allow apps to load it directly') : 'reader service '+k+(tw||' was unavailable'));
       continue;
     }
     const {res,buf}=got;
@@ -772,8 +785,8 @@ async function loadLink(raw){
   if(linkBusy){ toast('A link is already loading'); return null; }
   linkBusy=true;
   const ctl=new AbortController();
-  const cancel={label:'Cancel', fn:()=>ctl.abort()};
-  const P=(m,p)=>{ if(!ctl.signal.aborted) progress(m,p,cancel); };
+  const cancel={label:'Cancel', fn:()=>{ ctl.abort(); setTimeout(()=>{ if(linkBusy) progress('Stopping\u2026', null); },0); }};
+  const P=(m,p)=>{ if(ctl.signal.aborted){ const er=new Error('cancelled'); er.cancelled=true; throw er; } progress(m,p,cancel); };
   try{
     const got=await fetchLinkData(url, ctl.signal, P);
     let d;
@@ -861,8 +874,10 @@ async function openDoc(id){
   $('#rChapters').hidden=!meta.chapters.length;
   el.scrub.max=Math.max(1,R.n-1);
   const big=R.n>15000;
-  if(big){ progress('Opening \u201c'+meta.title+'\u201d ('+R.n.toLocaleString()+' words)\u2026', null); await yieldUI(); }
-  showView('reader'); requestAnimationFrame(()=>{ showPaused(); buildScrollText(); enableManualScroll(); positionLine(); if(big) $('#toast').hidden=true; });
+  if(big){ progress('Opening \u201c'+meta.title+'\u201d ('+R.n.toLocaleString()+' words)\u2026', null); await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,40))); }
+  showView('reader');
+  const finish=()=>{ try{ showPaused(); buildScrollText(); enableManualScroll(); positionLine(); } catch(e){ console.error(e); toast('Something went wrong opening this book.', null, 6000); return; } finally{ if(big && $('#toastMsg').textContent.startsWith('Opening')) $('#toast').hidden=true; } };
+  if(big) finish(); else requestAnimationFrame(finish);
 }
 function closeReader(){ pause(); saveProgress(true); showView('library'); renderLibrary(); }
 
@@ -1357,15 +1372,23 @@ async function backup(){
 }
 $('#restoreIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
-  let b; try{ b=JSON.parse(await f.text()); if(b.app!=='ReadFast') throw 0; }catch(err){ toast('That file isn’t a ReadFast backup.'); return; }
+  let b; try{ b=JSON.parse(await f.text()); if(!b||b.app!=='ReadFast'||!Array.isArray(b.meta)||!Array.isArray(b.texts)) throw 0; b.words=Array.isArray(b.words)?b.words:[]; b.stats=(b.stats&&typeof b.stats==='object')?b.stats:{}; }catch(err){ toast('That file isn\u2019t a ReadFast backup, or it\u2019s incomplete.', null, 6000); return; }
   openSheet('Restore backup', `<p class="note">This backup from ${esc(new Date(b.savedAt).toLocaleString())} has ${b.meta.length} document${b.meta.length===1?'':'s'} and ${b.words.length} saved word${b.words.length===1?'':'s'}. They’ll be added to what’s here now. Documents already on this phone are replaced by their backed-up copy.</p><button class="btn primary block" type="button" data-act="go">Restore</button>`,{
     go:async()=>{
-      for(const t of b.texts) await Store.put('texts',t);
-      for(const m of b.meta) await Store.put('meta',m);
+      closeSheet();
+      try{
+      let k=0; const tot=b.texts.length+b.meta.length;
+      for(const t of b.texts){
+        progress('Restoring \u2026 '+(++k)+' of '+tot, 100*k/tot);
+        if(t.images&&Array.isArray(t.images.files)) t.images={...t.images, files:t.images.files.map(f=>f.data&&!f.blob?{path:f.path, blob:dataURLToBlob(f.data)}:f)};
+        await Store.put('texts',t);
+      }
+      for(const m of b.meta){ progress('Restoring \u2026 '+(++k)+' of '+tot, 100*k/tot); await Store.put('meta',m); }
       LIB=await Store.all('meta');
       const have=new Set(WORDS.map(w=>w.id)); for(const w of b.words) if(!have.has(w.id)) WORDS.push(w); WORDS.sort((a,c)=>c.at-a.at); saveWords();
       const st=LS.get('stats',{}); for(const k in b.stats){ if(!st[k]||st[k].words<b.stats[k].words) st[k]=b.stats[k]; } LS.set('stats',st);
-      renderLibrary(); renderWords(); closeSheet(); toast('Backup restored');
+      renderLibrary(); renderWords(); toast('Backup restored');
+      }catch(err){ console.error(err); toast('The backup couldn\u2019t be fully restored'+(err&&err.name==='QuotaExceededError'?' because the phone\u2019s storage for ReadFast is full':'')+'.', null, 8000); try{ LIB=await Store.all('meta'); renderLibrary(); }catch(_){} }
     }});
 });
 
@@ -1430,7 +1453,7 @@ async function boot(){
   LIB=LIB.filter(m=>m.id!=='__probe');
   for(const m of LIB){ if(applySavedPos(m)) Store.put('meta',m).catch(()=>{}); }
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
-  try{ if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
+  try{ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')) navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
   if(!LS.get('seeded',false) && !LIB.length){ try{ await addDoc({title:'Welcome to ReadFast (sample)', kind:'sample', ...fromPlainText(SAMPLE)}); LS.set('seeded',true); }catch(e){} }
   renderLibrary(); renderWords();
   const onHash=()=>{ if(location.hash==='#paste'){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} openPaste(true); } };
