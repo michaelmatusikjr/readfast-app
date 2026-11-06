@@ -34,15 +34,19 @@ self.addEventListener('fetch', e => {
   if (url.origin === self.location.origin) {
     /* Network first so updates show up, but on a weak signal fall back to the saved copy after 3 seconds
        (the network answer still refreshes the cache for next time). */
+    /* A server error counts as a failure, so the saved copy is used instead of an error page.
+       Every app address (with or without ?query) is stored as one copy. */
+    const key = req.mode === 'navigate' ? new URL('./', self.location).href : req;
     const net = fetch(req).then(async r => {
-      if (r.ok) { const c = await caches.open(CACHE); await c.put(req, r.clone()); }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const c = await caches.open(CACHE); await c.put(key, r.clone());
       return r;
     });
     e.waitUntil(net.catch(() => {}));
     e.respondWith((async () => {
       const fallback = async () => (await caches.match(req, { ignoreSearch: true })) || (req.mode === 'navigate' ? await caches.match('index.html') : undefined);
       const cached = await fallback();
-      if (!cached) return net.catch(() => Response.error());
+      if (!cached) return net.catch(() => fetch(req).catch(() => Response.error())); /* nothing saved: pass the server's own answer through */
       const slow = new Promise(r => setTimeout(() => r(null), 3000));
       try { return (await Promise.race([net, slow])) || cached; } catch (err) { return cached; }
     })());

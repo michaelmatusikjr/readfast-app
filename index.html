@@ -786,7 +786,8 @@ async function loadLink(raw){
   linkBusy=true;
   const ctl=new AbortController();
   const cancel={label:'Cancel', fn:()=>{ ctl.abort(); setTimeout(()=>{ if(linkBusy) progress('Stopping\u2026', null); },0); }};
-  const P=(m,p)=>{ if(ctl.signal.aborted){ const er=new Error('cancelled'); er.cancelled=true; throw er; } progress(m,p,cancel); };
+  let hi=0; /* the bar only moves forward */
+  const P=(m,p)=>{ if(ctl.signal.aborted){ const er=new Error('cancelled'); er.cancelled=true; throw er; } if(p!=null) p=hi=Math.max(hi,p); progress(m,p,cancel); };
   try{
     const got=await fetchLinkData(url, ctl.signal, P);
     let d;
@@ -800,7 +801,7 @@ async function loadLink(raw){
     }
     if(ctl.signal.aborted){ const er=new Error('cancelled'); er.cancelled=true; throw er; }
     d.source=url;
-    P('Saving to your library…', 96);
+    progress('Saving to your library…', Math.max(hi,96));
     const meta=await addDoc(d);
     toast('Added “'+meta.title+'”', {label:'Read', fn:()=>openDoc(meta.id)}, 6000);
     return meta;
