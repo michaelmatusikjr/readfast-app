@@ -84,7 +84,15 @@ h2{font-size:1.15rem;font-weight:600}
 .rhead .title{flex:1;min-width:0;text-align:center;font-weight:700;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
 .rhead .sub{display:block;font-weight:400;font-size:.75rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
 #stage{flex:1;min-height:180px;position:relative;display:flex;flex-direction:column;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
-.reticle{position:relative;margin:0 4px;padding:30px 0}
+#scrollBg{position:absolute;inset:0;overflow:hidden;z-index:0;touch-action:none}
+#scrollText{position:absolute;left:12px;right:12px;top:0;font-size:1.05rem;line-height:1.55;color:var(--muted);opacity:.35;white-space:pre-wrap;word-wrap:break-word;transition:transform .35s linear;will-change:transform}
+#scrollText.manual{transition:none}
+#scrollText .w{display:inline;cursor:pointer}
+#scrollText .cur{color:var(--ink);opacity:.75;font-weight:600}
+#scrollLine{position:absolute;left:0;right:0;height:2px;background:var(--accent);opacity:.5;z-index:1;pointer-events:none}
+#stage .reticle{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;background:var(--surface);border-radius:12px;padding:18px 8px;box-shadow:0 -4px 16px rgba(0,0,0,.12)}
+
+.reticle{position:relative;margin:0;padding:18px 8px;background:var(--surface);border-radius:12px}
 .reticle::before,.reticle::after{content:"";position:absolute;left:0;right:0;height:1px;background:var(--line)}
 .reticle::before{top:0}.reticle::after{bottom:0}
 .tick{position:absolute;left:50%;width:2px;height:12px;margin-left:-1px;background:var(--muted)}
@@ -254,6 +262,10 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
       <button class="icon-btn" id="rMarks" type="button" aria-label="Bookmarks"></button>
     </div>
     <div id="stage" role="button" tabindex="0" aria-label="Tap to play or pause">
+      <div id="scrollBg" aria-hidden="true">
+        <div id="scrollLine"></div>
+        <div id="scrollText"></div>
+      </div>
       <div class="reticle">
         <i class="tick t"></i><i class="tick b"></i>
         <div class="word" id="word" aria-live="off"><span class="l"><span id="wl"></span></span><span class="p" id="wp"></span><span class="r"><span id="wr"></span></span></div>
@@ -648,20 +660,40 @@ function openLink(){
 }
 
 async function fetchArticle(url){
-  const res=await fetch(url, {mode:'cors', credentials:'omit'});
-  if(!res.ok) throw new Error('Page returned '+res.status);
-  const html=await res.text();
-  return extractArticle(html, url);
+  // Try direct first, then fall back to a CORS proxy
+  const proxies = [
+    (u)=>u,
+    (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u)=>`https://corsproxy.io/?${encodeURIComponent(u)}`
+  ];
+  let lastErr;
+  for(const make of proxies){
+    try{
+      const res=await fetch(make(url), {mode:'cors', credentials:'omit'});
+      if(!res.ok){ lastErr=new Error('Page returned '+res.status); continue; }
+      const html=await res.text();
+      const text=extractArticle(html, url);
+      if(text && text.length>=80) return text;
+    }catch(e){ lastErr=e; }
+  }
+  throw lastErr || new Error('Couldn’t load that page');
 }
 
 async function fetchTitle(url){
-  try{
-    const res=await fetch(url, {mode:'cors', credentials:'omit'});
-    if(!res.ok) return null;
-    const html=await res.text();
-    const m=html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    return m?m[1].trim().replace(/\s+/g,' '):null;
-  }catch(e){ return null; }
+  const proxies = [
+    (u)=>u,
+    (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
+  ];
+  for(const make of proxies){
+    try{
+      const res=await fetch(make(url), {mode:'cors', credentials:'omit'});
+      if(!res.ok) continue;
+      const html=await res.text();
+      const m=html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      if(m) return m[1].trim().replace(/\s+/g,' ');
+    }catch(e){}
+  }
+  return null;
 }
 
 function extractArticle(html, url){
@@ -718,7 +750,7 @@ async function openDoc(id){
   $('#rTitle').textContent=meta.title;
   $('#rChapters').hidden=!meta.chapters.length;
   el.scrub.max=Math.max(1,R.n-1);
-  showView('reader'); requestAnimationFrame(()=>{ showPaused(); });
+  showView('reader'); requestAnimationFrame(()=>{ showPaused(); buildScrollText(); enableManualScroll(); positionLine(); });
 }
 function closeReader(){ pause(); saveProgress(true); showView('library'); renderLibrary(); }
 
@@ -748,7 +780,92 @@ function renderWord(text, target){
   const half=t.box.clientWidth/2-6; const need=Math.max(t.l.offsetWidth,t.r.offsetWidth)+t.p.offsetWidth/2;
   if(need>half&&half>0){ t.box.style.fontSize=Math.max(14,Math.floor(S.fontSize*half/need))+'px'; }
 }
-function showChunk(i){ const j=chunkEnd(i); renderWord(R.words.slice(i,j).join(' ')); return j; }
+
+function buildScrollText(){
+  if(!R.words) return;
+  const box=$('#scrollText');
+  if(!box) return;
+  let h='';
+  for(let i=0;i<R.words.length;i++){
+    h+=`<span class="w" data-i="${i}">${esc(R.words[i])}</span> `;
+  }
+  box.innerHTML=h;
+  syncScroll();
+}
+function positionLine(){
+  const line=$('#scrollLine'); const stage=$('#stage'); const rhead=$('.rhead'); const reticle=$('.reticle');
+  if(!line||!stage||!rhead||!reticle) return;
+  const stageRect=stage.getBoundingClientRect();
+  const headBottom=rhead.getBoundingClientRect().bottom;
+  const retTop=reticle.getBoundingClientRect().top;
+  const mid=(headBottom + retTop)/2;
+  const topInStage=mid - stageRect.top;
+  line.style.top=Math.max(0, topInStage)+'px';
+}
+function syncScroll(force){
+  if(manualScroll && !force) return;
+  const box=$('#scrollText'); const line=$('#scrollLine');
+  if(!box||!R.words||R.pos==null) return;
+  const span=box.querySelector(`[data-i="${R.pos}"]`);
+  if(!span) return;
+  positionLine();
+  const lineY=line.offsetTop;
+  // Find the visual line containing this word
+  const spans=Array.from(box.querySelectorAll('.w'));
+  const myTop=span.offsetTop;
+  const lineSpans=spans.filter(s=>Math.abs(s.offsetTop - myTop)<4);
+  if(!lineSpans.length) return;
+  const first=lineSpans[0], last=lineSpans[lineSpans.length-1];
+  const lineTop=first.offsetTop;
+  const lineBottom=last.offsetTop + last.offsetHeight;
+  const idx=lineSpans.indexOf(span);
+  const progress=lineSpans.length<=1 ? 0.5 : idx/(lineSpans.length-1);
+  // When progress=0, lineTop aligns with lineY; when progress=1, lineBottom aligns with lineY
+  const alignAt=lineTop + progress*(lineBottom-lineTop);
+  const target=alignAt - lineY;
+  box.style.transform=`translateY(${-target}px)`;
+  box.querySelectorAll('.cur').forEach(el=>el.classList.remove('cur'));
+  span.classList.add('cur');
+}
+let manualScroll=false;
+let dragStartY=0, dragStartTrans=0;
+function enableManualScroll(){
+  const bg=$('#scrollBg'); const box=$('#scrollText');
+  if(!bg||!box) return;
+  bg.addEventListener('pointerdown', e=>{
+    if(e.target.closest('.reticle')) return;
+    manualScroll=true; box.classList.add('manual');
+    if(R.playing) pause();
+    dragStartY=e.clientY;
+    const m=box.style.transform.match(/translateY\(([\d.-]+)px\)/);
+    dragStartTrans=m?parseFloat(m[1]):0;
+    bg.setPointerCapture(e.pointerId);
+  });
+  bg.addEventListener('pointermove', e=>{
+    if(!manualScroll) return;
+    const dy=e.clientY - dragStartY;
+    box.style.transform=`translateY(${dragStartTrans + dy}px)`;
+  });
+  bg.addEventListener('pointerup', e=>{
+    if(!manualScroll) return;
+    manualScroll=false; box.classList.remove('manual');
+    bg.releasePointerCapture(e.pointerId);
+  });
+  bg.addEventListener('pointercancel', ()=>{ manualScroll=false; box.classList.remove('manual'); });
+  box.addEventListener('click', e=>{
+    const w=e.target.closest('.w');
+    if(!w) return;
+    e.stopPropagation();
+    const i=+w.dataset.i;
+    if(isNaN(i)) return;
+    if(R.playing) pause();
+    R.pos=i;
+    showChunk(R.pos);
+    updateProgress();
+    syncScroll(true);
+  });
+}
+function showChunk(i){ const j=chunkEnd(i); renderWord(R.words.slice(i,j).join(' ')); syncScroll(); return j; }
 function sentStart(i){ let k=i; while(k>0 && !isSentEnd(k-1)) k--; return k; }
 function sentEndIdx(i){ let k=i; while(k<R.n-1 && !isSentEnd(k)) k++; return k; }
 function renderContext(){
@@ -1111,10 +1228,29 @@ async function backup(){
     const meta=await Store.all('meta'); const raw=await Store.all('texts'); const texts=[];
     for(const t of raw){ if(t.images){ const files=[]; for(const f of t.images.files) files.push({path:f.path, data:f.data||(f.blob?await blobToDataURL(f.blob).catch(()=>''):'')}); texts.push({...t, images:{files, at:t.images.at}}); } else texts.push(t); }
     const data=JSON.stringify({app:'ReadFast', version:1, savedAt:new Date().toISOString(), meta, texts, words:WORDS, stats:LS.get('stats',{})});
-    if(!downloadsApi){ toast('Saving files isn’t available in this view. Open the app from its link in Safari and try again.'); return; }
-    await downloadsApi.save({filename:`readfast-backup-${dayKey()}.json`, data});
-    toast('Backup saved');
-  }catch(e){ if(e&&e.code==='declined') toast('Backup not saved'); else toast('The backup couldn’t be saved here.'); }
+    const filename=`readfast-backup-${dayKey()}.json`;
+    const blob=new Blob([data], {type:'application/json'});
+    // Prefer the Web Share API so the user can save to Files / iCloud Drive
+    if(navigator.share && navigator.canShare){
+      const file=new File([blob], filename, {type:'application/json'});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:'ReadFast backup'});
+        toast('Backup ready — choose Files or iCloud Drive');
+        return;
+      }
+    }
+    // Fallback: trigger a download
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast('Backup downloaded');
+  }catch(e){
+    if(e && e.name==='AbortError') toast('Backup cancelled');
+    else toast('Couldn’t save the backup');
+  }
 }
 $('#restoreIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -1161,7 +1297,7 @@ $('#bSent').innerHTML=ICON.bsent; $('#bWord').innerHTML=ICON.back; $('#fWord').i
 $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus;
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmark';
 $('#ftClose').innerHTML=ICON.close; $('#ftPrev').innerHTML=ICON.back; $('#ftNext').innerHTML=ICON.fwd;
-window.addEventListener('resize',()=>{ if(R.meta&&!$('#v-reader').hidden) showChunk(R.pos); });
+window.addEventListener('resize',()=>{ if(R.meta&&!$('#v-reader').hidden){ showChunk(R.pos); positionLine(); } });
 
 /* ---------- sample document ---------- */
 const SAMPLE=`# Welcome to ReadFast
