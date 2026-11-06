@@ -150,7 +150,6 @@ textarea{min-height:42vh;resize:vertical;line-height:1.45}
 ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
 code{font-family:var(--f-mono);font-size:.85em;background:var(--raise);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
 
-#fulltext{position:fixed;inset:0;z-index:15;background:var(--paper);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .ft-head{display:flex;align-items:center;gap:4px;padding:6px max(8px,env(safe-area-inset-right,0px)) 6px max(8px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);background:var(--surface)}
 .ft-head .grow{flex:1;min-width:0;text-align:center}
 .ft-head .grow b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.92rem}
@@ -365,7 +364,7 @@ const Store = {
 };
 
 /* ---------- settings ---------- */
-const DEFAULTS = { wpm:350, multi:false, charBudget:14, ramp:true, rampSecs:6, commaPause:1.6, sentPause:2.3, paraPause:3.0, longWord:true, autoRewind:3, font:'atkinson', fontSize:44, focusColor:'#E0303F', theme:'system', context:true };
+const DEFAULTS = { wpm:350, multi:false, charBudget:14, ramp:true, rampSecs:6, commaPause:1.6, sentPause:2.3, paraPause:3.0, longWord:true, autoRewind:3, font:'atkinson', fontSize:44, focusColor:'#E0303F', theme:'system', context:true , linkService:''};
 const S = Object.assign({}, DEFAULTS, LS.get('settings',{}));
 const saveSettings=()=>LS.set('settings',S);
 const FONTS = { atkinson:{label:'Atkinson', css:'"Atkinson Hyperlegible",-apple-system,system-ui,sans-serif', note:'Built for legibility'}, literata:{label:'Literata', css:'"Literata",Georgia,serif', note:'Book serif'}, lexend:{label:'Lexend', css:'"Lexend",-apple-system,system-ui,sans-serif', note:'Dyslexia-friendly'}, system:{label:'System', css:'-apple-system,BlinkMacSystemFont,system-ui,sans-serif', note:'iPhone default'} };
@@ -438,10 +437,22 @@ function walkHTML(root, ctx, path){
   visit(root); flush();
 }
 
+/* ---------- progress ---------- */
+let toastT;
+/* shows a message with a bar that stays up until the next message; pct may be null for "working" */
+function progress(msg, pct, action){ toast(msg, action||null, 0, pct==null?null:Math.round(pct)); }
+const yieldUI=()=>new Promise(r=>setTimeout(r,0));
+
 /* ---------- file parsing ---------- */
 const CDN={ jszip:'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', pdf:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', pdfw:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js' };
 const scriptCache={};
-function loadScript(src){ return scriptCache[src] || (scriptCache[src]=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>{ delete scriptCache[src]; rej(new Error('Could not load the file reader. Check your connection and try again.')); }; document.head.appendChild(s); })); }
+function loadScript(src){ return scriptCache[src] || (scriptCache[src]=new Promise((res,rej)=>{
+  const s=document.createElement('script'); s.src=src;
+  const fail=(why)=>{ clearTimeout(t); delete scriptCache[src]; s.remove(); rej(new Error(why)); };
+  const t=setTimeout(()=>fail('The file reader took too long to download. Check your connection and try again.'), 25000);
+  s.onload=()=>{ clearTimeout(t); res(); };
+  s.onerror=()=>fail('Could not load the file reader. Check your connection and try again.');
+  document.head.appendChild(s); })); }
 const parseXML=(s)=>new DOMParser().parseFromString(s,'application/xml');
 function parseXHTML(s){ let d=new DOMParser().parseFromString(s,'application/xhtml+xml'); if(d.getElementsByTagName('parsererror').length) d=new DOMParser().parseFromString(s,'text/html'); return d; }
 const dirOf=(p)=>p.includes('/')?p.slice(0,p.lastIndexOf('/')):'';
@@ -457,23 +468,45 @@ function guessImgType(p){ const e=(p.split('.').pop()||'').toLowerCase(); return
 function blobToDataURL(b){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsDataURL(b); }); }
 function dataURLToBlob(u){ const [h,d]=u.split(','); const type=(h.match(/data:([^;]+)/)||[])[1]||'application/octet-stream'; const bin=atob(d); const a=new Uint8Array(bin.length); for(let k=0;k<bin.length;k++) a[k]=bin.charCodeAt(k); return new Blob([a],{type}); }
 
-async function parseEpub(buf, fname){
+async function parseEpub(buf, fname, onP){
+  const P=onP||(()=>{});
+  P('Loading the EPUB reader…', 6);
   await loadScript(CDN.jszip);
-  const zip=await JSZip.loadAsync(buf);
-  const files={}; zip.forEach((p,f)=>{ files[p]=f; files[p.toLowerCase()]=files[p.toLowerCase()]||f; });
+  P('Unzipping…', 10);
+  let zip;
+  try{ zip=await JSZip.loadAsync(buf); }
+  catch(e){ throw new Error('This file isn’t a complete EPUB. If it’s stored in iCloud, download it in the Files app first, then try again.'); }
+  const files={}; zip.forEach((p,f)=>{ if(f.dir) return; files[p]=f; files[p.toLowerCase()]=files[p.toLowerCase()]||f; });
   const read=async(p)=>{ const f=files[p]||files[p.toLowerCase()]; return f? f.async('string'):null; };
   const cont=await read('META-INF/container.xml'); if(!cont) throw new Error('This EPUB is missing its table of contents file.');
-  const rf=byTag(parseXML(cont),'rootfile')[0]; if(!rf) throw new Error('This EPUB could not be read.');
+  const rf=byTag(parseXML(cont),'rootfile')[0]; if(!rf||!rf.getAttribute('full-path')) throw new Error('This EPUB could not be read.');
   const opfPath=rf.getAttribute('full-path'); const base=dirOf(opfPath);
-  const opf=parseXML(await read(opfPath)||'');
+  const opfText=await read(opfPath); if(!opfText) throw new Error('This EPUB could not be read.');
+  const opf=parseXML(opfText);
   const title=(byTag(opf,'title')[0]?.textContent||'').trim() || fname.replace(/\.[^.]+$/,'');
   const items={}; let navHref=null;
   for(const it of byTag(opf,'item')){ const href=resolvePath(base,it.getAttribute('href')||''); items[it.getAttribute('id')]={href, type:it.getAttribute('media-type')||'', props:it.getAttribute('properties')||''}; if(/\bnav\b/.test(it.getAttribute('properties')||'')) navHref=href; }
   const spineEl=byTag(opf,'spine')[0]; if(!spineEl) throw new Error('This EPUB has no readable chapters.');
   const tocId=spineEl.getAttribute('toc');
+  /* copy protection: refuse up front instead of importing scrambled text */
+  const DRM_MSG='This book is copy-protected (DRM), so its text can’t be read.';
+  if(files['META-INF/rights.xml']||files['META-INF/sinf.xml']) throw new Error(DRM_MSG);
+  const encXml=await read('META-INF/encryption.xml');
+  if(encXml){
+    const enc=parseXML(encXml); const spinePaths=new Set(byTag(spineEl,'itemref').map(r=>items[r.getAttribute('idref')]?.href.toLowerCase()).filter(Boolean));
+    for(const ed of byTag(enc,'EncryptedData')){
+      const alg=byTag(ed,'EncryptionMethod')[0]?.getAttribute('Algorithm')||'';
+      if(/idpf\.org\/2008\/embedding|ns\.adobe\.com\/pdf\/enc#RC/.test(alg)) continue; /* font obfuscation only */
+      const uri=byTag(ed,'CipherReference')[0]?.getAttribute('URI')||'';
+      if(spinePaths.has(resolvePath('',uri).toLowerCase())) throw new Error(DRM_MSG);
+    }
+  }
+  const refs=byTag(spineEl,'itemref');
   const ctx={words:[], ends:[], anchors:{}, firstHeading:{}, images:[]}; const fileStarts=[];
-  if(byTag(opf,'encryption').length || files['META-INF/encryption.xml']){ /* may be DRM; we try anyway */ }
-  for(const ref of byTag(spineEl,'itemref')){
+  let done=0;
+  for(const ref of refs){
+    done++;
+    if(done%8===0){ P('Reading chapter '+done+' of '+refs.length+'…', 20+50*done/refs.length); await yieldUI(); }
     const it=items[ref.getAttribute('idref')]; if(!it) continue;
     if(it.type && !/html|xml/.test(it.type)) continue;
     const html=await read(it.href); if(html==null) continue;
@@ -481,47 +514,57 @@ async function parseEpub(buf, fname){
     ctx.anchors[it.href]=ctx.words.length; fileStarts.push({path:it.href, i:ctx.words.length});
     walkHTML(body, ctx, it.href);
   }
-  if(!ctx.words.length) throw new Error(files['META-INF/encryption.xml'] ? 'This book is copy-protected (DRM), so its text can’t be read.' : 'No readable text was found in this EPUB.');
+  if(!ctx.words.length) throw new Error(encXml ? DRM_MSG : 'No readable text was found in this EPUB.');
+  P('Building the chapter list…', 70);
   const lookup=(full)=>{ if(full in ctx.anchors) return ctx.anchors[full]; const p=full.split('#')[0]; return p in ctx.anchors? ctx.anchors[p] : undefined; };
   let chapters=[];
   try{
     if(navHref){
       const nd=parseXHTML(await read(navHref)||''); const nbase=dirOf(navHref);
-      const navs=byTag(nd,'nav'); let nav=navs.find(n=>(n.getAttribute('epub:type')||n.getAttributeNS('http://www.idpf.org/2007/ops','type')||'').includes('toc')) || navs[0];
-      const walkOl=(ol,depth)=>{ for(const li of [...ol.children].filter(c=>c.localName==='li')){ const a=[...li.children].find(c=>c.localName==='a'||c.localName==='span'); if(a&&a.getAttribute('href')){ const i=lookup(resolvePath(nbase,a.getAttribute('href'))); const t=(a.textContent||'').replace(/\s+/g,' ').trim(); if(i!==undefined&&t) chapters.push({t:t.slice(0,100),i,d:depth}); } const sub=[...li.children].find(c=>c.localName==='ol'); if(sub) walkOl(sub,depth+1); } };
+      const navs=byTag(nd,'nav'); const nav=navs.find(n=>(n.getAttribute('epub:type')||n.getAttributeNS('http://www.idpf.org/2007/ops','type')||'').includes('toc')) || navs[0];
+      const kids=(el,name)=>[...el.children].filter(c=>c.localName===name);
+      const walkOl=(ol,depth)=>{ for(const li of kids(ol,'li')){ const a=[...li.children].find(c=>c.localName==='a'||c.localName==='span'); if(a&&a.getAttribute('href')){ const i=lookup(resolvePath(nbase,a.getAttribute('href'))); const t=(a.textContent||'').replace(/\s+/g,' ').trim(); if(i!==undefined&&t) chapters.push({t:t.slice(0,100),i,d:depth}); } const sub=kids(li,'ol')[0]; if(sub) walkOl(sub,depth+1); } };
       const ol=nav&&byTag(nav,'ol')[0]; if(ol) walkOl(ol,0);
     }
     if(!chapters.length && tocId && items[tocId]){
       const np=items[tocId].href; const nx=parseXML(await read(np)||''); const nbase=dirOf(np);
-      const walkNp=(el,depth)=>{ for(const pt of [...el.children].filter(c=>c.localName==='navPoint')){ const t=(byTag(pt,'text')[0]?.textContent||'').trim(); const src=byTag(pt,'content')[0]?.getAttribute('src'); if(src&&t){ const i=lookup(resolvePath(nbase,src)); if(i!==undefined) chapters.push({t:t.slice(0,100),i,d:depth}); } walkNp(pt,depth+1); } };
+      const walkNp=(el,depth)=>{ for(const pt of [...el.children].filter(c=>c.localName==='navPoint')){ const t=(byTag(pt,'text')[0]?.textContent||'').replace(/\s+/g,' ').trim(); const src=byTag(pt,'content')[0]?.getAttribute('src'); if(src&&t){ const i=lookup(resolvePath(nbase,src)); if(i!==undefined) chapters.push({t:t.slice(0,100),i,d:depth}); } walkNp(pt,depth+1); } };
       const nm=byTag(nx,'navMap')[0]; if(nm) walkNp(nm,0);
     }
   }catch(e){ chapters=[]; }
   if(!chapters.length){ fileStarts.forEach((f,k)=>{ if(k===0||f.i!==fileStarts[k-1].i) chapters.push({t:ctx.firstHeading[f.path]||('Section '+(chapters.length+1)), i:f.i, d:0}); }); }
   chapters=chapters.filter(c=>c.i<ctx.words.length).sort((a,b)=>a.i-b.i);
-  /* images: keep each picture file once, plus every place it appears */
+  /* images: each picture file once (kept as a Blob, not text), plus every place it appears */
   const typeByHref={}; for(const k in items) typeByHref[items[k].href]=items[k].type;
-  const imgFiles=[], fidx={}, at=[]; let missing=0;
+  const imgFiles=[], fidx={}, at=[]; let missing=0, n=0;
+  const uniq=new Set(ctx.images.map(im=>im.path.split('#')[0])).size;
   for(const im of ctx.images){
     const p=im.path.split('#')[0];
     if(!(p in fidx)){
+      n++; P('Loading picture '+n+' of '+uniq+'\u2026', 72+20*n/Math.max(1,uniq)); if(n%4===0) await yieldUI();
       const f=files[p]||files[p.toLowerCase()];
       if(!f){ fidx[p]=-1; }
-      else { try{ const b64=await f.async('base64'); fidx[p]=imgFiles.length; imgFiles.push({path:p, data:'data:'+(typeByHref[p]||guessImgType(p))+';base64,'+b64}); }catch(e){ fidx[p]=-1; } }
+      else { try{ const raw=await f.async('blob'); fidx[p]=imgFiles.length; imgFiles.push({path:p, blob:new Blob([raw],{type:typeByHref[p]||guessImgType(p)})}); }catch(e){ fidx[p]=-1; } }
     }
     if(fidx[p]>=0) at.push({i:Math.min(im.i,ctx.words.length), f:fidx[p], alt:im.alt}); else missing++;
   }
   return {title, kind:'epub', words:ctx.words, ends:ctx.ends, chapters, images: at.length?{files:imgFiles, at}:null, imagesMissing:missing};
 }
 
-async function parsePdf(buf, fname){
+async function parsePdf(buf, fname, onP){
+  const P=onP||(()=>{});
+  P('Loading the PDF reader\u2026', 6);
   await loadScript(CDN.pdf); await loadScript(CDN.pdfw);
   pdfjsLib.GlobalWorkerOptions.workerSrc=CDN.pdfw;
-  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf), isEvalSupported:false, disableFontFace:true}).promise;
+  let pdf;
+  try{ pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf), isEvalSupported:false, disableFontFace:true}).promise; }
+  catch(e){ throw new Error(e&&e.name==='PasswordException' ? 'This PDF is password-protected, so its text can\u2019t be read.' : 'This PDF couldn\u2019t be read. It may be damaged or incomplete. If it\u2019s stored in iCloud, download it in the Files app first.'); }
   let title=fname.replace(/\.[^.]+$/,'');
   try{ const md=await pdf.getMetadata(); const t=md?.info?.Title; if(t&&t.trim().length>2) title=t.trim(); }catch(e){}
   const words=[], ends=[], chapters=[];
+  try{
   for(let p=1;p<=pdf.numPages;p++){
+    if(p===1||p%5===0) P('Reading page '+p+' of '+pdf.numPages+'\u2026', 12+80*p/pdf.numPages);
     const page=await pdf.getPage(p); const tc=await page.getTextContent();
     let para='', lastY=null, prevEOL=false; const paras=[];
     for(const it of tc.items){
@@ -537,16 +580,18 @@ async function parsePdf(buf, fname){
     if(words.length>startI) chapters.push({t:'Page '+p, i:startI, d:0});
     page.cleanup&&page.cleanup();
   }
+  }catch(e){ try{ pdf.destroy(); }catch(_){} throw e; }
   if(!words.length) throw new Error('This PDF has no selectable text. It may be scanned pages saved as images.');
   return {title, kind:'pdf', words, ends, chapters};
 }
 
-async function parseFile(file){
+async function parseFile(file, onP){
   const name=file.name||'Document'; const ext=(name.split('.').pop()||'').toLowerCase();
+  (onP||(()=>{}))('Opening \u201c'+name+'\u201d\u2026', 3);
   const buf=await file.arrayBuffer(); const head=new Uint8Array(buf.slice(0,5));
   const isZip=head[0]===0x50&&head[1]===0x4B; const isPdf=head[0]===0x25&&head[1]===0x50&&head[2]===0x44&&head[3]===0x46;
-  if(ext==='epub'||(isZip&&ext!=='docx')) return parseEpub(buf,name);
-  if(ext==='pdf'||isPdf) return parsePdf(buf,name);
+  if(ext==='epub'||(isZip&&ext!=='docx')) return parseEpub(buf,name,onP);
+  if(ext==='pdf'||isPdf) return parsePdf(buf,name,onP);
   if(ext==='docx') throw new Error('Word files aren’t supported yet. Open the document, copy the text, and use Paste text.');
   const text=new TextDecoder('utf-8').decode(buf);
   if(ext==='html'||ext==='htm'||ext==='xhtml'){ const d=new DOMParser().parseFromString(text,'text/html'); const ctx={words:[],ends:[],anchors:null,firstHeading:null}; walkHTML(d.body,ctx,''); return {title:(d.title||name.replace(/\.[^.]+$/,'')).trim(), kind:'web', words:ctx.words, ends:ctx.ends, chapters:[]}; }
@@ -561,10 +606,10 @@ async function addDoc(d){
   const text={id, words:d.words, ends:d.ends, images:d.images||null};
   await Store.put('texts',text);
   const now=Date.now();
-  const meta={id, title:d.title||'Untitled', kind:d.kind, count:d.words.length, pos:0, added:now, lastRead:0, mod:now, chapters:d.chapters||[], bookmarks:[], finished:false, imageCount:d.images?d.images.at.length:0};
+  const meta={id, title:d.title||'Untitled', kind:d.kind, source:d.source||null, count:d.words.length, pos:0, added:now, lastRead:0, mod:now, chapters:d.chapters||[], bookmarks:[], finished:false, imageCount:d.images?d.images.at.length:0};
   await Store.put('meta',meta); LIB.push(meta); renderLibrary(); return meta;
 }
-const KIND={epub:'EPUB', pdf:'PDF', text:'Text', md:'Text', web:'Web', paste:'Pasted', sample:'Sample'};
+const KIND={epub:'EPUB', pdf:'PDF', text:'Text', md:'Text', web:'Web', link:'Web', paste:'Pasted', sample:'Sample'};
 function renderLibrary(){
   const el=$('#docList');
   if(!LIB.length){ el.innerHTML=`<div class="empty">Nothing here yet. Paste some text or open a file to start reading.</div>`; return; }
@@ -603,13 +648,22 @@ function docOptions(id){
 /* ---------- paste ---------- */
 function openPaste(fromShare){
   openSheet('Paste text', `
-    ${fromShare?'<p class="note">Your shortcut copied the text. Tap and hold in the box below, then choose <b>Paste</b>.</p>':''}
+    ${fromShare?'<p class="note">Your shortcut copied the text or link. Tap <b>Paste from clipboard</b>.</p>':''}
+    <button class="btn block" type="button" data-act="clip">${ICON.paste} Paste from clipboard</button>
     <div class="field"><label for="pasteTitle">Title <span class="muted" style="font-weight:400">(optional)</span></label><input class="input" id="pasteTitle" placeholder="Untitled"></div>
-    <div class="field"><label for="pasteText">Text</label><textarea id="pasteText" placeholder="Tap and hold, then Paste"></textarea></div>
+    <div class="field"><label for="pasteText">Text</label><textarea id="pasteText" placeholder="Tap and hold, then Paste. A link on its own loads that article."></textarea></div>
     <p class="note">Lines starting with # become chapters you can jump between.</p>
     <button class="btn primary block" type="button" data-act="add">Add to library</button>`, {
+    clip: async()=>{
+      let t='';
+      try{ t=await navigator.clipboard.readText(); }catch(e){ toast('Couldn’t read the clipboard. Tap and hold in the Text box, then choose Paste.', null, 6000); return; }
+      if(!t.trim()){ toast('The clipboard is empty'); return; }
+      if(isLoneUrl(t)){ closeSheet(); loadLink(t); return; }
+      $('#pasteText').value=t;
+    },
     add: async()=>{
       const t=$('#pasteText').value; if(!t.trim()){ toast('Paste some text first'); return; }
+      if(isLoneUrl(t)){ closeSheet(); loadLink(t); return; }
       const m=fromPlainText(t); let title=$('#pasteTitle').value.trim();
       if(!title){ title=m.chapters[0]?.t || m.words.slice(0,6).join(' ').replace(/[,.;:]$/,''); if(m.words.length>6&&!m.chapters[0]) title+='…'; }
       try{ const meta=await addDoc({title, kind:'paste', ...m}); closeSheet(); openDoc(meta.id); }catch(err){ toast(err.message); }
@@ -625,169 +679,179 @@ $('#addFile').onclick=()=>{ $('#fileIn').value=''; $('#fileIn').click(); };
 
 function openLink(){
   openSheet('Paste a link', `
-    <div class="field"><label for="linkUrl">Article or blog URL</label><input class="input" id="linkUrl" type="url" placeholder="https://…" inputmode="url"></div>
-    <p class="note">The page must allow public access. Some sites block loading from other apps.</p>
-    <button class="btn primary block" type="button" data-act="load">Load article</button>`, {
+    <div class="field"><label for="linkUrl">Article, EPUB or PDF link</label><input class="input" id="linkUrl" type="url" placeholder="https://…" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <p class="note">If a site doesn’t let apps load it directly, ReadFast asks a public reader service to fetch it for you. Pages behind a login can’t be loaded.</p>
+    <button class="btn primary block" type="button" data-act="load">Load</button>`, {
     load: async()=>{
-      const url=$('#linkUrl').value.trim();
-      if(!url){ toast('Enter a URL'); return; }
-      try{ new URL(url); }catch(e){ toast('That doesn’t look like a valid URL'); return; }
-      toast('Loading article…', null, 60000);
-      try{
-        const text=await fetchArticle(url);
-        if(!text||text.length<80){ toast('Couldn’t find readable article text on that page'); return; }
-        const m=fromPlainText(text);
-        let title=$('#linkUrl').value.replace(/^https?:\/\//,'').split('/')[0] || 'Article';
-        try{
-          const docTitle=await fetchTitle(url);
-          if(docTitle) title=docTitle;
-        }catch(e){}
-        const meta=await addDoc({title, kind:'link', source:url, ...m});
-        closeSheet(); openDoc(meta.id);
-        toast('Added “'+meta.title+'”');
-      }catch(err){
-        toast(err.message||'Couldn’t load that page. The site may block external apps.');
-      }
+      const raw=$('#linkUrl').value;
+      if(!raw.trim()){ toast('Enter a link'); return; }
+      if(!normalizeUrl(raw)){ toast('That doesn’t look like a web address. Try copying the link again.'); return; }
+      closeSheet(); loadLink(raw);
     }
   });
 }
 
-async function fetchArticle(url){
-  // Try direct first, then fall back to a CORS proxy
-  const proxies = [
-    (u)=>u,
-    (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    (u)=>`https://corsproxy.io/?${encodeURIComponent(u)}`
-  ];
-  let lastErr;
-  for(const make of proxies){
-    try{
-      const res=await fetch(make(url), {mode:'cors', credentials:'omit'});
-      if(!res.ok){ lastErr=new Error('Page returned '+res.status); continue; }
-      const html=await res.text();
-      const text=extractArticle(html, url);
-      if(text && text.length>=80) return text;
-    }catch(e){ lastErr=e; }
+const isLoneUrl=(t)=>/^\s*(https?:\/\/|www\.)\S+\s*$/i.test(t);
+function normalizeUrl(raw){
+  const m=String(raw).match(/https?:\/\/[^\s<>"']+/i);
+  let u=(m?m[0]:String(raw)).trim();
+  for(;;){
+    const c=u.slice(-1);
+    if(/[\]}>.,;:!?'"”’]/.test(c)){ u=u.slice(0,-1); continue; }
+    if(c===')' && (u.match(/\(/g)||[]).length < (u.match(/\)/g)||[]).length){ u=u.slice(0,-1); continue; }
+    break;
   }
-  throw lastErr || new Error('Couldn’t load that page');
+  if(!u) return null;
+  if(!/^[a-z][\w+.-]*:/i.test(u)) u='https://'+u;
+  let x; try{ x=new URL(u); }catch(e){ return null; }
+  if(!/^https?:$/.test(x.protocol) || !(x.hostname.includes('.')||x.hostname==='localhost')) return null;
+  return x.href;
+}
+const fmtSize=(n)=>n<1048576? Math.max(1,Math.round(n/1024))+' KB' : (n/1048576).toFixed(1)+' MB';
+function linkServices(){
+  const out=[];
+  const custom=(S.linkService||'').trim();
+  if(custom && /^https:\/\//i.test(custom)) out.push(u=> custom.includes('{url}') ? custom.replace('{url}',encodeURIComponent(u)) : custom+encodeURIComponent(u));
+  out.push(u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`);
+  out.push(u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`);
+  return out;
+}
+/* fetch with its own timeout (covering the download too), the user's cancel, and byte progress */
+async function fetchTimed(url, signal, ms, onBytes){
+  const ctl=new AbortController(); let why=null, got=0, idle;
+  const arm=()=>{ clearTimeout(idle); idle=setTimeout(()=>{ why=got?'stalled':'timeout'; ctl.abort(); }, ms); };
+  const cap=setTimeout(()=>{ why='toolong'; ctl.abort(); }, 180000);
+  const onAbort=()=>ctl.abort(); signal.addEventListener('abort', onAbort);
+  arm();
+  try{
+    const res=await fetch(url, {signal:ctl.signal, credentials:'omit', redirect:'follow'});
+    arm();
+    /* a compressed response's length is the compressed size, which can't be compared with what we count */
+    let total=res.headers.get('content-encoding')? 0 : (+res.headers.get('content-length')||0);
+    let buf;
+    if(res.body && res.body.getReader){
+      const rd=res.body.getReader(); const parts=[];
+      for(;;){ const {done,value}=await rd.read(); if(done) break; arm(); parts.push(value); got+=value.length; if(total&&got>total) total=0; onBytes&&onBytes(got,total); }
+      buf=new Uint8Array(got); let o=0; for(const c of parts){ buf.set(c,o); o+=c.length; }
+    } else buf=new Uint8Array(await res.arrayBuffer());
+    return {res, buf};
+  }catch(e){
+    if(signal.aborted){ const er=new Error('cancelled'); er.cancelled=true; throw er; }
+    if(why){ const er=new Error(why); er.timeout=true; er.why=why; throw er; }
+    throw e;
+  }finally{ clearTimeout(idle); clearTimeout(cap); signal.removeEventListener('abort', onAbort); }
+}
+function decodeHtml(buf, ctype){
+  let cs=(ctype.match(/charset=["']?([\w:.-]+)/i)||[])[1];
+  if(!cs){ const head=new TextDecoder('windows-1252').decode(buf.subarray(0,4096)); cs=(head.match(/<meta[^>]+charset\s*=\s*["']?([\w:.-]+)/i)||[])[1]; }
+  try{ return new TextDecoder(cs||'utf-8').decode(buf); }catch(e){ return new TextDecoder('utf-8').decode(buf); }
+}
+async function fetchLinkData(url, signal, P){
+  const host=new URL(url).hostname.replace(/^www\./,'');
+  const services=linkServices();
+  const routes=[{direct:true, make:u=>u}, ...services.map(make=>({direct:false, make}))];
+  const why=[];
+  for(let k=0;k<routes.length;k++){
+    const r=routes[k];
+    const base=k===0?8:15+k*10;
+    const label=r.direct? host : 'reader service '+k;
+    P(r.direct? 'Contacting '+host+'…' : (k===1? host+' doesn’t let apps load it directly. Trying reader service 1 of '+services.length+'…' : 'Trying reader service '+k+' of '+services.length+'…'), base);
+    let got;
+    try{
+      got=await fetchTimed(r.make(url), signal, r.direct?15000:20000, (n,total)=>P('Downloading from '+label+'… '+fmtSize(n)+(total?' of '+fmtSize(total):''), total? base+25*n/total : base+3));
+    }catch(e){
+      if(e.cancelled) throw e;
+      const tw= e.why==='stalled'?' stopped sending data partway through' : e.why==='toolong'?' took more than 3 minutes' : e.timeout?' didn\u2019t answer':null;
+      why.push(r.direct? (tw? host+tw : host+' doesn\u2019t allow apps to load it directly') : 'reader service '+k+(tw||' was unavailable'));
+      continue;
+    }
+    const {res,buf}=got;
+    if(r.direct && (res.status===404||res.status===410)) throw new Error('That page wasn’t found ('+res.status+'). Check the link.');
+    if(!res.ok){ why.push(r.direct? host+' answered with error '+res.status : 'reader service '+k+' refused ('+res.status+')'); continue; }
+    const ct=(res.headers.get('content-type')||'').toLowerCase();
+    const isZip=buf[0]===0x50&&buf[1]===0x4B, isPdf=buf[0]===0x25&&buf[1]===0x50&&buf[2]===0x44&&buf[3]===0x46;
+    const kind=isZip?'epub' : isPdf?'pdf' : /epub/.test(ct)?'epub' : /\/pdf/.test(ct)?'pdf' : 'html';
+    if(kind!=='html'){ let name=new URL(url).pathname.split('/').pop()||host; try{ name=decodeURIComponent(name); }catch(e){} return {kind, buf, name}; }
+    const html=decodeHtml(buf, ct);
+    if(!r.direct && html.replace(/<[^>]*>/g,'').trim().length<200){ why.push('reader service '+k+' returned an empty page'); continue; }
+    return {kind:'html', html, host};
+  }
+  throw new Error('Couldn’t load that link: '+why.join('; ')+'. You can open the page in Safari, copy the article text, and use Paste text.');
+}
+let linkBusy=false;
+async function loadLink(raw){
+  const url=normalizeUrl(raw);
+  if(!url){ toast('That doesn’t look like a web address. Try copying the link again.'); return null; }
+  if(linkBusy){ toast('A link is already loading'); return null; }
+  linkBusy=true;
+  const ctl=new AbortController();
+  const cancel={label:'Cancel', fn:()=>{ ctl.abort(); setTimeout(()=>{ if(linkBusy) progress('Stopping\u2026', null); },0); }};
+  let hi=0; /* the bar only moves forward */
+  const P=(m,p)=>{ if(ctl.signal.aborted){ const er=new Error('cancelled'); er.cancelled=true; throw er; } if(p!=null) p=hi=Math.max(hi,p); progress(m,p,cancel); };
+  try{
+    const got=await fetchLinkData(url, ctl.signal, P);
+    let d;
+    if(got.kind==='epub') d=await parseEpub(got.buf.buffer, got.name, (m,p)=>P(m,45+p*0.5));
+    else if(got.kind==='pdf') d=await parsePdf(got.buf.buffer, got.name, (m,p)=>P(m,45+p*0.5));
+    else {
+      P('Finding the article text…', 85); await yieldUI();
+      const a=extractArticle(got.html, url);
+      if(a.words.length<20) throw new Error('The page loaded, but ReadFast couldn’t find article text on it. It may need a login or only show the story after scripts run. Try copying the text and using Paste text.');
+      d={...a, title:a.title||got.host, kind:'link'};
+    }
+    if(ctl.signal.aborted){ const er=new Error('cancelled'); er.cancelled=true; throw er; }
+    d.source=url;
+    progress('Saving to your library…', Math.max(hi,96));
+    const meta=await addDoc(d);
+    toast('Added “'+meta.title+'”', {label:'Read', fn:()=>openDoc(meta.id)}, 6000);
+    return meta;
+  }catch(e){
+    if(e&&e.cancelled||ctl.signal.aborted) toast('Stopped loading the link');
+    else{ console.error(e); toast(e&&e.message||'Couldn’t load that link.', null, 9000); }
+    return null;
+  }finally{ linkBusy=false; }
 }
 
-async function fetchTitle(url){
-  const proxies = [
-    (u)=>u,
-    (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
-  ];
-  for(const make of proxies){
-    try{
-      const res=await fetch(make(url), {mode:'cors', credentials:'omit'});
-      if(!res.ok) continue;
-      const html=await res.text();
-      const m=html.match(/<title[^>]*>([^<]+)<\/title>/i);
-      if(m) return m[1].trim().replace(/\s+/g,' ');
-    }catch(e){}
-  }
-  return null;
-}
-
+/* picks the container holding the most paragraph text, keeps block boundaries, skips nested duplicates */
 function extractArticle(html, url){
   const doc=new DOMParser().parseFromString(html, 'text/html');
-  // Remove non-content
-  doc.querySelectorAll('script,style,nav,header,footer,aside,form,iframe,noscript,.sidebar,.menu,.nav,.ads,.advert,.social,.share,.comments,#comments').forEach(el=>el.remove());
-  // Prefer article, main, or content-like containers
-  let root=doc.querySelector('article')||doc.querySelector('main')||doc.querySelector('[role="main"]')||doc.querySelector('.post')||doc.querySelector('.entry')||doc.querySelector('.content')||doc.body;
-  if(!root) root=doc.body;
-  // Collect paragraphs and headings
-  const parts=[];
-  root.querySelectorAll('h1,h2,h3,h4,p,li').forEach(el=>{
-    const t=el.innerText.trim();
-    if(t.length>20){
-      if(/^H[1-3]$/.test(el.tagName)) parts.push('# '+t);
-      else parts.push(t);
-    }
+  const metaC=(sel)=>(doc.querySelector(sel)?.getAttribute('content')||'').trim();
+  const title=(metaC('meta[property="og:title"]')||metaC('meta[name="twitter:title"]')||(doc.querySelector('head > title')?.textContent||'')).replace(/\s+/g,' ').trim();
+  doc.querySelectorAll('script,style,noscript,template,svg,iframe,form,button,select,nav,footer,aside,[hidden],[aria-hidden="true"],.sidebar,.menu,.nav,.ads,.advert,.social,.share,.comments,#comments,[class*="related"],[class*="subscribe"],[class*="newsletter"],[class*="cookie"],[class*="promo"]').forEach(el=>el.remove());
+  doc.querySelectorAll('header').forEach(el=>{ if(!el.closest('article')) el.remove(); });
+  const body=doc.body||doc.documentElement;
+  const pLen=(el)=>{ let n=0; el.querySelectorAll('p').forEach(p=>{ n+=p.textContent.trim().length; }); return n; };
+  const cands=[...new Set(doc.querySelectorAll('[itemprop="articleBody"],.entry-content,.post-content,.post-body,.article-body,.article-content,.story-body,.c-entry-content,article,main,[role="main"],.post,.entry,.content,#content'))];
+  let best=0; const scored=cands.map(c=>{ const sc=pLen(c); if(sc>best) best=sc; return [c,sc]; });
+  let root=body;
+  if(best>=200){ let tight=Infinity; for(const [c,sc] of scored){ if(sc>=best*0.85){ const len=c.textContent.length; if(len<tight){ tight=len; root=c; } } } }
+  const paras=[];
+  root.querySelectorAll('h1,h2,h3,h4,p,li,blockquote,pre').forEach(el=>{
+    if(el.parentElement && el.parentElement.closest('p,li,blockquote,pre,h1,h2,h3,h4')) return;
+    const t=el.textContent.replace(/\s+/g,' ').trim(); if(!t) return;
+    if(/^H[1-4]$/.test(el.tagName)){ paras.push({text:t, heading:true, level:+el.tagName[1]-1}); return; }
+    if(el.tagName==='LI'){ const a=el.querySelector('a'); if(t.length<25 || (a && a.textContent.replace(/\s+/g,' ').trim()===t)) return; }
+    paras.push({text:t});
   });
-  let text=parts.join('\n\n').replace(/\n{3,}/g,'\n\n').trim();
-  if(text.length<100){
-    // Fallback: all visible text
-    text=root.innerText.replace(/\s+/g,' ').trim();
-  }
-  return text;
+  const h1=(root.querySelector('h1')||doc.querySelector('h1'))?.textContent.replace(/\s+/g,' ').trim()||'';
+  let out=fromParagraphs(paras);
+  const textLen=paras.reduce((n,p)=>n+(p.heading?0:p.text.length),0);
+  if(textLen<300){ const ctx={words:[],ends:[],anchors:null,firstHeading:null}; walkHTML(root,ctx,''); if(ctx.words.length>out.words.length) out={words:ctx.words, ends:ctx.ends, chapters:[]}; }
+  return {title:title||h1.slice(0,120), ...out};
 }
 $('#fileIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
-  const ext=(f.name.split('.').pop()||'').toLowerCase();
-  toast(ext==='epub'?'Opening EPUB…':'Opening file…', null, 120000, 2);
+  e.target.value='';
   try{
-    let d;
-    if(ext==='epub'){
-      d=await parseEpubWithProgress(f);
-    } else {
-      d=await parseFile(f);
-    }
+    const d=await parseFile(f, (msg,pct)=>progress(msg,pct));
+    progress('Saving to your library…', 95);
     const meta=await addDoc(d);
     let msg='Added “'+meta.title+'”';
     if(meta.imageCount) msg+=' with '+meta.imageCount+' image'+(meta.imageCount===1?'':'s');
     if(d.imagesMissing) msg+='. '+d.imagesMissing+' image'+(d.imagesMissing===1?' was':'s were')+' missing from the file and left out';
     toast(msg, null, d.imagesMissing?7000:3200);
-  }catch(err){ console.error(err); toast(err.message||'That file couldn’t be opened.'); }
+  }catch(err){ console.error(err); toast(err&&err.message||'That file couldn’t be opened.', null, 7000); }
 });
-
-async function parseEpubWithProgress(file){
-  toast('Opening EPUB…', null, 120000, 5);
-  const buf=await file.arrayBuffer();
-  toast('Reading EPUB…', null, 120000, 10);
-  await loadScript(CDN.jszip);
-  const zip=await JSZip.loadAsync(buf);
-  const files={}; zip.forEach((p,f)=>{ files[p]=f; files[p.toLowerCase()]=files[p.toLowerCase()]||f; });
-  const read=async(p)=>{ const f=files[p]||files[p.toLowerCase()]; return f? f.async('string'):null; };
-  const cont=await read('META-INF/container.xml'); if(!cont) throw new Error('This EPUB is missing its table of contents file.');
-  const rf=byTag(parseXML(cont),'rootfile')[0]; if(!rf) throw new Error('This EPUB could not be read.');
-  const opfPath=rf.getAttribute('full-path'); const base=dirOf(opfPath);
-  const opf=parseXML(await read(opfPath)||'');
-  const title=(byTag(opf,'title')[0]?.textContent||'').trim() || file.name.replace(/\.[^.]+$/,'');
-  toast('Reading “'+title+'”…', null, 120000, 20);
-  const items={}; let navHref=null;
-  for(const it of byTag(opf,'item')){ const href=resolvePath(base,it.getAttribute('href')||''); items[it.getAttribute('id')]={href, type:it.getAttribute('media-type')||'', props:it.getAttribute('properties')||''}; if(/\bnav\b/.test(it.getAttribute('properties')||'')) navHref=href; }
-  const spineEl=byTag(opf,'spine')[0]; if(!spineEl) throw new Error('This EPUB has no readable chapters.');
-  const refs=byTag(spineEl,'itemref');
-  const ctx={words:[], ends:[], anchors:{}, firstHeading:{}, images:[]}; const fileStarts=[];
-  let done=0;
-  for(const ref of refs){
-    const it=items[ref.getAttribute('idref')]; if(!it) continue;
-    if(it.type && !/html|xml/.test(it.type)) continue;
-    const html=await read(it.href); if(html==null) continue;
-    const d=parseXHTML(html); const body=d.body||d.getElementsByTagNameNS('*','body')[0]||d.documentElement;
-    ctx.anchors[it.href]=ctx.words.length; fileStarts.push({path:it.href, i:ctx.words.length});
-    walkHTML(body, ctx, it.href);
-    done++;
-    toast('Reading “'+title+'”…', null, 60000, 15+Math.round(70*done/Math.max(1,refs.length)));
-  }
-  if(!ctx.words.length) throw new Error(files['META-INF/encryption.xml'] ? 'This book is copy-protected (DRM), so its text can’t be read.' : 'No readable text was found in this EPUB.');
-  toast('Reading “'+title+'”…', null, 60000, 90);
-  const lookup=(full)=>{ if(full in ctx.anchors) return ctx.anchors[full]; const p=full.split('#')[0]; return p in ctx.anchors? ctx.anchors[p] : undefined; };
-  let chapters=[];
-  try{
-    if(navHref){
-      const nd=parseXHTML(await read(navHref)||''); const nbase=dirOf(navHref);
-      const navs=byTag(nd,'nav'); let nav=navs.find(n=>(n.getAttribute('epub:type')||n.getAttributeNS('http://www.idpf.org/2007/ops','type')||'').includes('toc')) || navs[0];
-      if(nav){ const walk=(ol,d)=>{ for(const li of byTag(ol,'li')){ const a=byTag(li,'a')[0]; if(a){ const href=resolvePath(nbase,a.getAttribute('href')||''); const i=lookup(href); if(i!=null) chapters.push({t:(a.textContent||'').trim()||'Chapter', i, d}); } const sub=byTag(li,'ol')[0]; if(sub) walk(sub,d+1); } }; walk(byTag(nav,'ol')[0],0); }
-    }
-  }catch(e){ chapters=[]; }
-  if(!chapters.length){ fileStarts.forEach((f,k)=>{ if(k===0||f.i!==fileStarts[k-1].i) chapters.push({t:ctx.firstHeading[f.path]||('Section '+(chapters.length+1)), i:f.i, d:0}); }); }
-  chapters=chapters.filter(c=>c.i<ctx.words.length).sort((a,b)=>a.i-b.i);
-  const typeByHref={}; for(const k in items) typeByHref[items[k].href]=items[k].type;
-  const imgFiles=[], fidx={}, at=[]; let missing=0;
-  for(const im of ctx.images){
-    const p=im.path.split('#')[0];
-    if(!(p in fidx)){
-      const f=files[p]||files[p.toLowerCase()];
-      if(!f){ fidx[p]=-1; }
-      else { try{ const b64=await f.async('base64'); fidx[p]=imgFiles.length; imgFiles.push({path:p, data:'data:'+(typeByHref[p]||guessImgType(p))+';base64,'+b64}); }catch(e){ fidx[p]=-1; } }
-    }
-    if(fidx[p]>=0) at.push({i:Math.min(im.i,ctx.words.length), f:fidx[p], alt:im.alt}); else missing++;
-  }
-  toast('Reading “'+title+'”…', null, 60000, 100);
-  return {title, kind:'epub', words:ctx.words, ends:ctx.ends, chapters, images: at.length?{files:imgFiles, at}:null, imagesMissing:missing};
-}
 
 /* ---------- reader ---------- */
 const R={ meta:null, words:[], ends:new Set(), n:0, pos:0, playing:false, timer:null, t0:0, runWords:0, lastNav:true, wake:null, lastSave:0 };
@@ -800,8 +864,9 @@ async function openDoc(id){
   if(R.meta && R.meta.id!==id && R.playing) pause();
   applySavedPos(meta);
   R.meta=meta; R.words=text.words; R.ends=new Set(text.ends); R.n=text.words.length;
+  (R.imgUrls||[]).forEach(u=>{ if(u&&u.startsWith('blob:')) try{ URL.revokeObjectURL(u); }catch(e){} });
   R.imgUrls=[]; R.imgList=[]; R.imgAt=new Map();
-  if(text.images){ R.imgUrls=await Promise.all(text.images.files.map(f=>f.data?f.data:(f.blob?blobToDataURL(f.blob).catch(()=>''):''))); R.imgList=text.images.at;
+  if(text.images){ R.imgUrls=text.images.files.map(f=>f.blob?URL.createObjectURL(f.blob):(f.data||'')); R.imgList=text.images.at;
     text.images.at.forEach((a,idx)=>{ if(!R.imgAt.has(a.i)) R.imgAt.set(a.i,[]); R.imgAt.get(a.i).push(idx); }); }
   R.pos=clamp(meta.finished?0:meta.pos,0,R.n-1); if(meta.finished){ meta.finished=false; }
   R.lastNav=false; R.playing=false;
@@ -809,7 +874,11 @@ async function openDoc(id){
   $('#rTitle').textContent=meta.title;
   $('#rChapters').hidden=!meta.chapters.length;
   el.scrub.max=Math.max(1,R.n-1);
-  showView('reader'); requestAnimationFrame(()=>{ showPaused(); buildScrollText(); enableManualScroll(); positionLine(); });
+  const big=R.n>15000;
+  if(big){ progress('Opening \u201c'+meta.title+'\u201d ('+R.n.toLocaleString()+' words)\u2026', null); await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,40))); }
+  showView('reader');
+  const finish=()=>{ try{ showPaused(); buildScrollText(); enableManualScroll(); positionLine(); } catch(e){ console.error(e); toast('Something went wrong opening this book.', null, 6000); return; } finally{ if(big && $('#toastMsg').textContent.startsWith('Opening')) $('#toast').hidden=true; } };
+  if(big) finish(); else requestAnimationFrame(finish);
 }
 function closeReader(){ pause(); saveProgress(true); showView('library'); renderLibrary(); }
 
@@ -855,6 +924,7 @@ function buildScrollText(){
   if(open) h+='</p>';
   if(R.n) h+=fig(R.n);
   box.innerHTML=h;
+  R.spans=box.getElementsByClassName('w'); R.curSpan=null;
   syncScroll();
 }
 function positionLine(){
@@ -871,19 +941,18 @@ function syncScroll(force){
   if(manualScroll && !force) return;
   const box=$('#scrollText'); const line=$('#scrollLine');
   if(!box||!R.words||R.pos==null) return;
-  const span=box.querySelector(`[data-i="${R.pos}"]`);
+  const span=(R.spans&&R.spans[R.pos]&&+R.spans[R.pos].dataset.i===R.pos)?R.spans[R.pos]:box.querySelector(`[data-i="${R.pos}"]`);
   if(!span) return;
   positionLine();
   const lineY=line.offsetTop;
-  const spans=Array.from(box.querySelectorAll('.w'));
   const myTop=span.offsetTop;
-  const lineSpans=spans.filter(s=>Math.abs(s.offsetTop - myTop)<4);
-  if(!lineSpans.length) return;
-  const first=lineSpans[0], last=lineSpans[lineSpans.length-1];
+  const same=(s)=>s&&s.classList&&s.classList.contains('w')&&Math.abs(s.offsetTop-myTop)<4;
+  let first=span, last=span, idx=0, count=1;
+  for(let s=span.previousElementSibling; same(s); s=s.previousElementSibling){ first=s; idx++; count++; }
+  for(let s=span.nextElementSibling; same(s); s=s.nextElementSibling){ last=s; count++; }
   const lineTop=first.offsetTop;
   const lineBottom=last.offsetTop + last.offsetHeight;
-  const idx=lineSpans.indexOf(span);
-  const progress=lineSpans.length<=1 ? 0.5 : idx/(lineSpans.length-1);
+  const progress=count<=1 ? 0.5 : idx/(count-1);
   let alignAt=lineTop + progress*(lineBottom-lineTop);
   // If the current word is immediately after an image, jump so the top of this line aligns
   const prevFig=span.parentElement && span.parentElement.previousElementSibling;
@@ -892,14 +961,15 @@ function syncScroll(force){
   }
   const target=alignAt - lineY;
   box.style.transform=`translateY(${-target}px)`;
-  box.querySelectorAll('.cur').forEach(el=>el.classList.remove('cur'));
-  span.classList.add('cur');
+  if(R.curSpan&&R.curSpan!==span) R.curSpan.classList.remove('cur'); else if(!R.curSpan) box.querySelectorAll('.cur').forEach(el=>el.classList.remove('cur'));
+  span.classList.add('cur'); R.curSpan=span;
 }
 let manualScroll=false;
 let dragStartY=0, dragStartTrans=0;
 function enableManualScroll(){
   const bg=$('#scrollBg'); const box=$('#scrollText');
-  if(!bg||!box) return;
+  if(!bg||!box||bg.dataset.bound) return;
+  bg.dataset.bound='1';
   bg.addEventListener('pointerdown', e=>{
     if(e.target.closest('.reticle')) return;
     manualScroll=true; box.classList.add('manual');
@@ -1045,7 +1115,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden){ pause();
 const leaving=()=>{ if(R.meta){ pause(); saveProgress(true); } };
 window.addEventListener('pagehide',leaving); window.addEventListener('beforeunload',leaving); document.addEventListener('freeze',leaving);
 document.addEventListener('keydown',e=>{
-  if($('#v-reader').hidden||!$('#sheet').hidden||!$('#fulltext').hidden) return;
+  if($('#v-reader').hidden||!$('#sheet').hidden||$('#imgOverlay')) return;
   if(e.target.matches('input,textarea')) return;
   if(e.key===' '){ e.preventDefault(); toggle(); } else if(e.key==='ArrowLeft') $('#bWord').click(); else if(e.key==='ArrowRight') $('#fWord').click();
 });
@@ -1133,48 +1203,6 @@ const endSwipe=()=>{ const r=swipe.row; if(!r) return; swipe.row=null; r.classLi
 $('#wordList').addEventListener('pointerup',endSwipe); $('#wordList').addEventListener('pointercancel',endSwipe);
 
 /* ---------- full text ---------- */
-let FT={secs:[], k:0};
-function sectionsFor(){
-  const starts=[...new Set([0,...R.meta.chapters.map(c=>c.i)])].filter(i=>i<R.n).sort((a,b)=>a-b); const out=[];
-  for(let k=0;k<starts.length;k++){ const s=starts[k], e=starts[k+1]??R.n; for(let x=s;x<e;x+=2500) out.push(x); }
-  return out;
-}
-function openFull(){
-  pause(); FT.secs=sectionsFor(); let k=0; for(let q=0;q<FT.secs.length;q++){ if(FT.secs[q]<=R.pos) k=q; } FT.k=k;
-  $('#fulltext').hidden=false; renderFull(true);
-}
-function renderFull(scrollToCur){
-  const s=FT.secs[FT.k], e=FT.secs[FT.k+1]??R.n; const j=chunkEnd(R.pos);
-  const ch=currentChapter(s);
-  $('#ftTitle').textContent=ch?ch.t:R.meta.title;
-  $('#ftSub').textContent=`Section ${FT.k+1} of ${FT.secs.length} · words ${(s+1).toLocaleString()}–${e.toLocaleString()}`;
-  $('#ftPrev').disabled=FT.k===0; $('#ftNext').disabled=FT.k>=FT.secs.length-1;
-  $('#ftPrev').classList.toggle('dim',FT.k===0); $('#ftNext').classList.toggle('dim',FT.k>=FT.secs.length-1);
-  const fig=(k)=>{ const arr=R.imgAt.get(k); if(!arr) return ''; return arr.map(idx=>{ const a=R.imgList[idx]; const src=R.imgUrls[a.f]; if(!src) return ''; return `<figure data-img="${idx}"><img src="${src}" alt="${esc(a.alt||'Illustration')}" loading="lazy"></figure>`; }).join(''); };
-  let h='', open=false;
-  for(let k=s;k<e;k++){
-    const f=fig(k); if(f){ if(open){ h+='</p>'; open=false; } h+=f; }
-    if(!open){ h+='<p>'; open=true; }
-    h+=`<span data-i="${k}"${k>=R.pos&&k<j?' class="cur"':''}>${esc(R.words[k])}</span>`;
-    if(R.ends.has(k)){ h+='</p>'; open=false; } else h+=' ';
-  }
-  if(open) h+='</p>';
-  if(e===R.n) h+=fig(R.n);
-  $('#ftText').innerHTML=h;
-  const body=$('#ftBody'); body.scrollTop=0;
-  if(scrollToCur){ const c=$('#ftText .cur'); if(c) c.scrollIntoView({block:'center'}); }
-}
-$('#ftText').addEventListener('error',e=>{ const im=e.target; if(im&&im.tagName==='IMG'&&im.parentNode){ const p=document.createElement('p'); p.className='note'; p.style.textAlign='center'; p.textContent='This image couldn’t be shown.'; im.parentNode.replaceWith(p); } }, true);
-$('#ftText').addEventListener('click',e=>{
-  const fg=e.target.closest('[data-img]');
-  if(fg){ const a=R.imgList[+fg.dataset.img]; const startAt=Math.min(a.i,R.n-1);
-    openSheet(a.alt||'Image', `<img src="${R.imgUrls[a.f]}" alt="${esc(a.alt||'Illustration')}" style="width:100%;height:auto;border-radius:10px;background:var(--img-bg)"><button class="btn primary block" type="button" data-act="start">Start reading after this image</button>`,
-      { start:()=>{ closeSheet(); goTo(startAt); $('#fulltext').hidden=true; } });
-    return; }
-  const s=e.target.closest('[data-i]'); if(!s) return; goTo(+s.dataset.i); $('#fulltext').hidden=true; });
-$('#ftClose').onclick=()=>{ $('#fulltext').hidden=true; };
-$('#ftPrev').onclick=()=>{ if(FT.k>0){ FT.k--; renderFull(false); } };
-$('#ftNext').onclick=()=>{ if(FT.k<FT.secs.length-1){ FT.k++; renderFull(false); } };
 
 /* ---------- stats ---------- */
 function recordStats(ms, words){
@@ -1243,14 +1271,20 @@ function renderSettings(){
     </div>
     <h2>Send text from other apps</h2>
     <div class="group"><div class="set">
-      <div class="desc" style="color:var(--ink)">Make a shortcut once, and “ReadFast” shows up in the iPhone share sheet.</div>
+      <div class="desc" style="color:var(--ink)">Make a shortcut once, and “Send to ReadFast” shows up in the iPhone share sheet.</div>
       <ol class="steps">
-        <li>Open the <b>Shortcuts</b> app and tap <b>+</b>. Name it <b>ReadFast</b>.</li>
-        <li>Tap the <b>ⓘ</b> button and turn on <b>Show in Share Sheet</b>. Set it to receive <b>Text</b>, <b>Articles</b> and <b>Safari web pages</b>.</li>
+        <li>Open the <b>Shortcuts</b> app and tap <b>+</b>. Name it <b>Send to ReadFast</b>.</li>
+        <li>Tap the <b>ⓘ</b> button and turn on <b>Show in Share Sheet</b>. Set it to receive <b>Text</b>, <b>URLs</b> and <b>Safari web pages</b>.</li>
         <li>Add the action <b>Copy to Clipboard</b> (it copies the Shortcut Input).</li>
-        <li>Add <b>Open URLs</b> and paste this app’s link with <code>#paste</code> on the end.</li>
-        <li>Now select text anywhere, tap <b>Share</b>, then <b>ReadFast</b>. Paste into the box that opens.</li>
+        <li>Share any text or link to <b>Send to ReadFast</b>, open ReadFast from your Home Screen, tap <b>Paste text</b>, then <b>Paste from clipboard</b>. A link loads the article; text is added as is.</li>
       </ol>
+      <div class="desc">A shortcut can’t open the Home Screen app directly. It would open Safari, which keeps a separate library.</div>
+    </div></div>
+    <h2>Loading links</h2>
+    <div class="group"><div class="set">
+      <div class="hd"><label for="sLinkSvc">Your own reader service <span class="muted" style="font-weight:400">(optional)</span></label></div>
+      <input class="input" id="sLinkSvc" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://my-proxy.example.workers.dev/?url={url}" value="${esc(S.linkService||'')}">
+      <div class="desc">When a site won’t let apps load it, ReadFast tries a reader service. Public ones are free but sometimes down. If you run your own, enter its address here with {url} where the link goes; it’s tried first.</div>
     </div></div>
     <h2>Your library</h2>
     <div class="group"><div class="set">
@@ -1300,6 +1334,7 @@ function bindSettings(){
   $('#themeSeg').addEventListener('click',e=>{ const b=e.target.closest('[data-theme-pick]'); if(!b) return; S.theme=b.dataset.themePick; saveSettings(); applyLook(); document.querySelectorAll('#themeSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.themePick===S.theme)); });
   $('#diagRun').onclick=runDiag;
   $('#persistBtn').onclick=async()=>{ try{ const ok=navigator.storage&&navigator.storage.persist?await navigator.storage.persist():false; toast(ok?'iPhone will keep ReadFast’s data':'iPhone didn’t agree to keep the data permanently'); }catch(e){ toast('This view can’t ask for that'); } runDiag(); };
+  $('#sLinkSvc').addEventListener('change',e=>{ S.linkService=e.target.value.trim(); saveSettings(); toast(S.linkService?'Reader service saved':'Reader service cleared'); });
   $('#backupBtn').onclick=backup;
   $('#restoreBtn').onclick=()=>{ $('#restoreIn').value=''; $('#restoreIn').click(); };
   $('#resetBtn').onclick=()=>{ Object.assign(S,DEFAULTS); saveSettings(); applyLook(); setWpm(S.wpm); renderSettings(); toast('Settings reset'); };
@@ -1338,15 +1373,23 @@ async function backup(){
 }
 $('#restoreIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
-  let b; try{ b=JSON.parse(await f.text()); if(b.app!=='ReadFast') throw 0; }catch(err){ toast('That file isn’t a ReadFast backup.'); return; }
+  let b; try{ b=JSON.parse(await f.text()); if(!b||b.app!=='ReadFast'||!Array.isArray(b.meta)||!Array.isArray(b.texts)) throw 0; b.words=Array.isArray(b.words)?b.words:[]; b.stats=(b.stats&&typeof b.stats==='object')?b.stats:{}; }catch(err){ toast('That file isn\u2019t a ReadFast backup, or it\u2019s incomplete.', null, 6000); return; }
   openSheet('Restore backup', `<p class="note">This backup from ${esc(new Date(b.savedAt).toLocaleString())} has ${b.meta.length} document${b.meta.length===1?'':'s'} and ${b.words.length} saved word${b.words.length===1?'':'s'}. They’ll be added to what’s here now. Documents already on this phone are replaced by their backed-up copy.</p><button class="btn primary block" type="button" data-act="go">Restore</button>`,{
     go:async()=>{
-      for(const t of b.texts) await Store.put('texts',t);
-      for(const m of b.meta) await Store.put('meta',m);
+      closeSheet();
+      try{
+      let k=0; const tot=b.texts.length+b.meta.length;
+      for(const t of b.texts){
+        progress('Restoring \u2026 '+(++k)+' of '+tot, 100*k/tot);
+        if(t.images&&Array.isArray(t.images.files)) t.images={...t.images, files:t.images.files.map(f=>f.data&&!f.blob?{path:f.path, blob:dataURLToBlob(f.data)}:f)};
+        await Store.put('texts',t);
+      }
+      for(const m of b.meta){ progress('Restoring \u2026 '+(++k)+' of '+tot, 100*k/tot); await Store.put('meta',m); }
       LIB=await Store.all('meta');
       const have=new Set(WORDS.map(w=>w.id)); for(const w of b.words) if(!have.has(w.id)) WORDS.push(w); WORDS.sort((a,c)=>c.at-a.at); saveWords();
       const st=LS.get('stats',{}); for(const k in b.stats){ if(!st[k]||st[k].words<b.stats[k].words) st[k]=b.stats[k]; } LS.set('stats',st);
-      renderLibrary(); renderWords(); closeSheet(); toast('Backup restored');
+      renderLibrary(); renderWords(); toast('Backup restored');
+      }catch(err){ console.error(err); toast('The backup couldn\u2019t be fully restored'+(err&&err.name==='QuotaExceededError'?' because the phone\u2019s storage for ReadFast is full':'')+'.', null, 8000); try{ LIB=await Store.all('meta'); renderLibrary(); }catch(_){} }
     }});
 });
 
@@ -1360,13 +1403,12 @@ function openSheet(title, body, acts){
 function closeSheet(){ $('#sheet').hidden=true; $('#backdrop').hidden=true; sheetActs={}; }
 $('#sheet').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act; if(a==='__close'){ closeSheet(); return; } const fn=sheetActs[a]; if(fn) fn(b,e); });
 $('#backdrop').onclick=closeSheet;
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!$('#sheet').hidden) closeSheet(); else if(!$('#fulltext').hidden) $('#fulltext').hidden=true; } });
-let toastT;
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!$('#sheet').hidden) closeSheet(); else if($('#imgOverlay')) $('#imgOverlay').remove(); } });
 function toast(msg, action, ms, progress){
   $('#toastMsg').textContent=msg; const a=$('#toastAct'); const prog=$('#toastProg'); const bar=$('#toastBar');
   if(action){ a.hidden=false; a.textContent=action.label; a.onclick=()=>{ action.fn(); $('#toast').hidden=true; }; } else a.hidden=true;
   if(progress!=null){ prog.hidden=false; bar.style.width=Math.max(0,Math.min(100,progress))+'%'; } else { prog.hidden=true; }
-  $('#toast').hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{ $('#toast').hidden=true; }, ms||(action?5000:3200));
+  $('#toast').hidden=false; clearTimeout(toastT); if(ms!==0) toastT=setTimeout(()=>{ $('#toast').hidden=true; }, ms||(action?5000:3200));
 }
 const VIEWS=['library','words','stats','settings'];
 function showView(v){
@@ -1381,7 +1423,6 @@ $('#rBack').innerHTML=ICON.back; $('#rChapters').innerHTML=ICON.list; $('#rMarks
 $('#bSent').innerHTML=ICON.bsent; $('#bWord').innerHTML=ICON.back; $('#fWord').innerHTML=ICON.fwd; $('#fSent').innerHTML=ICON.fsent;
 $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus;
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmark';
-$('#ftClose').innerHTML=ICON.close; $('#ftPrev').innerHTML=ICON.back; $('#ftNext').innerHTML=ICON.fwd;
 window.addEventListener('resize',()=>{ if(R.meta&&!$('#v-reader').hidden){ showChunk(R.pos); positionLine(); } });
 
 /* ---------- sample document ---------- */
@@ -1413,10 +1454,11 @@ async function boot(){
   LIB=LIB.filter(m=>m.id!=='__probe');
   for(const m of LIB){ if(applySavedPos(m)) Store.put('meta',m).catch(()=>{}); }
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
+  try{ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')) navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
   if(!LS.get('seeded',false) && !LIB.length){ try{ await addDoc({title:'Welcome to ReadFast (sample)', kind:'sample', ...fromPlainText(SAMPLE)}); LS.set('seeded',true); }catch(e){} }
   renderLibrary(); renderWords();
-  if(location.hash==='#paste') openPaste(true);
-  window.addEventListener('hashchange',()=>{ if(location.hash==='#paste') openPaste(true); });
+  const onHash=()=>{ if(location.hash==='#paste'){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} openPaste(true); } };
+  onHash(); window.addEventListener('hashchange', onHash);
   try{ const c=window.claude; if(c&&c.use){ c.use('downloads').then(d=>{ downloadsApi=d; }).catch(()=>{}); } }catch(e){}
   if(document.fonts) document.fonts.ready.then(()=>{ if(R.meta&&!$('#v-reader').hidden) showChunk(R.pos); });
   showView('library');
