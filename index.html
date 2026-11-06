@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
+#v-reader[hidden]{display:none!important}
+#v-words[hidden],#v-stats[hidden],#v-settings[hidden]{display:none!important}
+</style>
 <title>ReadFast</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ReadFast">
@@ -207,6 +211,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
       </div>
       <div class="row">
         <button class="btn primary" id="addPaste" type="button"></button>
+        <button class="btn" id="addLink" type="button"></button>
         <button class="btn" id="addFile" type="button"></button>
       </div>
       <div id="docList" class="wrap" style="gap:10px"></div>
@@ -607,9 +612,81 @@ function openPaste(fromShare){
   });
 }
 $('#addPaste').innerHTML=ICON.paste+'Paste text';
+$('#addLink').innerHTML=ICON.define+'Paste link';
 $('#addFile').innerHTML=ICON.file+'Open file';
 $('#addPaste').onclick=()=>openPaste(false);
+$('#addLink').onclick=()=>openLink();
 $('#addFile').onclick=()=>{ $('#fileIn').value=''; $('#fileIn').click(); };
+
+function openLink(){
+  openSheet('Paste a link', `
+    <div class="field"><label for="linkUrl">Article or blog URL</label><input class="input" id="linkUrl" type="url" placeholder="https://…" inputmode="url"></div>
+    <p class="note">The page must allow public access. Some sites block loading from other apps.</p>
+    <button class="btn primary block" type="button" data-act="load">Load article</button>`, {
+    load: async()=>{
+      const url=$('#linkUrl').value.trim();
+      if(!url){ toast('Enter a URL'); return; }
+      try{ new URL(url); }catch(e){ toast('That doesn’t look like a valid URL'); return; }
+      toast('Loading article…', null, 60000);
+      try{
+        const text=await fetchArticle(url);
+        if(!text||text.length<80){ toast('Couldn’t find readable article text on that page'); return; }
+        const m=fromPlainText(text);
+        let title=$('#linkUrl').value.replace(/^https?:\/\//,'').split('/')[0] || 'Article';
+        try{
+          const docTitle=await fetchTitle(url);
+          if(docTitle) title=docTitle;
+        }catch(e){}
+        const meta=await addDoc({title, kind:'link', source:url, ...m});
+        closeSheet(); openDoc(meta.id);
+        toast('Added “'+meta.title+'”');
+      }catch(err){
+        toast(err.message||'Couldn’t load that page. The site may block external apps.');
+      }
+    }
+  });
+}
+
+async function fetchArticle(url){
+  const res=await fetch(url, {mode:'cors', credentials:'omit'});
+  if(!res.ok) throw new Error('Page returned '+res.status);
+  const html=await res.text();
+  return extractArticle(html, url);
+}
+
+async function fetchTitle(url){
+  try{
+    const res=await fetch(url, {mode:'cors', credentials:'omit'});
+    if(!res.ok) return null;
+    const html=await res.text();
+    const m=html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    return m?m[1].trim().replace(/\s+/g,' '):null;
+  }catch(e){ return null; }
+}
+
+function extractArticle(html, url){
+  const doc=new DOMParser().parseFromString(html, 'text/html');
+  // Remove non-content
+  doc.querySelectorAll('script,style,nav,header,footer,aside,form,iframe,noscript,.sidebar,.menu,.nav,.ads,.advert,.social,.share,.comments,#comments').forEach(el=>el.remove());
+  // Prefer article, main, or content-like containers
+  let root=doc.querySelector('article')||doc.querySelector('main')||doc.querySelector('[role="main"]')||doc.querySelector('.post')||doc.querySelector('.entry')||doc.querySelector('.content')||doc.body;
+  if(!root) root=doc.body;
+  // Collect paragraphs and headings
+  const parts=[];
+  root.querySelectorAll('h1,h2,h3,h4,p,li').forEach(el=>{
+    const t=el.innerText.trim();
+    if(t.length>20){
+      if(/^H[1-3]$/.test(el.tagName)) parts.push('# '+t);
+      else parts.push(t);
+    }
+  });
+  let text=parts.join('\n\n').replace(/\n{3,}/g,'\n\n').trim();
+  if(text.length<100){
+    // Fallback: all visible text
+    text=root.innerText.replace(/\s+/g,' ').trim();
+  }
+  return text;
+}
 $('#fileIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
   toast('Reading “'+f.name+'”…', null, 60000);
