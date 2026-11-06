@@ -304,7 +304,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 
 
 
-<div id="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button></div>
+<div id="toast" role="status" hidden><span id="toastMsg"></span><div id="toastProg" hidden style="height:4px;background:var(--line);border-radius:2px;margin-top:6px;overflow:hidden"><div id="toastBar" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div></div><button type="button" id="toastAct" hidden></button></div>
 <input type="file" id="fileIn" accept=".epub,.pdf,.txt,.md,.markdown,.html,.htm,.xhtml,application/epub+zip,application/pdf,text/plain,text/markdown,text/html" hidden>
 <input type="file" id="restoreIn" accept=".json,application/json" hidden>
 
@@ -714,14 +714,78 @@ function extractArticle(html, url){
 }
 $('#fileIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
-  toast('Reading “'+f.name+'”…', null, 60000);
-  try{ const d=await parseFile(f); const meta=await addDoc(d);
+  const ext=(f.name.split('.').pop()||'').toLowerCase();
+  toast('Reading “'+f.name+'”…', null, 60000, 5);
+  try{
+    let d;
+    if(ext==='epub'){
+      d=await parseEpubWithProgress(f);
+    } else {
+      d=await parseFile(f);
+    }
+    const meta=await addDoc(d);
     let msg='Added “'+meta.title+'”';
     if(meta.imageCount) msg+=' with '+meta.imageCount+' image'+(meta.imageCount===1?'':'s');
     if(d.imagesMissing) msg+='. '+d.imagesMissing+' image'+(d.imagesMissing===1?' was':'s were')+' missing from the file and left out';
-    toast(msg, null, d.imagesMissing?7000:3200); }
-  catch(err){ toast(err.message||'That file couldn’t be opened.'); }
+    toast(msg, null, d.imagesMissing?7000:3200);
+  }catch(err){ toast(err.message||'That file couldn’t be opened.'); }
 });
+
+async function parseEpubWithProgress(file){
+  const buf=await file.arrayBuffer();
+  await loadScript(CDN.jszip);
+  const zip=await JSZip.loadAsync(buf);
+  const files={}; zip.forEach((p,f)=>{ files[p]=f; files[p.toLowerCase()]=files[p.toLowerCase()]||f; });
+  const read=async(p)=>{ const f=files[p]||files[p.toLowerCase()]; return f? f.async('string'):null; };
+  const cont=await read('META-INF/container.xml'); if(!cont) throw new Error('This EPUB is missing its table of contents file.');
+  const rf=byTag(parseXML(cont),'rootfile')[0]; if(!rf) throw new Error('This EPUB could not be read.');
+  const opfPath=rf.getAttribute('full-path'); const base=dirOf(opfPath);
+  const opf=parseXML(await read(opfPath)||'');
+  const title=(byTag(opf,'title')[0]?.textContent||'').trim() || file.name.replace(/\.[^.]+$/,'');
+  toast('Reading “'+title+'”…', null, 60000, 15);
+  const items={}; let navHref=null;
+  for(const it of byTag(opf,'item')){ const href=resolvePath(base,it.getAttribute('href')||''); items[it.getAttribute('id')]={href, type:it.getAttribute('media-type')||'', props:it.getAttribute('properties')||''}; if(/\bnav\b/.test(it.getAttribute('properties')||'')) navHref=href; }
+  const spineEl=byTag(opf,'spine')[0]; if(!spineEl) throw new Error('This EPUB has no readable chapters.');
+  const refs=byTag(spineEl,'itemref');
+  const ctx={words:[], ends:[], anchors:{}, firstHeading:{}, images:[]}; const fileStarts=[];
+  let done=0;
+  for(const ref of refs){
+    const it=items[ref.getAttribute('idref')]; if(!it) continue;
+    if(it.type && !/html|xml/.test(it.type)) continue;
+    const html=await read(it.href); if(html==null) continue;
+    const d=parseXHTML(html); const body=d.body||d.getElementsByTagNameNS('*','body')[0]||d.documentElement;
+    ctx.anchors[it.href]=ctx.words.length; fileStarts.push({path:it.href, i:ctx.words.length});
+    walkHTML(body, ctx, it.href);
+    done++;
+    toast('Reading “'+title+'”…', null, 60000, 15+Math.round(70*done/Math.max(1,refs.length)));
+  }
+  if(!ctx.words.length) throw new Error(files['META-INF/encryption.xml'] ? 'This book is copy-protected (DRM), so its text can’t be read.' : 'No readable text was found in this EPUB.');
+  toast('Reading “'+title+'”…', null, 60000, 90);
+  const lookup=(full)=>{ if(full in ctx.anchors) return ctx.anchors[full]; const p=full.split('#')[0]; return p in ctx.anchors? ctx.anchors[p] : undefined; };
+  let chapters=[];
+  try{
+    if(navHref){
+      const nd=parseXHTML(await read(navHref)||''); const nbase=dirOf(navHref);
+      const navs=byTag(nd,'nav'); let nav=navs.find(n=>(n.getAttribute('epub:type')||n.getAttributeNS('http://www.idpf.org/2007/ops','type')||'').includes('toc')) || navs[0];
+      if(nav){ const walk=(ol,d)=>{ for(const li of byTag(ol,'li')){ const a=byTag(li,'a')[0]; if(a){ const href=resolvePath(nbase,a.getAttribute('href')||''); const i=lookup(href); if(i!=null) chapters.push({t:(a.textContent||'').trim()||'Chapter', i, d}); } const sub=byTag(li,'ol')[0]; if(sub) walk(sub,d+1); } }; walk(byTag(nav,'ol')[0],0); }
+    }
+  }catch(e){ chapters=[]; }
+  if(!chapters.length){ fileStarts.forEach((f,k)=>{ if(k===0||f.i!==fileStarts[k-1].i) chapters.push({t:ctx.firstHeading[f.path]||('Section '+(chapters.length+1)), i:f.i, d:0}); }); }
+  chapters=chapters.filter(c=>c.i<ctx.words.length).sort((a,b)=>a.i-b.i);
+  const typeByHref={}; for(const k in items) typeByHref[items[k].href]=items[k].type;
+  const imgFiles=[], fidx={}, at=[]; let missing=0;
+  for(const im of ctx.images){
+    const p=im.path.split('#')[0];
+    if(!(p in fidx)){
+      const f=files[p]||files[p.toLowerCase()];
+      if(!f){ fidx[p]=-1; }
+      else { try{ const b64=await f.async('base64'); fidx[p]=imgFiles.length; imgFiles.push({path:p, data:'data:'+(typeByHref[p]||guessImgType(p))+';base64,'+b64}); }catch(e){ fidx[p]=-1; } }
+    }
+    if(fidx[p]>=0) at.push({i:Math.min(im.i,ctx.words.length), f:fidx[p], alt:im.alt}); else missing++;
+  }
+  toast('Reading “'+title+'”…', null, 60000, 100);
+  return {title, kind:'epub', words:ctx.words, ends:ctx.ends, chapters, images: at.length?{files:imgFiles, at}:null, imagesMissing:missing};
+}
 
 /* ---------- reader ---------- */
 const R={ meta:null, words:[], ends:new Set(), n:0, pos:0, playing:false, timer:null, t0:0, runWords:0, lastNav:true, wake:null, lastSave:0 };
@@ -1296,9 +1360,10 @@ $('#sheet').addEventListener('click',e=>{ const b=e.target.closest('[data-act]')
 $('#backdrop').onclick=closeSheet;
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!$('#sheet').hidden) closeSheet(); else if(!$('#fulltext').hidden) $('#fulltext').hidden=true; } });
 let toastT;
-function toast(msg, action, ms){
-  $('#toastMsg').textContent=msg; const a=$('#toastAct');
+function toast(msg, action, ms, progress){
+  $('#toastMsg').textContent=msg; const a=$('#toastAct'); const prog=$('#toastProg'); const bar=$('#toastBar');
   if(action){ a.hidden=false; a.textContent=action.label; a.onclick=()=>{ action.fn(); $('#toast').hidden=true; }; } else a.hidden=true;
+  if(progress!=null){ prog.hidden=false; bar.style.width=Math.max(0,Math.min(100,progress))+'%'; } else { prog.hidden=true; }
   $('#toast').hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{ $('#toast').hidden=true; }, ms||(action?5000:3200));
 }
 const VIEWS=['library','words','stats','settings'];
