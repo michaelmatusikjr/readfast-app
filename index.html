@@ -197,6 +197,17 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 .wpm{font-family:var(--f-mono);font-weight:700;font-size:.95rem;min-width:5.6em;text-align:right;font-variant-numeric:tabular-nums}
 .wpm small{font-weight:500;color:var(--page-muted)}
 
+#speedView{overflow-y:auto}
+@media (orientation:landscape) and (max-height:500px){
+  #speedView{gap:2px;padding-bottom:4px}
+  #stage{min-height:96px}
+  #stage .reticle{padding:8px}
+  #context,.ctl-label,.pause-tools{display:none}
+  #playBtn{width:46px;height:46px}
+  #playBtn svg{width:22px;height:22px}
+  #speedView .icon-btn{height:36px}
+  #speedView input[type=range]{height:24px}
+}
 /* Floating reader bits */
 #backPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);z-index:8;display:flex;align-items:center;background:var(--ink);color:var(--paper);border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:nowrap}
 #backPill button{background:none;border:0;color:inherit;font-weight:700;font-size:.85rem;padding:9px 6px 9px 14px;cursor:pointer}
@@ -215,6 +226,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 #sheet.short{max-height:60%}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px max(12px,env(safe-area-inset-right,0px)) 6px max(18px,env(safe-area-inset-left,0px))}
 .sheet-body{overflow-y:auto;padding:4px max(18px,env(safe-area-inset-right,0px)) 18px max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch}
+.sheet-body>*{flex-shrink:0}
 .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
 .list{display:flex;flex-direction:column}
 .li{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line);background:none;border-left:0;border-right:0;border-top:0;text-align:left;cursor:pointer;width:100%;color:var(--ink)}
@@ -1681,7 +1693,7 @@ scView.addEventListener('scroll',()=>{
     const now=performance.now();
     if(now-SC.lastSave>2500){ SC.lastSave=now; saveProgress(); }
     if(now-SC.lastClock>3000){ SC.lastClock=now; noteProgress(); }
-    if(S.focus && !SC.auto && R.chrome && SC.userScrolled) setChrome(false);
+    if(S.focus && !SC.auto && R.chrome && SC.userScrolled && performance.now()-(SC.stopT||0)>500) setChrome(false);
   });
 },{passive:true});
 let scPt=null;
@@ -1707,7 +1719,7 @@ function asStart(){
   cancelAnimationFrame(SC.raf); SC.raf=requestAnimationFrame(asLoop);
 }
 function asStop(keepChrome){
-  if(!SC.auto) return; SC.auto=false; cancelAnimationFrame(SC.raf); releaseWake(); asUI(); noteProgress(); saveProgress(true);
+  if(!SC.auto) return; SC.auto=false; SC.stopT=performance.now(); cancelAnimationFrame(SC.raf); releaseWake(); asUI(); noteProgress(); saveProgress(true);
   if(!keepChrome) setChrome(true);
 }
 function asLineY(){ const r=scView.getBoundingClientRect(); return r.top+r.height*0.33; }
@@ -1751,7 +1763,12 @@ $('#asUp').onclick=()=>{ S.scrollWpm=clamp(S.scrollWpm+10,60,700); saveSettings(
 function hasSelection(){ const s=getSelection(); return !!(s && !s.isCollapsed && s.toString().trim()); }
 function readerTap(e){
   const t=e.target;
-  const fig=t.closest&&t.closest('figure'); if(fig){ showImage(R.imgList[+fig.dataset.img]); return; }
+  const fig=t.closest&&t.closest('figure');
+  if(fig){
+    let mid=true;
+    if(R.mode==='pages'){ const r=pgView.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width; mid = S.tapZones==='anywhere' ? false : (x>=0.27 && x<=0.73); if(S.tapZones==='anywhere' && x>=0.3 && x<=0.7 && (e.clientY-r.top)/r.height>0.25 && (e.clientY-r.top)/r.height<0.75) mid=true; }
+    if(mid){ showImage(R.imgList[+fig.dataset.img]); return; }
+  }
   const w=t.closest&&t.closest('w');
   if(w && w.classList.contains('n')){ openFootnote(idxOf(w)); return; }
   if(w && /\bhl[1-4]\b/.test(w.className)){ const h=hlAt(idxOf(w)); if(h){ openHlMenu(h); return; } }
@@ -2090,11 +2107,11 @@ if('speechSynthesis' in window){ ttsVoices(); try{ speechSynthesis.addEventListe
 function ttsStart(){
   if(!('speechSynthesis' in window)){ toast('Read aloud isn’t available on this device.'); return; }
   if(R.mode==='speed') return;
-  stopActivity(); selClear(); TTS.on=true; TTS.seq++; requestWake(); updateChrome();
+  stopActivity(); selClear(); TTS.on=true; TTS.seq++; requestWake(); updateChrome(); if(S.focus) setChrome(false);
   try{ speechSynthesis.cancel(); }catch(e){}
   ttsSpeakFrom(R.pos, TTS.seq);
 }
-function ttsStop(){ if(!TTS.on) return; TTS.on=false; TTS.seq++; try{ speechSynthesis.cancel(); }catch(e){} ttsMark(-1); releaseWake(); resetClock(); updateChrome(); }
+function ttsStop(){ if(!TTS.on) return; TTS.on=false; TTS.seq++; try{ speechSynthesis.cancel(); }catch(e){} ttsMark(-1); releaseWake(); resetClock(); updateChrome(); setChrome(true); }
 function ttsSpeakFrom(i, seq){
   if(!TTS.on || seq!==TTS.seq) return;
   if(i>=R.n){ ttsStop(); toast('Finished reading aloud'); return; }
