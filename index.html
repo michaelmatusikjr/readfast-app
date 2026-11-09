@@ -116,8 +116,8 @@ h2{font-size:1.15rem;font-weight:600}
 .book h1,.book h2,.book h3,.book h4,.book h5,.book h6{font-family:inherit;font-weight:var(--bwb);line-height:1.25;margin:1.1em 0 .7em;text-indent:0;text-align:center;letter-spacing:0;text-wrap:balance;break-after:avoid;-webkit-hyphens:manual;hyphens:manual}
 .book h1{font-size:1.5em}.book h2{font-size:1.32em}.book h3{font-size:1.15em}.book h4,.book h5,.book h6{font-size:1em}
 .book .sec>:first-child{margin-top:.2em}
-.book p.li{padding-left:1.3em;text-indent:0;position:relative}
-.book p.li::before{content:"•";position:absolute;left:.35em;color:var(--page-muted)}
+.book p.bli{padding-left:1.3em;text-indent:0;position:relative;margin-top:.35em}
+.book p.bli::before{content:"•";position:absolute;left:.35em;color:var(--page-muted)}
 .book p.pre{font-family:var(--f-mono);font-size:.82em;white-space:pre-wrap;text-indent:0;text-align:left;-webkit-hyphens:manual;hyphens:manual}
 .book p.gap{margin-top:1.2em}
 .book p.cap{font-size:.86em;color:var(--page-muted);text-align:center;text-indent:0}
@@ -145,8 +145,8 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 #v-reader.overlay:not([data-mode="speed"]) .rchrome{position:absolute;left:0;right:0}
 #v-reader.overlay:not([data-mode="speed"]) #rTop{top:0}
 #v-reader.overlay:not([data-mode="speed"]) #rFoot{bottom:0}
-#v-reader.overlay #pgFlow{top:40px;bottom:46px}
-#v-reader.overlay #scFlow{padding-top:58px}
+#v-reader.overlay #pgFlow{top:50px;bottom:46px}
+#v-reader.overlay #scrollView{top:48px;bottom:46px}
 #pgFlow.anim-slide{transition:transform .28s cubic-bezier(.3,.6,.2,1)}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
 /* Scroll */
@@ -776,10 +776,13 @@ async function parseEpub(buf, fname, onP){
   const files={}; zip.forEach((p,f)=>{ if(f.dir) return; files[p]=f; files[p.toLowerCase()]=files[p.toLowerCase()]||f; });
   /* decode each file in the character set it declares (most are UTF-8; some older books use Latin-1 or Windows-1252) */
   const read=async(p)=>{ const f=files[p]||files[p.toLowerCase()]; if(!f) return null;
-    const u8=await f.async('uint8array'); const head=new TextDecoder('windows-1252').decode(u8.subarray(0,1024));
-    let cs=(head.match(/<\?xml[^>]*encoding\s*=\s*["']([\w.:-]+)/i)||head.match(/<meta[^>]+charset\s*=\s*["']?([\w.:-]+)/i)||[])[1]||'utf-8';
-    if(u8[0]===0xFE&&u8[1]===0xFF) cs='utf-16be'; else if(u8[0]===0xFF&&u8[1]===0xFE) cs='utf-16le'; else if(u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF) cs='utf-8';
-    try{ return new TextDecoder(cs).decode(u8); }catch(e){ return new TextDecoder('utf-8').decode(u8); } };
+    const u8=await f.async('uint8array');
+    if(u8[0]===0xFE&&u8[1]===0xFF) return new TextDecoder('utf-16be').decode(u8);
+    if(u8[0]===0xFF&&u8[1]===0xFE) return new TextDecoder('utf-16le').decode(u8);
+    try{ return new TextDecoder('utf-8',{fatal:true}).decode(u8); }catch(e){}
+    const head=new TextDecoder('windows-1252').decode(u8.subarray(0,1024));
+    const cs=(head.match(/<\?xml[^>]*encoding\s*=\s*["']([\w.:-]+)/i)||[])[1]||'windows-1252';
+    try{ return new TextDecoder(cs).decode(u8); }catch(e){ return new TextDecoder('windows-1252').decode(u8); } };
   const cont=await read('META-INF/container.xml'); if(!cont) throw new Error('This EPUB is missing its table of contents file.');
   const rf=byTag(parseXML(cont),'rootfile')[0]; if(!rf||!rf.getAttribute('full-path')) throw new Error('This EPUB could not be read.');
   const opfPath=rf.getAttribute('full-path'); const base=dirOf(opfPath);
@@ -1240,7 +1243,7 @@ function buildScrollText(){
   if(!R.words) return;
   const box=$('#scrollText');
   if(!box) return;
-  const fig=(k)=>{ const arr=R.imgAt.get(k); if(!arr) return ''; return arr.map(idx=>{ const a=R.imgList[idx]; const src=R.imgUrls[a.f]; if(!src) return ''; return `<figure class="scroll-img" data-img="${idx}"><img src="${src}" alt="${esc(a.alt||'Illustration')}" loading="lazy"></figure>`; }).join(''); };
+  const fig=(k)=>{ const arr=R.imgAt.get(k); if(!arr) return ''; return arr.map(idx=>{ const a=R.imgList[idx]; const src=R.imgUrls[a.f]; if(!src) return ''; return `<figure class="scroll-img" data-img="${idx}"><img src="${src}" alt="${esc(a.alt||'Illustration')}"></figure>`; }).join(''); };
   const wa=Math.max(0,R.pos-400), wb=Math.min(R.n,R.pos+400); R.winA=wa; R.winB=wb; /* only the words near your place */
   let h='', open=false;
   for(let k=wa;k<wb;k++){
@@ -1252,6 +1255,7 @@ function buildScrollText(){
   if(open) h+='</p>';
   if(wb>=R.n) h+=fig(R.n);
   box.classList.add('manual'); box.innerHTML=h;
+  box.querySelectorAll('img').forEach(im=>{ if(!im.complete) im.addEventListener('load',()=>{ if(!manualScroll) syncScroll(true); },{once:true}); });
   R.spans=box.getElementsByClassName('w'); R.curSpan=null;
   syncScroll(true); requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(!manualScroll) box.classList.remove('manual'); }));
 }
@@ -1318,7 +1322,7 @@ function enableManualScroll(){
     if(!manualScroll) return;
     manualScroll=false; box.classList.remove('manual');
     bg.releasePointerCapture(e.pointerId);
-    if(dragMoved){ suppressStageClick=true; setTimeout(()=>{ suppressStageClick=false; },400); }
+    if(dragMoved){ suppressStageClick=true; setTimeout(()=>{ suppressStageClick=false; },400); speedBrowseRebuild(); }
   });
   bg.addEventListener('pointercancel', ()=>{ manualScroll=false; box.classList.remove('manual'); });
   box.addEventListener('click', e=>{
@@ -1437,7 +1441,7 @@ $('#bWord').onclick=()=>{ let k=R.pos-1; while(k>0 && glued(k)) k--; goTo(k); };
 $('#fWord').onclick=()=>goTo(chunkEnd(R.pos));
 $('#bSent').onclick=()=>{ let s=sentStart(R.pos); if(R.pos-s<2&&s>0) s=sentStart(s-1); goTo(s); };
 $('#fSent').onclick=()=>goTo(Math.min(R.n-1,sentEndIdx(R.pos)+1));
-el.scrub.addEventListener('input',()=>{ if(R.playing) goTo(+el.scrub.value); const i=+el.scrub.value; renderWord(R.words.slice(i,chunkEnd(i)).join(' ')); el.pos.textContent=`${Math.round(100*i/Math.max(1,R.n-1))}% · ${(i+1).toLocaleString()}/${R.n.toLocaleString()}`; });
+el.scrub.addEventListener('input',()=>{ if(R.playing) goTo(+el.scrub.value); const i=+el.scrub.value; renderWord(textOf(i,chunkEnd(i)-1)); el.pos.textContent=`${Math.round(100*i/Math.max(1,R.n-1))}% · ${(i+1).toLocaleString()}/${R.n.toLocaleString()}`; });
 el.scrub.addEventListener('change',()=>goTo(+el.scrub.value));
 $('#rBack').onclick=closeReader;
 /* speed */
@@ -1446,6 +1450,17 @@ function setWpm(v){ S.wpm=clamp(Math.round(v/10)*10,100,1000); wpmIn.value=S.wpm
 wpmIn.addEventListener('input',()=>setWpm(+wpmIn.value));
 $('#wpmDown').onclick=()=>setWpm(S.wpm-10); $('#wpmUp').onclick=()=>setWpm(S.wpm+10);
 
+/* after dragging the faded background text in Speed mode, rebuild it around the word under the guide line */
+function speedBrowseRebuild(){
+  if(!R.spans || R.winA==null) return; const line=$('#scrollLine'); if(!line) return;
+  const y=line.getBoundingClientRect().top; let best=null, bd=1e9;
+  for(const s of R.spans){ const r=s.getBoundingClientRect(); const d=Math.abs((r.top+r.bottom)/2-y); if(d<bd){ bd=d; best=s; } }
+  if(!best) return; const w=+best.dataset.i;
+  if(w>R.winA+150 && w<R.winB-150) return;
+  const keep=R.pos; R.pos=w; buildScrollText(); R.pos=keep;
+  const box=$('#scrollText'); box.querySelectorAll('.cur').forEach(x=>x.classList.remove('cur'));
+  const c=(keep>=R.winA&&keep<R.winB)?R.spans[keep-R.winA]:null; if(c){ c.classList.add('cur'); } R.curSpan=c||null;
+}
 /* adaptive pacing: a little slower on long sentences and long or unusual words, a little faster on easy stretches */
 let diffCache={s:-1,e:-1,f:1};
 function difficulty(i){
@@ -1493,7 +1508,7 @@ function wsHTML(w){
 }
 function blockHTML(blk,s,e){
   const t=blk.t; const tag=/^h[1-6]$/.test(t)?t:'p';
-  let cls=t==='li'?'li':t==='pre'?'pre':t==='cap'?'cap':''; if(blk.q) cls+=(cls?' ':'')+'bq'; if(blk.g) cls+=(cls?' ':'')+'gap';
+  let cls=t==='li'?'bli':t==='pre'?'pre':t==='cap'?'cap':''; /* 'bli', not 'li': that class styles the app's menu rows */ if(blk.q) cls+=(cls?' ':'')+'bq'; if(blk.g) cls+=(cls?' ':'')+'gap';
   let h='<'+tag+(cls?' class="'+cls+'"':'')+'>';
   const wf=R.wf, W=R.words, ws=S.wordStart && t!=='pre';
   for(let k=s;k<e;k++){
@@ -1592,6 +1607,7 @@ async function pgFade(fn){
 async function pgTurn(d){
   if(P.busy || R.mode!=='pages') return;
   selClear();
+  if(d>0 && S.focus && R.chrome){ setChrome(false); return; } /* the bars cover the page edge; reveal it before turning */
   if(d>0){
     if(P.page<P.pages-1){ if(S.turn==='fade') await pgFade(()=>pgSet(P.page+1,false)); else pgSet(P.page+1,true); }
     else if(P.k<R.SEC.length-1){ P.busy=true; try{ await pgFade(async()=>{ await pgLoad(P.k+1); pgSet(0,false); }); } finally{ P.busy=false; } }
@@ -1927,6 +1943,7 @@ window.addEventListener('pagehide',leaving); window.addEventListener('beforeunlo
 document.addEventListener('keydown',e=>{
   if($('#v-reader').hidden||!$('#sheet').hidden||$('#imgOverlay')) return;
   if(e.target.matches('input,textarea,select')) return;
+  if(R.mode==='scroll') SC.userScrolled=true;
   if(R.mode==='speed'){ if(e.key===' '){ e.preventDefault(); toggle(); } else if(e.key==='ArrowLeft') $('#bWord').click(); else if(e.key==='ArrowRight') $('#fWord').click(); return; }
   if(R.mode==='pages'){ if(['ArrowRight','PageDown',' '].includes(e.key)){ e.preventDefault(); pgTurn(1); } else if(['ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); pgTurn(-1); } return; }
   if(R.mode==='scroll' && S.autoScroll && e.key===' '){ e.preventDefault(); SC.auto?asStop():asStart(); }
