@@ -139,13 +139,16 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 
 /* Pages */
 #pagesView{position:absolute;top:0;bottom:0;overflow:hidden;touch-action:pan-y;-webkit-user-select:text;user-select:text}
-#pgFlow{position:absolute;top:22px;left:var(--mx);bottom:22px;column-fill:auto;will-change:transform}
+#pgClip{position:absolute;top:22px;bottom:22px;overflow:hidden}
+#pgFlow,#pgMeasure{position:absolute;top:0;left:0;bottom:0;column-fill:auto}
+#pgFlow{will-change:transform}
+#pgMeasure{visibility:hidden;pointer-events:none;-webkit-user-select:none;user-select:none}
 #pagesView,#scrollView{left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px)}
 /* focus mode: the bars float over the page, so hiding them gives the text the whole screen */
 #v-reader.overlay:not([data-mode="speed"]) .rchrome{position:absolute;left:0;right:0}
 #v-reader.overlay:not([data-mode="speed"]) #rTop{top:0}
 #v-reader.overlay:not([data-mode="speed"]) #rFoot{bottom:0}
-#v-reader.overlay #pgFlow{top:50px;bottom:46px}
+#v-reader.overlay #pgClip{top:50px;bottom:46px}
 #v-reader.overlay #scrollView{top:48px;bottom:46px}
 #pgFlow.anim-slide{transition:transform .28s cubic-bezier(.3,.6,.2,1)}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
@@ -159,13 +162,13 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 #speedView{position:absolute;inset:0;display:flex;flex-direction:column;gap:6px;padding:4px max(8px,env(safe-area-inset-right,0px)) 10px max(8px,env(safe-area-inset-left,0px));background:var(--page-bg)}
 #stage{flex:1;min-height:180px;position:relative;display:flex;flex-direction:column;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 #scrollBg{position:absolute;inset:0;overflow:hidden;z-index:0;touch-action:none}
-#scrollText{position:absolute;left:12px;right:12px;top:0;font-family:var(--bfont);font-size:1.05rem;line-height:1.55;color:var(--page-muted);opacity:.35;white-space:pre-wrap;word-wrap:break-word;transition:transform .35s linear;will-change:transform}
+#scrollText{position:absolute;left:12px;right:12px;top:0;font-family:var(--bfont);font-size:1.05rem;line-height:1.55;color:var(--page-muted);color:color-mix(in srgb,var(--page-ink) 30%,transparent);white-space:pre-wrap;word-wrap:break-word;transition:transform .35s linear;will-change:transform}
 #scrollText.manual{transition:none}
 #scrollText .w{display:inline;cursor:pointer}
-#scrollText .cur{color:var(--page-ink);opacity:.75;font-weight:600}
+#scrollText .cur{color:var(--page-ink)} /* full strength, not bold: bold changed where lines wrap */
 #scrollText figure.scroll-img{margin:12px 0;text-align:center}
-#scrollText figure.scroll-img img{max-width:100%;height:auto;border-radius:8px;background:var(--img-bg)}
-#scrollLine{position:absolute;left:0;right:0;height:2px;background:var(--page-link);opacity:.5;z-index:1;pointer-events:none}
+#scrollText figure.scroll-img img{opacity:.4;max-width:100%;height:auto;border-radius:8px;background:var(--img-bg)}
+#scrollLine{position:absolute;left:4px;right:4px;height:calc(1.05rem * 1.55);border-radius:6px;background:var(--page-link);opacity:.13;z-index:1;pointer-events:none} /* one text line tall */
 #stage .reticle{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;background:var(--page-bg);border-radius:12px;padding:18px 8px;box-shadow:0 -4px 16px rgba(0,0,0,.12)}
 .reticle{position:relative;margin:0;padding:18px 8px;background:var(--surface);border-radius:12px}
 .reticle::before,.reticle::after{content:"";position:absolute;left:0;right:0;height:1px;background:var(--page-line)}
@@ -214,6 +217,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 #backPill button+button{padding:9px 12px 9px 6px;opacity:.7}
 #selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;gap:2px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:4px 6px;box-shadow:0 8px 28px rgba(0,0,0,.22);max-width:calc(100% - 16px)}
 #selBar .dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;margin:0 3px;flex:none}
+#selBar .dot[data-hl="1"]{background:var(--hl1)} #selBar .dot[data-hl="2"]{background:var(--hl2)} #selBar .dot[data-hl="3"]{background:var(--hl3)} #selBar .dot[data-hl="4"]{background:var(--hl4)}
 #selBar .tb{border:0;background:none;font-weight:700;font-size:.86rem;padding:8px 8px;cursor:pointer;color:var(--ink);white-space:nowrap}
 #selBar .sep{width:1px;align-self:stretch;background:var(--line);margin:4px 3px}
 #shade{position:fixed;inset:0;pointer-events:none;z-index:40;display:none}
@@ -380,7 +384,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
       <button class="icon-btn" id="rAa" type="button" aria-label="Reading options">Aa</button>
     </header>
     <div id="rBody">
-      <div id="pagesView" hidden><div class="book" id="pgFlow"></div></div>
+      <div id="pagesView" hidden><div id="pgClip"><div class="book" id="pgFlow"></div><div class="book" id="pgMeasure" aria-hidden="true"></div></div></div>
       <div id="scrollView" hidden><div class="book" id="scFlow"></div></div>
       <div id="speedView" hidden>
         <div id="stage" role="button" tabindex="0" aria-label="Tap to play or pause">
@@ -1279,7 +1283,7 @@ function positionLine(){
   const retTop=reticle.getBoundingClientRect().top;
   const mid=(headBottom + retTop)/2;
   const topInStage=mid - stageRect.top;
-  line.style.top=Math.max(0, topInStage)+'px';
+  line.style.top=Math.max(0, topInStage - line.offsetHeight/2)+'px';
 }
 function syncScroll(force){
   if(manualScroll && !force) return;
@@ -1298,12 +1302,11 @@ function syncScroll(force){
   for(let s=span.nextElementSibling; same(s); s=s.nextElementSibling){ last=s; count++; }
   const lineTop=first.offsetTop;
   const lineBottom=last.offsetTop + last.offsetHeight;
-  const progress=count<=1 ? 0.5 : idx/(count-1);
-  let alignAt=lineTop + progress*(lineBottom-lineTop);
+  let alignAt=lineTop + span.offsetHeight/2 - line.offsetHeight/2; /* the bar sits exactly over the current line */
   // If the current word is immediately after an image, jump so the top of this line aligns
   const prevFig=span.parentElement && span.parentElement.previousElementSibling;
   if(prevFig && prevFig.tagName==='FIGURE' && idx===0){
-    alignAt=lineTop;
+    alignAt=lineTop + span.offsetHeight/2 - line.offsetHeight/2;
   }
   const target=alignAt - lineY;
   box.style.transform=`translateY(${-target}px)`;
@@ -1335,29 +1338,14 @@ function enableManualScroll(){
     manualScroll=false; box.classList.remove('manual');
     bg.releasePointerCapture(e.pointerId);
     if(dragMoved){ suppressStageClick=true; setTimeout(()=>{ suppressStageClick=false; },400); speedBrowseRebuild(); }
+    else{ /* a plain tap or mouse click: jump to the word, or open the picture, under the pointer */
+      const hit=document.elementFromPoint(e.clientX,e.clientY); const fig=hit&&hit.closest('#scrollText figure.scroll-img'); const w=hit&&hit.closest('#scrollText .w');
+      if(fig||w){ suppressStageClick=true; setTimeout(()=>{ suppressStageClick=false; },400); }
+      if(fig){ if(R.playing) pause(); const a=R.imgList[+fig.dataset.img]; if(a) openImageFull(a); }
+      else if(w){ const i=+w.dataset.i; if(!isNaN(i)) goTo(i); }
+    }
   });
   bg.addEventListener('pointercancel', ()=>{ manualScroll=false; box.classList.remove('manual'); });
-  box.addEventListener('click', e=>{
-    const fig=e.target.closest('figure.scroll-img');
-    if(fig){
-      e.stopPropagation();
-      if(R.playing) pause();
-      const idx=+fig.dataset.img;
-      const a=R.imgList[idx];
-      if(a) openImageFull(a);
-      return;
-    }
-    const w=e.target.closest('.w');
-    if(!w) return;
-    e.stopPropagation();
-    const i=+w.dataset.i;
-    if(isNaN(i)) return;
-    if(R.playing) pause();
-    R.pos=i;
-    showChunk(R.pos);
-    updateProgress();
-    syncScroll(true);
-  });
 function openImageFull(a){
   const ov=document.createElement('div');
   ov.id='imgOverlay';
@@ -1576,19 +1564,55 @@ function redecorate(){ const h=hostEl(); if(h) for(const sec of h.children) if(s
 /* ---------- Pages mode ---------- */
 const P={k:-1, page:0, pages:1, g:null, busy:false, rangeEnd:0};
 function pgGeom(){
-  const W=pgView.clientWidth, H=pgView.clientHeight; const mx=MARGINS[S.margin]||24; const gap=mx*2; const inner=Math.max(120,W-2*mx);
-  const two=S.twoCol && W>H*1.1 && W>=640; const cw= two? (inner-gap)/2 : inner;
-  return {W,H,mx,gap,inner,cw,two,colsPer:two?2:1,stride:inner+gap};
+  const W=pgView.clientWidth, H=pgView.clientHeight; const mx=MARGINS[S.margin]||24; const gap=mx*2;
+  const two=S.twoCol && W>H*1.1 && W>=640;
+  /* the text block is centred, and capped so lines stay a readable length on wide screens */
+  const inner=Math.max(120, Math.min(W-2*mx, two?1100:700)); const cw= two? (inner-gap)/2 : inner;
+  return {W,H,mx,gap,inner,cw,two,colsPer:two?2:1,stride:inner+gap,left:Math.round((W-inner)/2)};
 }
 function pgApplyGeom(){
   const g=pgGeom(); P.g=g;
-  pgFlow.style.width=g.inner+'px'; pgFlow.style.columnCount=g.two?'2':'1'; pgFlow.style.columnGap=g.gap+'px';
-  document.documentElement.style.setProperty('--pageH', pgFlow.clientHeight+'px');
+  const clip=$('#pgClip'); clip.style.left=g.left+'px'; clip.style.width=g.inner+'px';
+  for(const f of [pgFlow, $('#pgMeasure')]){ f.style.width=g.inner+'px'; f.style.columnCount=g.two?'2':'1'; f.style.columnGap=g.gap+'px'; }
+  document.documentElement.style.setProperty('--pageH', clip.clientHeight+'px');
+  pcSync();
 }
-function pgMeasure(){ const g=P.g; const cols=Math.max(1,Math.round((pgFlow.scrollWidth+g.gap)/(g.cw+g.gap))); P.pages=Math.max(1,Math.ceil(cols/g.colsPer)); }
+/* whole-book page numbers: each section's page count is measured in the background for the current
+   text settings; sections not measured yet are estimated from the ones that are */
+const PC={sig:'', counts:[], token:0, fontGen:0};
+function pcSync(){
+  const g=P.g; const sig=[R.meta.id,R.SEC.length,g.W,g.H,g.two,S.size,S.lineH,S.margin,S.para,S.justify,S.hyphen,S.boldText,S.wordStart,S.font,R.bookFamily,S.focus,PC.fontGen].join('|');
+  if(sig===PC.sig && PC.counts.length===R.SEC.length) return;
+  PC.sig=sig; PC.counts=new Array(R.SEC.length).fill(0); pcRun();
+}
+async function pcRun(){
+  const tok=++PC.token; const m=$('#pgMeasure'); const g=P.g; const here=secAt(R.pos);
+  await sleep(250);
+  const order=[...R.SEC.keys()].sort((a,b)=>Math.abs(a-here)-Math.abs(b-here));
+  let t=performance.now(), n=0;
+  for(const k of order){
+    if(tok!==PC.token || R.mode!=='pages') return;
+    if(PC.counts[k]) continue;
+    m.innerHTML=sectionHTML(k);
+    const imgs=[...m.getElementsByTagName('img')];
+    if(imgs.length){ await Promise.race([Promise.all(imgs.map(im=>im.decode?im.decode().catch(()=>{}):0)), sleep(800)]); if(tok!==PC.token || R.mode!=='pages') return; }
+    const cols=Math.max(1,Math.round((m.scrollWidth+g.gap)/(g.cw+g.gap)));
+    if(!PC.counts[k]) PC.counts[k]=Math.max(1,Math.ceil(cols/g.colsPer));
+    if(performance.now()-t>10){ m.innerHTML=''; await sleep(40); t=performance.now(); if(++n%6===0 && tok===PC.token) updateChrome(); }
+  }
+  m.innerHTML=''; if(tok===PC.token) updateChrome();
+}
+function bookPages(){
+  const c=PC.counts; let kw=0, kp=0;
+  for(let k=0;k<R.SEC.length;k++) if(c[k]){ kw+=R.SEC[k][1]-R.SEC[k][0]; kp+=c[k]; }
+  const wpp=kp? kw/kp : 280; let before=0, total=0;
+  for(let k=0;k<R.SEC.length;k++){ const n=c[k]||Math.max(1,Math.round((R.SEC[k][1]-R.SEC[k][0])/wpp)); if(k<P.k) before+=n; total+=n; }
+  return {page:before+P.page+1, total};
+}
+function pgMeasure(){ const g=P.g; const cols=Math.max(1,Math.round((pgFlow.scrollWidth+g.gap)/(g.cw+g.gap))); const sec=pgFlow.firstElementChild; P.cols=sec?Math.min(cols, Math.max(1,sec.getClientRects().length)):cols; /* columns the text really fills */ P.pages=Math.max(1,Math.ceil(cols/g.colsPer)); if(P.k>=0) PC.counts[P.k]=P.pages; }
 function pgPageOfEl(w){
   if(!w) return 0; const fr=pgFlow.getBoundingClientRect(); const rr=w.getClientRects(); const r=rr.length?rr[0]:w.getBoundingClientRect();
-  return clamp(Math.floor((r.left-fr.left+2)/P.g.stride),0,P.pages-1);
+  return clamp(Math.floor((r.left-fr.left+2)/P.g.stride),0,P.pages-1); /* both rects move together, so the shift cancels out */
 }
 function pgFirstWord(page){
   const sec=pgFlow.firstElementChild; if(!sec||!sec._ws.length) return sec?sec._a:0;
@@ -1598,11 +1622,13 @@ function pgFirstWord(page){
   return sec._a+ans;
 }
 async function pgLoad(k){ await renderSec(pgFlow,k,'replace'); P.k=k; pgMeasure(); }
+/* a lone column in the two-page layout sits in the middle instead of on the left */
+const pgShift=()=> (P.g.two && P.cols===1) ? (P.g.cw+P.g.gap)/2 : 0;
 function pgSet(page, anim){
   P.page=clamp(page,0,P.pages-1);
   const slide = anim && S.turn==='slide';
   pgFlow.classList.toggle('anim-slide', slide);
-  pgFlow.style.transform=`translateX(${-P.page*P.g.stride}px)`;
+  pgFlow.style.transform=`translateX(${-P.page*P.g.stride+pgShift()}px)`;
   P.rangeEnd = P.page<P.pages-1 ? pgFirstWord(P.page+1) : (pgFlow.firstElementChild?pgFlow.firstElementChild._b:R.n);
 }
 async function pgShow(i){
@@ -1809,7 +1835,7 @@ function afterMove(){ const now=performance.now(); if(now-R.lastSave>1500) saveP
 const MODES={
   pages:{
     async enter(){ pgView.hidden=false; pgApplyGeom(); P.k=-1; await pgShow(R.pos); },
-    leave(){ pgView.hidden=true; pgFlow.replaceChildren(); P.k=-1; },
+    leave(){ PC.token++; $('#pgMeasure').innerHTML=''; pgView.hidden=true; pgFlow.replaceChildren(); P.k=-1; },
     show:(i)=>pgShow(i),
     async relayout(){ const i=R.pos; pgApplyGeom(); P.k=-1; await pgShow(i); }
   },
@@ -1839,7 +1865,7 @@ let relayT=null;
 function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; try{ await MODES[R.mode].relayout(); }catch(e){ console.error(e); } updateChrome(); },140); }
 window.addEventListener('resize', relayoutSoon);
 /* a font that finishes downloading changes line breaks, so lay the pages out again */
-try{ document.fonts.addEventListener('loadingdone', ()=>{ if(R.mode) relayoutSoon(); }); }catch(e){}
+try{ document.fonts.addEventListener('loadingdone', ()=>{ PC.fontGen++; if(R.mode) relayoutSoon(); }); }catch(e){}
 function fontsReady(ms){ try{ return Promise.race([document.fonts.ready, sleep(ms||1500)]); }catch(e){ return Promise.resolve(); } }
 
 /* ---------- reading clock (time left, stats) ---------- */
@@ -1864,7 +1890,7 @@ function infoText(){
   if(S.info===1) return `${pct}% · ${fmtMins((R.n-R.pos)/wpm)} left in book`;
   if(S.info===2) return `Location ${(R.pos+1).toLocaleString()} of ${R.n.toLocaleString()}`;
   const left=fmtMins((chapterEnd(R.pos)-R.pos)/wpm)+' left in chapter';
-  if(R.mode==='pages') return `Page ${P.page+1} of ${P.pages} · ${left}`;
+  if(R.mode==='pages'){ const bp=bookPages(); return `Page ${bp.page} of ${bp.total} · ${left}`; }
   return `${pct}% · ${left}`;
 }
 let scrubbing=false;
@@ -2523,28 +2549,54 @@ $('#bSent').innerHTML=ICON.bsent; $('#bWord').innerHTML=ICON.back; $('#fWord').i
 $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown').innerHTML=ICON.minus; $('#asUp').innerHTML=ICON.plus; $('#asPlay').innerHTML=ICON.play;
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
-/* ---------- sample document ---------- */
-const SAMPLE=`# Welcome to Tooz eReader
-This is a sample so you can try the reader. Swipe left or tap the right edge of the page to turn it, and tap the left edge to go back. Tap the middle of the page to show or hide the controls.
-
-# Three ways to read
-Tap Aa at the top to choose how you read. Pages turns pages like a printed book. Scroll gives you one long column, and auto-scroll can move it for you at a speed you set. Speed flashes the words one at a time in the same spot, so your eyes never have to move.
-
-All three share your place, down to the word. Switch in the middle of a chapter and you carry on exactly where you were.
-
-# Make it yours
-The Aa panel also has themes from white to black, a night theme that switches on by itself, fonts, text size, spacing, margins and brightness. It only shows the options for the mode you picked.
-
-# Highlights, notes and words
-Press and hold a word, drag to select more, then pick a color to highlight it or tap Note to write something down. Tap Define to look a word up; every word you look up is saved in the Words tab with the sentence you found it in.
-
-# Getting around
-The list icon at the top shows the chapters, your bookmarks and your highlights. The magnifying glass searches the whole book. After any jump, a button lets you go back to where you were. The speaker at the bottom reads the book aloud.
-
-When you're done with this sample, delete it from the library with the three dots.`;
+/* ---------- sample book ---------- */
+const SAMPLE_V=3;
+const SAMPLE_HTML=`
+<h2>Welcome to Tooz eReader</h2>
+<p>This short book is a tour of the reader. Swipe left, or tap the right edge of the page, to turn it. Tap the left edge to go back. Tap the <em>middle</em> of the page to show or hide the controls.</p>
+<p>While you read, the controls stay out of the way. The chapter name sits at the top and your page number at the bottom.</p>
+<h2>Three ways to read</h2>
+<p>Tap <strong>Aa</strong> at the top to choose how you read:</p>
+<ul><li><strong>Pages</strong> turns pages like a printed book.</li><li><strong>Scroll</strong> gives you one long column to scroll through.</li><li><strong>Speed</strong> flashes the words one at a time in the same spot, so your eyes never have to move.</li></ul>
+<p>All three share your place, down to the word. Switch in the middle of a sentence and you carry on <em>exactly</em> where you were.</p>
+<h2>Auto-scroll</h2>
+<p>In Scroll, open Aa and turn on <strong>Auto-scroll</strong>. A play button and a speed slider appear at the bottom. The text then moves by itself at the words per minute you set, easing in gently when it starts. Tap the page to pause, and tap again to carry on.</p>
+<p>It can also pause for a moment at pictures and headings, so you have time to take them in.</p>
+<h2>Speed reading</h2>
+<p>In Speed, press play and keep your eyes on the coloured letter. Tap anywhere to pause, and the whole sentence appears so you can find your place. The buttons step back or forward by a word or a sentence, and the slider sets your speed.</p>
+<p>Every speed setting is in Aa while you are in Speed: pauses at commas and full stops, a gentle ramp up to speed, two or three words at once, and the colour of the focus letter.</p>
+<h2>Make it yours</h2>
+<p>Aa only shows the options for the mode you are in. For Pages and Scroll you can change:</p>
+<ul><li>The theme, from white through sepia to black, with a night theme that can switch on by itself.</li><li>The font, text size, line spacing and margins.</li><li>Brightness and warmth, for reading in the dark.</li><li>How pages turn, and where you tap to turn them.</li></ul>
+<p>Change the text size now and watch the page count at the bottom update to match.</p>
+<h2>Highlights, notes and words</h2>
+<p>Press and hold a word, then drag to select more. A small bar appears with four highlight colours, plus <strong>Note</strong>, <strong>Copy</strong> and <strong>Define</strong>. Tap a highlight later to change its colour, add a note or remove it.</p>
+<blockquote><p>Try it on this sentence: highlight it, then add a note saying what you think of it.</p></blockquote>
+<p>Every word you define is saved in the Words tab, along with the sentence you found it in.</p>
+<h2>Footnotes</h2>
+<p>Books often tuck extra detail into footnotes.<a href="#note1"><sup>1</sup></a> Tap the small number and the note opens without losing your place.</p>
+<hr>
+<p>A row of stars like the one above marks a break in the story. Books you import keep their breaks, headings, <em>italics</em>, quotations and lists.</p>
+<h2>Getting around</h2>
+<p>The list icon at the top opens the contents, your bookmarks and your highlights. The magnifying glass searches the whole book. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book.</p>
+<p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
+<h2>Read aloud</h2>
+<p>Tap the speaker at the bottom and the book is read to you, with each word marked as it is spoken. The page turns by itself. Choose the voice and its speed in Aa.</p>
+<h2>Helpful extras</h2>
+<ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li></ul>
+<p>When you have finished the tour, delete this book from the library with the three dots.</p>
+<h2>Notes</h2>
+<p id="note1">1. This is the footnote. Tap “Go to this note in the book” to jump here, then use Back to where you were to return.</p>`;
+function sampleDoc(){
+  const d=new DOMParser().parseFromString(SAMPLE_HTML,'text/html'); const ctx=newCtx(true); walkHTML(d.body,ctx,'');
+  const notes=resolveNotes(ctx, f=>ctx.anchors[f]);
+  const chapters=ctx.blocks.filter(b=>/^h[1-3]$/.test(b.t)).map(b=>({t:ctx.words.slice(b.s,b.e).join(' '), i:b.s, d:0}));
+  return {title:'Welcome to Tooz eReader (sample)', kind:'sample', words:ctx.words, ends:ctx.ends, blocks:ctx.blocks, wf:ctx.wf, notes, breaks:ctx.breaks, chapters};
+}
+const sampleText=(id,d)=>({id, words:d.words, ends:d.ends, blocks:d.blocks, wf:d.wf, notes:d.notes, breaks:d.breaks, images:null});
 
 function touch(m){ m.mod=Date.now(); Store.put('meta',m).catch(()=>{}); }
-function fetchText(meta){ if(meta.kind!=='sample') return null; const m=fromPlainText(SAMPLE); return {id:meta.id, words:m.words, ends:m.ends, blocks:m.blocks, images:null}; }
+function fetchText(meta){ if(meta.kind!=='sample') return null; return sampleText(meta.id, sampleDoc()); }
 
 /* ---------- boot ---------- */
 async function boot(){
@@ -2552,10 +2604,12 @@ async function boot(){
   await Store.open();
   try{ LIB=await Store.all('meta'); }catch(e){ LIB=[]; }
   LIB=LIB.filter(m=>m.id!=='__probe');
+  /* an older sample book is replaced by the current tour */
+  for(const m of LIB){ if(m.kind==='sample' && m.sv!==SAMPLE_V){ try{ const d=sampleDoc(); await Store.put('texts',sampleText(m.id,d)); Object.assign(m,{title:d.title, count:d.words.length, chapters:d.chapters, pos:0, finished:false, bookmarks:[], highlights:[], sv:SAMPLE_V}); try{ localStorage.removeItem('rf.pos.'+m.id); }catch(e){} touch(m); }catch(e){} } }
   for(const m of LIB){ if(applySavedPos(m)) Store.put('meta',m).catch(()=>{}); }
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
   try{ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')) navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
-  if(!LS.get('seeded',false) && !LIB.length){ try{ await addDoc({title:'Welcome to Tooz eReader (sample)', kind:'sample', ...fromPlainText(SAMPLE)}); LS.set('seeded',true); }catch(e){} }
+  if(!LS.get('seeded',false) && !LIB.length){ try{ const sm=await addDoc(sampleDoc()); sm.sv=SAMPLE_V; touch(sm); LS.set('seeded',true); }catch(e){} }
   renderLibrary(); renderWords();
   const onHash=()=>{ if(location.hash==='#paste'){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} openPaste(true); } };
   onHash(); window.addEventListener('hashchange', onHash);
