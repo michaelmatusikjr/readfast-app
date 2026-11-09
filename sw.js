@@ -1,8 +1,8 @@
-/* ReadFast offline cache.
+/* Tooz eReader offline cache.
    - The app's own files: network first, so updates arrive right away; cached copy when offline.
    - The EPUB/PDF readers and fonts: cached after first download, so files open offline.
    - Everything else (articles you load by link) is left alone. */
-const CACHE = 'readfast-v1';
+const CACHE = 'tooz-v2';
 const CORE = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-512.png'];
 const LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
