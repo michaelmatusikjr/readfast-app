@@ -1,12 +1,12 @@
 {
-  "name": "ReadFast",
-  "short_name": "ReadFast",
-  "description": "A personal speed-reading app for iPhone and iPad",
+  "name": "Tooz eReader",
+  "short_name": "Tooz",
+  "description": "An eReader with page-by-page, scrolling and speed reading for iPhone and iPad",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#E9EDF2",
   "theme_color": "#2244B5",
-  "orientation": "portrait",
+  "orientation": "any",
   "icons": [
     {
       "src": "icon-180.png",
