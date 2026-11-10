@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
 </style>
 <title>Tooz eReader</title>
@@ -37,7 +37,7 @@
   --paper:#0E1217; --surface:#171C23; --raise:#1E242C; --ink:#E4E9F0; --muted:#8D99A8;
   --line:#2B333D; --accent:#8AA4FF; --accent-soft:#232E4D; --accent-ink:#0E1217; --danger:#FF7A82; color-scheme:dark}
 *{box-sizing:border-box}
-html,body{height:100%}
+html,body{height:100%;touch-action:pan-x pan-y} /* no pinch or double-tap zoom of the app; pictures have their own zoom */
 body{background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.45;overflow:hidden;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit}
 input,textarea,select{font:inherit;color:var(--ink)}
@@ -154,7 +154,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
 /* Scroll */
 #scrollView{position:absolute;top:0;bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-#scFlow{padding:18px var(--mx) 45vh;max-width:44em;margin:0 auto}
+#scFlow{padding:18px var(--mx) 45vh}
 #scFlow .sec+.sec{margin-top:2.4em;padding-top:1.4em;border-top:1px solid var(--page-line)}
 #scrollView.auto-on{scroll-behavior:auto}
 
@@ -221,7 +221,11 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 #selBar .tb{border:0;background:none;font-weight:700;font-size:.86rem;padding:8px 8px;cursor:pointer;color:var(--ink);white-space:nowrap}
 #selBar .sep{width:1px;align-self:stretch;background:var(--line);margin:4px 3px}
 #shade{position:fixed;inset:0;pointer-events:none;z-index:40;display:none}
-#imgOverlay img{background:var(--img-bg)}
+#imgOverlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+#imgOverlay img{background:var(--img-bg);max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;transform-origin:center center;will-change:transform;-webkit-user-drag:none;-webkit-touch-callout:none}
+#imgOverlay img.ease{transition:transform .2s ease}
+#imgClose{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));color:#fff;background:rgba(255,255,255,.18);border-radius:50%}
+#imgHint{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));text-align:center;color:rgba(255,255,255,.75);font-size:.8rem;pointer-events:none}
 
 /* Sheets and overlays */
 #backdrop{position:fixed;inset:0;background:rgba(10,14,20,.42);z-index:20}
@@ -569,7 +573,9 @@ const THEMES = {
   black:{label:'Black', bg:'#000000', ink:'#C8C8C8', muted:'#7D7D7D', line:'#1E1E1E', link:'#7C97F2', dark:true}
 };
 const HL_LIGHT=['#FFE58A','#C4EDB5','#C5E1FF','#FFC9DF'], HL_DARK=['rgba(255,214,64,.42)','rgba(110,200,90,.38)','rgba(90,160,255,.40)','rgba(255,110,170,.40)'];
-const MARGINS={narrow:14, normal:24, wide:40};
+/* margins grow with the screen: [smallest in px, share of the reading width] */
+const MARGINS={narrow:[12,0.03], normal:[22,0.065], wide:[44,0.13]};
+function marginPx(W){ const m=MARGINS[S.margin]||MARGINS.normal; if(!W){ const rb=document.getElementById('rBody'); W=(rb&&rb.clientWidth)||window.innerWidth||390; } return Math.round(Math.max(m[0], W*m[1])); }
 function isNightNow(){
   const m=(s)=>{ const [h,mm]=String(s||'0:0').split(':').map(Number); return (h||0)*60+(mm||0); };
   const d=new Date(), c=d.getHours()*60+d.getMinutes(), a=m(S.nightFrom), b=m(S.nightTo);
@@ -596,7 +602,7 @@ function applyLook(){
   const fc=fontCSS(); st.setProperty('--bfont', fc);
   const sf=FONTS[S.speedFont]; st.setProperty('--rfont', S.speedFont==='same'||!sf ? fc : (sf.css||fc)); st.setProperty('--rsize', S.speedSize+'px');
   st.setProperty('--bsize', S.size+'px'); st.setProperty('--blh', S.lineH);
-  st.setProperty('--mx', (MARGINS[S.margin]||24)+'px');
+  st.setProperty('--mx', marginPx()+'px');
   st.setProperty('--pind', S.para==='indent'?'1.4em':'0'); st.setProperty('--pgap', S.para==='indent'?'0':'.8em');
   st.setProperty('--balign', S.justify?'justify':'left'); st.setProperty('--hyph', S.hyphen?'auto':'manual');
   st.setProperty('--bw', S.boldText?'600':'400'); st.setProperty('--bwb', S.boldText?'800':'700');
@@ -1341,7 +1347,7 @@ function enableManualScroll(){
     else{ /* a plain tap or mouse click: jump to the word, or open the picture, under the pointer */
       const hit=document.elementFromPoint(e.clientX,e.clientY); const fig=hit&&hit.closest('#scrollText figure.scroll-img'); const w=hit&&hit.closest('#scrollText .w');
       if(fig||w){ suppressStageClick=true; setTimeout(()=>{ suppressStageClick=false; },400); }
-      if(fig){ if(R.playing) pause(); const a=R.imgList[+fig.dataset.img]; if(a) openImageFull(a); }
+      if(fig){ if(R.playing) pause(); const a=R.imgList[+fig.dataset.img]; if(a) showImage(a); }
       else if(w){ const i=+w.dataset.i; if(!isNaN(i)) goTo(i); }
     }
   });
@@ -1564,10 +1570,11 @@ function redecorate(){ const h=hostEl(); if(h) for(const sec of h.children) if(s
 /* ---------- Pages mode ---------- */
 const P={k:-1, page:0, pages:1, g:null, busy:false, rangeEnd:0};
 function pgGeom(){
-  const W=pgView.clientWidth, H=pgView.clientHeight; const mx=MARGINS[S.margin]||24; const gap=mx*2;
+  const W=pgView.clientWidth, H=pgView.clientHeight; const mx=marginPx(W);
   const two=S.twoCol && W>H*1.1 && W>=640;
-  /* the text block is centred, and capped so lines stay a readable length on wide screens */
-  const inner=Math.max(120, Math.min(W-2*mx, two?1100:700)); const cw= two? (inner-gap)/2 : inner;
+  /* the text block is centred; the Margins setting alone decides how wide it is */
+  const gap= two ? Math.max(36, Math.round(mx*1.2)) : mx*2;
+  const inner=Math.max(120, W-2*mx); const cw= two? (inner-gap)/2 : inner;
   return {W,H,mx,gap,inner,cw,two,colsPer:two?2:1,stride:inner+gap,left:Math.round((W-inner)/2)};
 }
 function pgApplyGeom(){
@@ -1621,9 +1628,13 @@ function pgFirstWord(page){
   while(lo<=hi){ const m=(lo+hi)>>1; if(pgPageOfEl(ws[m])>=page){ ans=m; hi=m-1; } else lo=m+1; }
   return sec._a+ans;
 }
-async function pgLoad(k){ await renderSec(pgFlow,k,'replace'); P.k=k; pgMeasure(); }
-/* a lone column in the two-page layout sits in the middle instead of on the left */
-const pgShift=()=> (P.g.two && P.cols===1) ? (P.g.cw+P.g.gap)/2 : 0;
+async function pgLoad(k){
+  pgFlow.style.columnCount=P.g.two?'2':'1';
+  await renderSec(pgFlow,k,'replace'); P.k=k; pgMeasure();
+  /* in the two-page layout, a chapter that fills only one column is set across the full width instead of sitting on the left */
+  if(P.g.two && P.cols===1) pgFlow.style.columnCount='1';
+}
+const pgShift=()=>0;
 function pgSet(page, anim){
   P.page=clamp(page,0,P.pages-1);
   const slide = anim && S.turn==='slide';
@@ -1807,12 +1818,41 @@ function readerTap(e){
     else toggleChrome();
   }
 }
+/* picture viewer: the one place zooming is allowed. Pinch, double-tap or scroll-wheel to zoom, drag to move. */
 function showImage(a){
-  if(!a) return; const ov=document.createElement('div'); ov.id='imgOverlay';
-  ov.style.cssText='position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:12px;';
-  ov.innerHTML=`<img src="${R.imgUrls[a.f]}" alt="${esc(a.alt||'Illustration')}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px">`;
-  const at=performance.now(); ov.onclick=()=>{ if(performance.now()-at>420) ov.remove(); }; document.body.appendChild(ov);
+  if(!a || $('#imgOverlay')) return;
+  const ov=document.createElement('div'); ov.id='imgOverlay';
+  ov.innerHTML=`<img src="${R.imgUrls[a.f]}" alt="${esc(a.alt||'Illustration')}" draggable="false"><button class="icon-btn" id="imgClose" type="button" aria-label="Close picture">${ICON.close}</button><div id="imgHint">Pinch or double-tap to zoom</div>`;
+  const img=ov.firstElementChild; const opened=performance.now();
+  let sc=1, tx=0, ty=0, st=null, moved=false, lastTap=0, tapT=null; const pts=new Map();
+  const apply=(ease)=>{ img.classList.toggle('ease',!!ease); img.style.transform=`translate(${tx}px,${ty}px) scale(${sc})`; };
+  const limit=()=>{ const mx=Math.max(0,(img.offsetWidth*sc-ov.clientWidth)/2), my=Math.max(0,(img.offsetHeight*sc-ov.clientHeight)/2); tx=clamp(tx,-mx,mx); ty=clamp(ty,-my,my); };
+  const close=()=>{ clearTimeout(tapT); ov.remove(); };
+  const begin=()=>{ const p=[...pts.values()]; st={sc,tx,ty, x:p[0].x, y:p[0].y, d:p.length>1?Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y):0, mx:p.length>1?(p[0].x+p[1].x)/2:p[0].x, my:p.length>1?(p[0].y+p[1].y)/2:p[0].y}; };
+  /* zoom so the point under the finger stays put */
+  const zoomAt=(nsc,cx,cy)=>{ const ox=cx-ov.clientWidth/2, oy=cy-ov.clientHeight/2; const k=nsc/sc; tx=ox-(ox-tx)*k; ty=oy-(oy-ty)*k; sc=nsc; if(sc<=1.01){ sc=1; tx=0; ty=0; } limit(); };
+  ov.addEventListener('pointerdown',e=>{ if(e.target.closest('#imgClose')) return; try{ ov.setPointerCapture(e.pointerId); }catch(_){} pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(pts.size===1) moved=false; else moved=true; begin(); });
+  ov.addEventListener('pointermove',e=>{
+    if(!pts.has(e.pointerId)||!st) return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); const p=[...pts.values()];
+    if(p.length>=2){ const d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y), mx=(p[0].x+p[1].x)/2, my=(p[0].y+p[1].y)/2; sc=st.sc; tx=st.tx+(mx-st.mx); ty=st.ty+(my-st.my); zoomAt(clamp(st.sc*d/Math.max(1,st.d),1,6), mx, my); moved=true; apply(); }
+    else{ const dx=p[0].x-st.x, dy=p[0].y-st.y; if(Math.abs(dx)+Math.abs(dy)>8) moved=true; if(sc>1){ tx=st.tx+dx; ty=st.ty+dy; limit(); apply(); } }
+  });
+  const up=e=>{
+    if(!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
+    if(pts.size){ begin(); return; }
+    st=null; if(moved || e.type==='pointercancel' || performance.now()-opened<420) return;
+    const now=performance.now();
+    if(now-lastTap<320){ clearTimeout(tapT); lastTap=0; if(sc>1){ sc=1; tx=0; ty=0; } else zoomAt(2.5, e.clientX, e.clientY); apply(true); }
+    else{ lastTap=now; tapT=setTimeout(()=>{ if(sc===1) close(); },330); }
+  };
+  ov.addEventListener('pointerup',up); ov.addEventListener('pointercancel',up);
+  ov.addEventListener('wheel',e=>{ e.preventDefault(); zoomAt(clamp(sc*(e.deltaY<0?1.15:0.87),1,6), e.clientX, e.clientY); apply(); },{passive:false});
+  ov.querySelector('#imgClose').onclick=close;
+  document.body.appendChild(ov);
 }
+/* everywhere else, pinch and double-tap zoom are off */
+for(const t of ['gesturestart','gesturechange','gestureend']) document.addEventListener(t,e=>e.preventDefault(),{passive:false});
+document.addEventListener('touchmove',e=>{ if(e.touches.length>1) e.preventDefault(); },{passive:false});
 
 /* ---------- moving around ---------- */
 function setChrome(on){ R.chrome=on; $('#v-reader').classList.toggle('chrome-off',!on); }
@@ -1862,7 +1902,7 @@ async function switchMode(m){
   await MODES[m].enter(); updateChrome(); resetClock();
 }
 let relayT=null;
-function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; try{ await MODES[R.mode].relayout(); }catch(e){ console.error(e); } updateChrome(); },140); }
+function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; applyLook(); try{ await MODES[R.mode].relayout(); }catch(e){ console.error(e); } updateChrome(); },140); }
 window.addEventListener('resize', relayoutSoon);
 /* a font that finishes downloading changes line breaks, so lay the pages out again */
 try{ document.fonts.addEventListener('loadingdone', ()=>{ PC.fontGen++; if(R.mode) relayoutSoon(); }); }catch(e){}
