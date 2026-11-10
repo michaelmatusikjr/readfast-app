@@ -154,7 +154,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
 /* Scroll */
 #scrollView{position:absolute;top:0;bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-#scFlow{padding:18px var(--mx) 45vh;max-width:44em;margin:0 auto}
+#scFlow{padding:18px var(--mx) 45vh}
 #scFlow .sec+.sec{margin-top:2.4em;padding-top:1.4em;border-top:1px solid var(--page-line)}
 #scrollView.auto-on{scroll-behavior:auto}
 
@@ -569,7 +569,9 @@ const THEMES = {
   black:{label:'Black', bg:'#000000', ink:'#C8C8C8', muted:'#7D7D7D', line:'#1E1E1E', link:'#7C97F2', dark:true}
 };
 const HL_LIGHT=['#FFE58A','#C4EDB5','#C5E1FF','#FFC9DF'], HL_DARK=['rgba(255,214,64,.42)','rgba(110,200,90,.38)','rgba(90,160,255,.40)','rgba(255,110,170,.40)'];
-const MARGINS={narrow:14, normal:24, wide:40};
+/* margins grow with the screen: [smallest in px, share of the reading width] */
+const MARGINS={narrow:[12,0.03], normal:[22,0.065], wide:[44,0.13]};
+function marginPx(W){ const m=MARGINS[S.margin]||MARGINS.normal; if(!W){ const rb=document.getElementById('rBody'); W=(rb&&rb.clientWidth)||window.innerWidth||390; } return Math.round(Math.max(m[0], W*m[1])); }
 function isNightNow(){
   const m=(s)=>{ const [h,mm]=String(s||'0:0').split(':').map(Number); return (h||0)*60+(mm||0); };
   const d=new Date(), c=d.getHours()*60+d.getMinutes(), a=m(S.nightFrom), b=m(S.nightTo);
@@ -596,7 +598,7 @@ function applyLook(){
   const fc=fontCSS(); st.setProperty('--bfont', fc);
   const sf=FONTS[S.speedFont]; st.setProperty('--rfont', S.speedFont==='same'||!sf ? fc : (sf.css||fc)); st.setProperty('--rsize', S.speedSize+'px');
   st.setProperty('--bsize', S.size+'px'); st.setProperty('--blh', S.lineH);
-  st.setProperty('--mx', (MARGINS[S.margin]||24)+'px');
+  st.setProperty('--mx', marginPx()+'px');
   st.setProperty('--pind', S.para==='indent'?'1.4em':'0'); st.setProperty('--pgap', S.para==='indent'?'0':'.8em');
   st.setProperty('--balign', S.justify?'justify':'left'); st.setProperty('--hyph', S.hyphen?'auto':'manual');
   st.setProperty('--bw', S.boldText?'600':'400'); st.setProperty('--bwb', S.boldText?'800':'700');
@@ -1564,10 +1566,11 @@ function redecorate(){ const h=hostEl(); if(h) for(const sec of h.children) if(s
 /* ---------- Pages mode ---------- */
 const P={k:-1, page:0, pages:1, g:null, busy:false, rangeEnd:0};
 function pgGeom(){
-  const W=pgView.clientWidth, H=pgView.clientHeight; const mx=MARGINS[S.margin]||24; const gap=mx*2;
+  const W=pgView.clientWidth, H=pgView.clientHeight; const mx=marginPx(W);
   const two=S.twoCol && W>H*1.1 && W>=640;
-  /* the text block is centred, and capped so lines stay a readable length on wide screens */
-  const inner=Math.max(120, Math.min(W-2*mx, two?1100:700)); const cw= two? (inner-gap)/2 : inner;
+  /* the text block is centred; the Margins setting alone decides how wide it is */
+  const gap= two ? Math.max(36, Math.round(mx*1.2)) : mx*2;
+  const inner=Math.max(120, W-2*mx); const cw= two? (inner-gap)/2 : inner;
   return {W,H,mx,gap,inner,cw,two,colsPer:two?2:1,stride:inner+gap,left:Math.round((W-inner)/2)};
 }
 function pgApplyGeom(){
@@ -1621,9 +1624,13 @@ function pgFirstWord(page){
   while(lo<=hi){ const m=(lo+hi)>>1; if(pgPageOfEl(ws[m])>=page){ ans=m; hi=m-1; } else lo=m+1; }
   return sec._a+ans;
 }
-async function pgLoad(k){ await renderSec(pgFlow,k,'replace'); P.k=k; pgMeasure(); }
-/* a lone column in the two-page layout sits in the middle instead of on the left */
-const pgShift=()=> (P.g.two && P.cols===1) ? (P.g.cw+P.g.gap)/2 : 0;
+async function pgLoad(k){
+  pgFlow.style.columnCount=P.g.two?'2':'1';
+  await renderSec(pgFlow,k,'replace'); P.k=k; pgMeasure();
+  /* in the two-page layout, a chapter that fills only one column is set across the full width instead of sitting on the left */
+  if(P.g.two && P.cols===1) pgFlow.style.columnCount='1';
+}
+const pgShift=()=>0;
 function pgSet(page, anim){
   P.page=clamp(page,0,P.pages-1);
   const slide = anim && S.turn==='slide';
@@ -1862,7 +1869,7 @@ async function switchMode(m){
   await MODES[m].enter(); updateChrome(); resetClock();
 }
 let relayT=null;
-function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; try{ await MODES[R.mode].relayout(); }catch(e){ console.error(e); } updateChrome(); },140); }
+function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; applyLook(); try{ await MODES[R.mode].relayout(); }catch(e){ console.error(e); } updateChrome(); },140); }
 window.addEventListener('resize', relayoutSoon);
 /* a font that finishes downloading changes line breaks, so lay the pages out again */
 try{ document.fonts.addEventListener('loadingdone', ()=>{ PC.fontGen++; if(R.mode) relayoutSoon(); }); }catch(e){}
