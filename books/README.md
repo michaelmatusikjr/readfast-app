@@ -7,3 +7,7 @@ first time each book is opened.
 The starter shelf's other books (Augustine's Confessions, The Practice of the
 Presence of God, Calvin's Institutes and Fox's Book of Martyrs) are downloaded
 from Project Gutenberg (https://www.gutenberg.org) when first opened.
+
+The two Bibles (King James Version and World English Bible, both public domain)
+are built by Tooz from the verse text in github.com/aruljohn/Bible-kjv and
+github.com/TehShrike/world-english-bible, with a book-and-chapter table of contents.

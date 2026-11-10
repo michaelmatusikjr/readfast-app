@@ -66,7 +66,10 @@ h2{font-size:1.15rem;font-weight:600}
 #libTools{display:flex;flex-direction:column;gap:10px;width:100%}
 #libFind{width:100%;box-sizing:border-box}
 #libSort button{font-size:.8rem;padding:8px 2px}
-#libTags{gap:6px}
+#libTags,#libStatus{gap:6px}
+#libStatus .chip{padding:5px 10px;font-size:.82rem;border-radius:999px}
+#libStatus .chip span{font-weight:400;opacity:.75;margin-left:4px}
+#libTags{border-top:1px solid var(--line);padding-top:10px}
 #libTags .chip,.tagchips .chip{padding:5px 10px;font-size:.82rem;border-radius:999px}
 .grp{margin:10px 2px -2px;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:baseline}
 .grp span{font-weight:400;letter-spacing:0}
@@ -370,6 +373,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
       <div id="libTools">
         <input class="input" id="libFind" type="search" placeholder="Search titles, authors, categories and tags" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Search your library">
         <div class="seg" id="libSort" role="group" aria-label="Sort and group"></div>
+        <div class="chips" id="libStatus"></div>
         <div class="chips" id="libTags" hidden></div>
       </div>
       <div id="docList" class="wrap" style="gap:10px"></div>
@@ -2110,7 +2114,17 @@ function openToc(tab){
   let body='';
   if(t==='toc'){
     const ch=R.meta.chapters||[]; const cur=currentChapter(R.pos);
-    body = ch.length ? `<div class="list">${ch.map((c,k)=>`<button class="li${c===cur?' on':''}" type="button" data-act="go" data-i="${c.i}" style="padding-left:${4+(c.d||0)*16}px"><span class="grow">${esc(c.t)}</span><span class="small">${Math.round(100*c.i/Math.max(1,R.n-1))}%</span></button>`).join('')}</div>` : '<p class="note">This document has no chapter list. Use search or the progress bar to move around.</p>';
+    /* a very long list (the Bible's 1,189 chapters) shows books first; tap a book to show its chapters */
+    let rows=ch.map((c,k)=>k), kids=new Set(), open=-1;
+    if(ch.length>150){
+      const maxD=Math.max(...ch.map(c=>c.d||0));
+      const parentOf=k=>{ for(let j=k-1;j>=0;j--) if((ch[j].d||0)<(ch[k].d||0)) return j; return -1; };
+      ch.forEach((c,k)=>{ if((c.d||0)===maxD){ const p=parentOf(k); if(p>=0) kids.add(p); } });
+      const curK=ch.indexOf(cur);
+      open = (R.tocOpen&&R.tocOpen.id===R.meta.id)? R.tocOpen.k : (curK>=0&&(cur.d||0)===maxD? parentOf(curK) : curK);
+      if(maxD>0) rows=rows.filter(k=>(ch[k].d||0)<maxD || parentOf(k)===open);
+    }
+    body = ch.length ? `<div class="list">${rows.map(k=>{ const c=ch[k]; const par=kids.has(k); return `<button class="li${c===cur?' on':''}${k===open?' open':''}" type="button" data-act="${par?'tocx':'go'}" data-k="${k}" data-i="${c.i}" style="padding-left:${4+(c.d||0)*16}px"${par?` aria-expanded="${k===open}"`:''}><span class="grow">${par?(k===open?'▾ ':'▸ '):''}${esc(c.t)}</span><span class="small">${Math.round(100*c.i/Math.max(1,R.n-1))}%</span></button>`; }).join('')}</div>` : '<p class="note">This document has no chapter list. Use search or the progress bar to move around.</p>';
   } else if(t==='marks'){
     const bm=R.meta.bookmarks;
     body=`<div class="field"><label for="bmName">Bookmark this spot</label><input class="input" id="bmName" placeholder="Name (optional)"></div>
@@ -2123,13 +2137,14 @@ function openToc(tab){
   }
   openSheet(R.meta.title, seg+body, {
     tab:(b)=>openToc(b.dataset.t),
+    tocx:(b)=>{ const k=+b.dataset.k; const was=R.tocOpen&&R.tocOpen.id===R.meta.id&&R.tocOpen.k===k; R.tocOpen={id:R.meta.id, k: was? -1 : k}; openToc('toc'); setTimeout(()=>{ const o=$('#sheet .li.open'); o&&o.scrollIntoView({block:'start'}); },40); },
     go:(b)=>{ closeSheet(); goTo(+b.dataset.i, true); },
     addbm:()=>{ const bm=R.meta.bookmarks; bm.push({i:R.pos, name:$('#bmName').value.trim()||((currentChapter(R.pos)||{}).t||''), at:Date.now()}); bm.sort((a,b)=>a.i-b.i); touch(R.meta); updateChrome(); toast('Bookmarked'); openToc('marks'); },
     rmbm:(b)=>{ R.meta.bookmarks.splice(+b.dataset.k,1); touch(R.meta); updateChrome(); openToc('marks'); },
     edit:(b)=>{ const h=R.meta.highlights.find(x=>x.id===b.dataset.id); if(h) openHlMenu(h); },
     copyall:async()=>{ const txt=R.meta.title+'\n\n'+R.meta.highlights.map(h=>'“'+textOf(h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+R.meta.highlights.length+' highlight'+(R.meta.highlights.length===1?'':'s')); }catch(e){ toast('Couldn’t copy on this device.'); } }
   });
-  if(t==='toc') setTimeout(()=>{ const on=$('#sheet .li.on'); on&&on.scrollIntoView({block:'center'}); },30);
+  if(t==='toc' && !(tab==='toc' && R.tocOpen && R.tocOpen.fresh===false)) setTimeout(()=>{ const on=$('#sheet .li.on')||$('#sheet .li.open'); on&&on.scrollIntoView({block:'center'}); },30);
 }
 
 /* ---------- search ---------- */
@@ -2644,7 +2659,10 @@ async function initBackups(){
 
 /* ---------- library: add, sort, group, tags ---------- */
 const LIBSORTS=[['recent','Recent'],['title','Title'],['author','Author'],['category','Category'],['tags','Tags']];
-let LIBV={sort:LS.get('libSort','recent'), tag:LS.get('libTag',''), q:''};
+let LIBV={sort:LS.get('libSort','recent'), tag:LS.get('libTag',''), status:LS.get('libStatus','all'), q:''};
+/* opened and not finished = in progress */
+const isReading=d=>!d.pending && !d.finished && ((d.pos||0)>0 || (d.lastRead||0)>0);
+const STATUS=[['all','All',()=>true],['reading','Reading',isReading],['unread','Not started',d=>!d.finished&&!isReading(d)],['done','Finished',d=>!!d.finished]];
 const normTag=t=>t.replace(/\s+/g,' ').trim().slice(0,40);
 const tagsOf=d=>Array.isArray(d.tags)?d.tags:[];
 const sortKey=t=>(t||'').toLowerCase().replace(/^(the|a|an)\s+/,'').trim();
@@ -2671,17 +2689,23 @@ function renderLibrary(){
   $('#libTags').hidden=!tags.length;
   $('#libTags').innerHTML=tags.length?[`<button class="chip" type="button" data-tag="" aria-pressed="${!LIBV.tag}">All</button>`,...tags.map(t=>`<button class="chip" type="button" data-tag="${esc(t)}" aria-pressed="${LIBV.tag.toLowerCase()===t.toLowerCase()}">${esc(t)}</button>`)].join(''):'';
   $('#libTools').hidden=LIB.length<2;
+  if(!STATUS.some(([k])=>k===LIBV.status)) LIBV.status='all';
+  $('#libStatus').innerHTML=STATUS.map(([k,l,f])=>{ const n=k==='all'?0:LIB.filter(f).length; return `<button class="chip" type="button" data-st="${k}" aria-pressed="${LIBV.status===k}">${l}${n?`<span>${n}</span>`:''}</button>`; }).join('');
   if(!LIB.length){ el.innerHTML=`<div class="empty">Nothing here yet. Tap <b>Add to library</b> to paste text, load a link or open a book file.</div>`; return; }
   let docs=[...LIB];
   if(LIBV.tag) docs=docs.filter(d=>tagsOf(d).some(t=>t.toLowerCase()===LIBV.tag.toLowerCase()));
+  const stf=(STATUS.find(([k])=>k===LIBV.status)||STATUS[0])[2]; docs=docs.filter(stf);
   const q=LIBV.q.trim().toLowerCase();
   if(q) docs=docs.filter(d=>[d.title,d.author,d.category,...tagsOf(d)].some(x=>(x||'').toLowerCase().includes(q)));
-  if(!docs.length){ el.innerHTML=`<div class="empty">Nothing matches${q?' “'+esc(LIBV.q.trim())+'”':''}${LIBV.tag?' with the tag “'+esc(LIBV.tag)+'”':''}.</div>`; return; }
+  if(!docs.length){ el.innerHTML=`<div class="empty">${LIBV.status==='reading'&&!q&&!LIBV.tag?'No books in progress. Open any book to start it.':LIBV.status==='done'&&!q&&!LIBV.tag?'No finished books yet.':`Nothing matches${q?' “'+esc(LIBV.q.trim())+'”':''}${LIBV.tag?' with the tag “'+esc(LIBV.tag)+'”':''}.`}</div>`; return; }
+  /* books in progress sit at the top under Continue reading, whatever the sort */
+  let top='';
+  if(LIBV.status==='all'){ const cont=docs.filter(isReading).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0)); if(cont.length && cont.length<docs.length){ top=`<h3 class="grp">Continue reading <span>${cont.length}</span></h3>`+cont.map(docCard).join('')+(LIBV.sort==='recent'||LIBV.sort==='title'?'<h3 class="grp">Everything else</h3>':''); docs=docs.filter(d=>!isReading(d)); } }
   const recent=(a,b)=>(b.lastRead||b.added)-(a.lastRead||a.added);
   const titleSort=(a,b)=>byName(sortKey(a.title),sortKey(b.title));
   const s=LIBV.sort;
-  if(s==='recent'){ el.innerHTML=docs.sort(recent).map(docCard).join(''); return; }
-  if(s==='title'){ el.innerHTML=docs.sort(titleSort).map(docCard).join(''); return; }
+  if(s==='recent'){ el.innerHTML=top+docs.sort(recent).map(docCard).join(''); return; }
+  if(s==='title'){ el.innerHTML=top+docs.sort(titleSort).map(docCard).join(''); return; }
   const groups=new Map(); const none={author:'Unknown author', category:'No category', tags:'No tags'}[s];
   const put=(k,d)=>{ const key=k.toLowerCase(); if(!groups.has(key)) groups.set(key,{name:k, docs:[]}); groups.get(key).docs.push(d); };
   for(const d of docs){
@@ -2689,11 +2713,12 @@ function renderLibrary(){
     else put((d[s]||'').trim()||none, d);
   }
   const keys=[...groups.values()].sort((a,b)=> a.name===none?1 : b.name===none?-1 : byName(s==='author'?authorKey(a.name):a.name, s==='author'?authorKey(b.name):b.name));
-  el.innerHTML=keys.map(g=>`<h3 class="grp">${esc(g.name)} <span>${g.docs.length}</span></h3>`+g.docs.sort(titleSort).map(docCard).join('')).join('');
+  el.innerHTML=top+keys.map(g=>`<h3 class="grp">${esc(g.name)} <span>${g.docs.length}</span></h3>`+g.docs.sort(titleSort).map(docCard).join('')).join('');
 }
 /* "Jane Austen" sorts under Austen */
 function authorKey(a){ const first=a.split(/,|&| and /)[0].trim(); if(a.includes(',')&&!/,.*,/.test(a)&&first.split(' ').length===1) return a.toLowerCase(); const p=first.split(/\s+/); return (p.length>1?p[p.length-1]+' '+p.slice(0,-1).join(' '):first).toLowerCase(); }
 $('#libSort').addEventListener('click',e=>{ const b=e.target.closest('button[data-s]'); if(!b) return; LIBV.sort=b.dataset.s; LS.set('libSort',LIBV.sort); renderLibrary(); });
+$('#libStatus').addEventListener('click',e=>{ const b=e.target.closest('button[data-st]'); if(!b) return; LIBV.status=b.dataset.st; LS.set('libStatus',LIBV.status); renderLibrary(); });
 $('#libTags').addEventListener('click',e=>{ const b=e.target.closest('button[data-tag]'); if(!b) return; LIBV.tag=b.dataset.tag; LS.set('libTag',LIBV.tag); renderLibrary(); });
 $('#libFind').addEventListener('input',e=>{ LIBV.q=e.target.value; renderLibrary(); });
 $('#addBtn').innerHTML=ICON.plus+'Add to library';
@@ -2750,6 +2775,8 @@ function docOptions(id, keep){
 /* ---------- free books: starter shelf and Project Gutenberg search ---------- */
 const CC='Christian Classics', CL='Classics';
 const SHELF=[
+  ['kjv','The Holy Bible: King James Version','King James Version','Bible','bible-kjv'],
+  ['web','The Holy Bible: World English Bible','World English Bible','Bible','bible-web'],
   ['pilgrim','The Pilgrim’s Progress','John Bunyan',CC,'john-bunyan_the-pilgrims-progress'],
   ['confessions','Confessions','Augustine',CC,'g:3296'],
   ['imitation','The Imitation of Christ','Thomas à Kempis',CC,'thomas-a-kempis_the-imitation-of-christ_william-benham'],
@@ -2779,7 +2806,7 @@ const SHELF=[
   ['treasure','Treasure Island','Robert Louis Stevenson',CL,'robert-louis-stevenson_treasure-island'],
   ['douglass','Narrative of the Life of Frederick Douglass','Frederick Douglass',CL,'frederick-douglass_narrative-of-the-life-of-frederick-douglass']
 ].map(([k,title,author,category,src])=>({id:'shelf-'+k, title, author, category, src: src.startsWith('g:')? 'gutenberg:'+src.slice(2) : 'books/'+src+'.epub'}));
-const SHELF_SIZE={"shelf-pilgrim": "1.3 MB", "shelf-imitation": "1.1 MB", "shelf-orthodoxy": "1.3 MB", "shelf-everlasting": "0.7 MB", "shelf-pursuit": "0.7 MB", "shelf-paradise": "0.8 MB", "shelf-comedy": "2.1 MB", "shelf-benhur": "1.2 MB", "shelf-pride": "0.8 MB", "shelf-twocities": "1.2 MB", "shelf-miserables": "2.8 MB", "shelf-karamazov": "1.2 MB", "shelf-crime": "1.7 MB", "shelf-montecristo": "2.0 MB", "shelf-moby": "1.3 MB", "shelf-eyre": "0.8 MB", "shelf-quixote": "1.3 MB", "shelf-odyssey": "1.0 MB", "shelf-meditations": "0.7 MB", "shelf-holmes": "1.4 MB", "shelf-gatsby": "0.4 MB", "shelf-treasure": "0.7 MB", "shelf-douglass": "0.2 MB"};
+const SHELF_SIZE={"shelf-pilgrim": "1.3 MB", "shelf-imitation": "1.1 MB", "shelf-orthodoxy": "1.3 MB", "shelf-everlasting": "0.7 MB", "shelf-pursuit": "0.7 MB", "shelf-paradise": "0.8 MB", "shelf-comedy": "2.1 MB", "shelf-benhur": "1.2 MB", "shelf-pride": "0.8 MB", "shelf-twocities": "1.2 MB", "shelf-miserables": "2.8 MB", "shelf-karamazov": "1.2 MB", "shelf-crime": "1.7 MB", "shelf-montecristo": "2.0 MB", "shelf-moby": "1.3 MB", "shelf-eyre": "0.8 MB", "shelf-quixote": "1.3 MB", "shelf-odyssey": "1.0 MB", "shelf-meditations": "0.7 MB", "shelf-holmes": "1.4 MB", "shelf-gatsby": "0.4 MB", "shelf-treasure": "0.7 MB", "shelf-douglass": "0.2 MB", "shelf-kjv": "1.4 MB", "shelf-web": "1.4 MB"};
 function shelfMeta(b, n){ const now=Date.now(); return {id:b.id, title:b.title, author:b.author, category:b.category, kind:'epub', source:b.src, pending:{src:b.src}, count:0, pos:0, added:1000-n, lastRead:0, mod:now, chapters:[], bookmarks:[], highlights:[], tags:[], finished:false, imageCount:0}; }
 /* each starter book is added once; one you delete stays deleted (add it again from Free books) */
 async function seedShelf(){
