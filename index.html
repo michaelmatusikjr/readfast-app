@@ -844,7 +844,9 @@ async function parseEpub(buf, fname, onP){
   const title=(byTag(opf,'title')[0]?.textContent||'').trim() || fname.replace(/\.[^.]+$/,'');
   const lang=(byTag(opf,'language')[0]?.textContent||'').trim().slice(0,12);
   const author=[...new Set(byTag(opf,'creator').map(c=>c.textContent.replace(/\s+/g,' ').trim()).filter(Boolean))].slice(0,3).join(', ');
-  const category=(byTag(opf,'subject')[0]?.textContent||'').replace(/\s+/g,' ').trim().slice(0,60);
+  const seSub=[...opf.getElementsByTagName('meta')].find(m=>m.getAttribute('property')==='se:subject');
+  const dcSub=byTag(opf,'subject').map(x=>x.textContent.replace(/\s+/g,' ').trim()).find(x=>x && !x.includes('--') && x.length<=40);
+  const category=((seSub&&seSub.textContent)||dcSub||'').replace(/\s+/g,' ').trim().slice(0,60);
   const items={}; let navHref=null;
   for(const it of byTag(opf,'item')){ const href=resolvePath(base,it.getAttribute('href')||''); items[it.getAttribute('id')]={href, type:it.getAttribute('media-type')||'', props:it.getAttribute('properties')||''}; if(/\bnav\b/.test(it.getAttribute('properties')||'')) navHref=href; }
   const spineEl=byTag(opf,'spine')[0]; if(!spineEl) throw new Error('This EPUB has no readable chapters.');
@@ -1975,6 +1977,7 @@ async function loadBookFont(text){
 }
 async function openDoc(id){
   const meta=LIB.find(x=>x.id===id); if(!meta){ toast('That document couldn’t be found.'); return false; }
+  if(meta.pending){ if(!await fetchShelfBook(meta)) return false; }
   let text=await Store.get('texts',id).catch(()=>null);
   if(!text){ text=fetchText(meta); if(!text){ toast('That document’s text is missing. Delete it and add the file again.', null, 6000); return false; } Store.put('texts',text).catch(()=>{}); }
   if(R.meta){ stopActivity(); saveProgress(true); if(R.mode) MODES[R.mode].leave(); R.mode=null; }
@@ -2622,7 +2625,7 @@ function askFolderAgain(){
   toast('Allow Tooz to keep saving backups to “'+BK.dir.name+'”?', {label:'Allow', fn:()=>folderBackup(true)}, 12000);
 }
 function remindBackup(){
-  if(BK.dir || BK.reminded || !S.bkRemind || !LIB.some(m=>m.kind!=='sample') || !bkChanged()) return;
+  if(BK.dir || BK.reminded || !S.bkRemind || !LIB.some(m=>m.kind!=='sample'&&!m.pending) || !bkChanged()) return;
   const at=LS.get('bk.at',0); if(at && Date.now()-at < S.bkRemind*864e5) return;
   BK.reminded=true;
   setTimeout(()=>{ if($('#v-library').hidden && $('#v-words').hidden) { BK.reminded=false; return; } toast(at?'It’s been a while since your last backup':'Your library hasn’t been backed up yet', {label:'Save backup', fn:backup}, 12000); }, 1500);
@@ -2651,12 +2654,12 @@ function allOf(key){ const m=new Map(); for(const d of LIB){ const v=(d[key]||''
 function docCard(d){
   const pct=d.finished?100:Math.round(100*d.pos/Math.max(1,d.count-1));
   const left=fmtMins((d.count-d.pos)/(S.measuredWpm||230));
-  const tg=tagsOf(d);
+  const tg=tagsOf(d); const sz=d.pending&&SHELF_SIZE[d.id];
   return `<div class="doc" data-open="${d.id}" role="button" tabindex="0">
       <div class="t"><span class="tag">${KIND[d.kind]||'Text'}</span>${esc(d.title)}</div>
       <button class="icon-btn more" type="button" data-more="${d.id}" aria-label="Edit or organize ${esc(d.title)}">${ICON.more}</button>
       ${d.author?`<div class="a">${esc(d.author)}</div>`:''}
-      <div class="m">${d.count.toLocaleString()} words · ${d.finished?'Finished':pct+'% · '+left+' left'}${d.category?' · '+esc(d.category):''}</div>
+      <div class="m">${d.pending? 'Free book · tap to download'+(sz?' ('+sz+')':'') : d.count.toLocaleString()+' words · '+(d.finished?'Finished':pct+'% · '+left+' left')}${d.category?' · '+esc(d.category):''}</div>
       ${tg.length?`<div class="tg">${tg.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}
       <div class="bar"><i style="width:${pct}%"></i></div></div>`;
 }
@@ -2697,7 +2700,9 @@ $('#addBtn').innerHTML=ICON.plus+'Add to library';
 $('#addBtn').onclick=()=>openSheet('Add to library', `
   <button class="addopt" type="button" data-act="file">${ICON.file}<span><b>Open a file</b><small>EPUB, PDF, TXT, Markdown or HTML</small></span></button>
   <button class="addopt" type="button" data-act="link">${ICON.link}<span><b>Paste a link</b><small>Loads the article from a web page</small></span></button>
-  <button class="addopt" type="button" data-act="paste">${ICON.paste}<span><b>Paste text</b><small>Copied text, or anything you type</small></span></button>`, {
+  <button class="addopt" type="button" data-act="paste">${ICON.paste}<span><b>Paste text</b><small>Copied text, or anything you type</small></span></button>
+  <button class="addopt" type="button" data-act="free">${ICON.book}<span><b>Find free books</b><small>Search 75,000 classics from Project Gutenberg</small></span></button>`, {
+  free:()=>{ closeSheet(); setTimeout(openFreeBooks, 30); },
   file:()=>{ closeSheet(); $('#fileIn').value=''; $('#fileIn').click(); },
   link:()=>{ closeSheet(); openLink(); },
   paste:()=>{ closeSheet(); openPaste(false); }
@@ -2739,6 +2744,118 @@ function docOptions(id, keep){
     del:async()=>{ if(R.meta&&R.meta.id===id){ if(R.mode) closeReader(); R.meta=null; } try{ localStorage.removeItem('rf.pos.'+id); }catch(e){} await Store.del('meta',id); await Store.del('texts',id); LIB=LIB.filter(x=>x.id!==id); renderLibrary(); closeSheet(); toast('Deleted'); }
   });
   const ti=$('#edTag'); if(ti) ti.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addTag(); } });
+}
+
+
+/* ---------- free books: starter shelf and Project Gutenberg search ---------- */
+const CC='Christian Classics', CL='Classics';
+const SHELF=[
+  ['pilgrim','The Pilgrim’s Progress','John Bunyan',CC,'john-bunyan_the-pilgrims-progress'],
+  ['confessions','Confessions','Augustine',CC,'g:3296'],
+  ['imitation','The Imitation of Christ','Thomas à Kempis',CC,'thomas-a-kempis_the-imitation-of-christ_william-benham'],
+  ['orthodoxy','Orthodoxy','G. K. Chesterton',CC,'g-k-chesterton_orthodoxy'],
+  ['everlasting','The Everlasting Man','G. K. Chesterton',CC,'g-k-chesterton_the-everlasting-man'],
+  ['presence','The Practice of the Presence of God','Brother Lawrence',CC,'g:5657'],
+  ['pursuit','The Pursuit of God','A. W. Tozer',CC,'a-w-tozer_the-pursuit-of-god'],
+  ['institutes1','Institutes of the Christian Religion, Vol. 1','John Calvin',CC,'g:45001'],
+  ['institutes2','Institutes of the Christian Religion, Vol. 2','John Calvin',CC,'g:64392'],
+  ['paradise','Paradise Lost','John Milton',CC,'john-milton_paradise-lost'],
+  ['comedy','The Divine Comedy','Dante Alighieri',CC,'dante-alighieri_the-divine-comedy_henry-wadsworth-longfellow'],
+  ['martyrs','Fox’s Book of Martyrs','John Foxe',CC,'g:22400'],
+  ['benhur','Ben-Hur','Lew Wallace',CC,'lew-wallace_ben-hur'],
+  ['pride','Pride and Prejudice','Jane Austen',CL,'jane-austen_pride-and-prejudice'],
+  ['twocities','A Tale of Two Cities','Charles Dickens',CL,'charles-dickens_a-tale-of-two-cities'],
+  ['miserables','Les Misérables','Victor Hugo',CL,'victor-hugo_les-miserables_isabel-f-hapgood'],
+  ['karamazov','The Brothers Karamazov','Fyodor Dostoevsky',CL,'fyodor-dostoevsky_the-brothers-karamazov_constance-garnett'],
+  ['crime','Crime and Punishment','Fyodor Dostoevsky',CL,'fyodor-dostoevsky_crime-and-punishment_constance-garnett'],
+  ['montecristo','The Count of Monte Cristo','Alexandre Dumas',CL,'alexandre-dumas_the-count-of-monte-cristo_chapman-and-hall'],
+  ['moby','Moby-Dick','Herman Melville',CL,'herman-melville_moby-dick'],
+  ['eyre','Jane Eyre','Charlotte Brontë',CL,'charlotte-bronte_jane-eyre'],
+  ['quixote','Don Quixote','Miguel de Cervantes',CL,'miguel-de-cervantes-saavedra_don-quixote_john-ormsby'],
+  ['odyssey','The Odyssey','Homer',CL,'homer_the-odyssey_william-cullen-bryant'],
+  ['meditations','Meditations','Marcus Aurelius',CL,'marcus-aurelius_meditations_george-long'],
+  ['holmes','The Adventures of Sherlock Holmes','Arthur Conan Doyle',CL,'arthur-conan-doyle_the-adventures-of-sherlock-holmes'],
+  ['gatsby','The Great Gatsby','F. Scott Fitzgerald',CL,'f-scott-fitzgerald_the-great-gatsby'],
+  ['treasure','Treasure Island','Robert Louis Stevenson',CL,'robert-louis-stevenson_treasure-island'],
+  ['douglass','Narrative of the Life of Frederick Douglass','Frederick Douglass',CL,'frederick-douglass_narrative-of-the-life-of-frederick-douglass']
+].map(([k,title,author,category,src])=>({id:'shelf-'+k, title, author, category, src: src.startsWith('g:')? 'gutenberg:'+src.slice(2) : 'books/'+src+'.epub'}));
+const SHELF_SIZE={"shelf-pilgrim": "1.3 MB", "shelf-imitation": "1.1 MB", "shelf-orthodoxy": "1.3 MB", "shelf-everlasting": "0.7 MB", "shelf-pursuit": "0.7 MB", "shelf-paradise": "0.8 MB", "shelf-comedy": "2.1 MB", "shelf-benhur": "1.2 MB", "shelf-pride": "0.8 MB", "shelf-twocities": "1.2 MB", "shelf-miserables": "2.8 MB", "shelf-karamazov": "1.2 MB", "shelf-crime": "1.7 MB", "shelf-montecristo": "2.0 MB", "shelf-moby": "1.3 MB", "shelf-eyre": "0.8 MB", "shelf-quixote": "1.3 MB", "shelf-odyssey": "1.0 MB", "shelf-meditations": "0.7 MB", "shelf-holmes": "1.4 MB", "shelf-gatsby": "0.4 MB", "shelf-treasure": "0.7 MB", "shelf-douglass": "0.2 MB"};
+function shelfMeta(b, n){ const now=Date.now(); return {id:b.id, title:b.title, author:b.author, category:b.category, kind:'epub', source:b.src, pending:{src:b.src}, count:0, pos:0, added:1000-n, lastRead:0, mod:now, chapters:[], bookmarks:[], highlights:[], tags:[], finished:false, imageCount:0}; }
+/* each starter book is added once; one you delete stays deleted (add it again from Free books) */
+async function seedShelf(){
+  const done=new Set(LS.get('shelf',[])); let n=0;
+  for(const b of SHELF){ if(done.has(b.id)) continue; done.add(b.id); if(LIB.some(m=>m.id===b.id)) continue; const m=shelfMeta(b, n++); LIB.push(m); await Store.put('meta',m).catch(()=>{}); }
+  LS.set('shelf',[...done]);
+}
+const gutenbergUrl=id=>`https://www.gutenberg.org/cache/epub/${id}/pg${id}-images-3.epub`;
+/* the app's own copy first; Gutenberg directly, then through the reader services (some phones' browsers are blocked from downloading it directly) */
+async function downloadEpub(src, label, P){
+  const urls = src.startsWith('gutenberg:') ? (u=>[u, ...linkServices().map(f=>f(u))])(gutenbergUrl(src.slice(10))) : [src];
+  const ctl=new AbortController();
+  for(let k=0;k<urls.length;k++){
+    try{
+      P(k? 'Trying another way to download “'+label+'”…' : 'Downloading “'+label+'”…', 5);
+      const {res,buf}=await fetchTimed(urls[k], ctl.signal, 25000, (g,t)=>P('Downloading “'+label+'”… '+fmtSize(g)+(t?' of '+fmtSize(t):''), t? 5+60*g/t : null));
+      if(res.ok && buf.length>1000 && buf[0]===0x50 && buf[1]===0x4B) return buf;
+    }catch(e){}
+  }
+  return null;
+}
+async function fetchShelfBook(meta){
+  const P=(m,p)=>progress(m,p);
+  const buf=await downloadEpub(meta.pending.src, meta.title, P);
+  if(!buf){ toast('Couldn’t download “'+meta.title+'”. Check your internet connection and try again.', null, 7000); return false; }
+  let d; try{ d=await parseFile(new File([buf], meta.title+'.epub'), (m,p)=>P(m, p==null?null:65+p*0.3)); }catch(e){ toast(e&&e.message||'That book couldn’t be opened.', null, 7000); return false; }
+  P('Saving to your library…', 97);
+  const text={id:meta.id, words:d.words, ends:d.ends, images:d.images||null, blocks:d.blocks||null, wf:d.wf||null, notes:d.notes||null, breaks:d.breaks||null, secs:d.secs||null, font:d.font||null, lang:d.lang||null};
+  try{ await Store.put('texts',text); }catch(e){ toast('There isn’t enough storage on this device to save “'+meta.title+'”.', null, 7000); return false; }
+  Object.assign(meta,{count:d.words.length, chapters:d.chapters||[], imageCount:d.images?d.images.at.length:0, pending:null});
+  if(!meta.author && d.author) meta.author=d.author;
+  touch(meta); BK.cache.delete(meta.id); renderLibrary(); $('#toast').hidden=true;
+  return true;
+}
+/* Free books sheet: the starter shelf, plus a search of Project Gutenberg's 75,000 books */
+let FB={q:'', results:null, busy:false, err:''};
+function openFreeBooks(){
+  const inLib=new Set(LIB.map(m=>m.id));
+  const missing=SHELF.filter(b=>!inLib.has(b.id));
+  const res=FB.results;
+  openSheet('Free books', `
+    <div class="row" style="flex-wrap:nowrap"><input class="input" id="fbQ" type="search" enterkeyhint="search" placeholder="Search by title or author" value="${esc(FB.q)}" style="flex:1;min-width:0" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="btn primary" type="button" data-act="find" style="flex:none;padding-left:18px;padding-right:18px">Search</button></div>
+    <p class="note" style="margin:0">Searches Project Gutenberg: over 75,000 public-domain books, free to keep.</p>
+    <div id="fbRes">${FB.busy?'<p class="note">Searching…</p>':FB.err?`<p class="note">${esc(FB.err)}</p>`:res?(res.length?`<div class="list">${res.map((r,k)=>`<div class="li"><div class="grow" style="min-width:0"><b>${esc(r.title)}</b><div class="small">${esc(r.author||'Unknown author')}</div></div><button class="btn" type="button" data-act="get" data-k="${k}" style="flex:none">${LIB.some(m=>m.source==='gutenberg:'+r.id)?'Added':'Add'}</button></div>`).join('')}</div>`:'<p class="note">No books matched. Try fewer words, or just the author’s last name.</p>'):''}</div>
+    ${missing.length?`<h3 class="grp" style="margin-top:6px">Starter shelf books you removed</h3><div class="list">${missing.map(b=>`<div class="li"><div class="grow" style="min-width:0"><b>${esc(b.title)}</b><div class="small">${esc(b.author)}</div></div><button class="btn" type="button" data-act="shelf" data-id="${b.id}" style="flex:none">Add</button></div>`).join('')}</div>`:''}`, {
+    find:()=>searchGutenberg($('#fbQ').value),
+    get:(b)=>addGutenberg(FB.results[+b.dataset.k]),
+    shelf:async(b)=>{ const s=SHELF.find(x=>x.id===b.dataset.id); if(!s||LIB.some(m=>m.id===s.id)) return; const m=shelfMeta(s,0); LIB.push(m); await Store.put('meta',m).catch(()=>{}); renderLibrary(); toast('Added “'+s.title+'”'); openFreeBooks(); }
+  });
+  const q=$('#fbQ'); q.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); searchGutenberg(q.value); } });
+}
+const flipName=n=>{ const p=(n||'').split(', '); return p.length===2? p[1]+' '+p[0] : n||''; };
+async function searchGutenberg(q){
+  q=(q||'').trim(); if(!q) return; FB={q, results:null, busy:true, err:''}; openFreeBooks();
+  const api=`https://gutendex.com/books/?languages=en&search=${encodeURIComponent(q)}`;
+  const ctl=new AbortController(); let data=null;
+  for(const u of [api, ...linkServices().map(f=>f(api))]){
+    try{ const {res,buf}=await fetchTimed(u, ctl.signal, 15000); if(!res.ok) continue; data=JSON.parse(new TextDecoder().decode(buf)); if(data&&Array.isArray(data.results)) break; data=null; }catch(e){}
+  }
+  if(FB.q!==q) return;
+  FB.busy=false;
+  if(!data) FB.err='The book search isn’t answering right now. Check your connection and try again in a minute.';
+  else FB.results=data.results.filter(r=>r.formats&&Object.keys(r.formats).some(k=>k.startsWith('application/epub'))).slice(0,30).map(r=>({id:r.id, title:(r.title||'').replace(/\s*\r?\n\s*/g,': ').replace(/\$/g,''), author:(r.authors||[]).slice(0,2).map(a=>flipName(a.name)).join(', ')}));
+  if(!$('#sheet').hidden && $('#fbQ')) openFreeBooks();
+}
+async function addGutenberg(r){
+  if(!r) return; if(LIB.some(m=>m.source==='gutenberg:'+r.id)){ toast('That book is already in your library'); return; }
+  closeSheet();
+  const P=(m,p)=>progress(m,p);
+  const buf=await downloadEpub('gutenberg:'+r.id, r.title, P);
+  if(!buf){ toast('Couldn’t download “'+r.title+'”. Check your connection and try again.', null, 7000); return; }
+  try{
+    const d=await parseFile(new File([buf], r.title+'.epub'), (m,p)=>P(m, p==null?null:65+p*0.3));
+    d.title=r.title||d.title; d.author=r.author||d.author; d.source='gutenberg:'+r.id;
+    const m=await addDoc(d); toast('Added “'+m.title+'”');
+  }catch(e){ toast(e&&e.message||'That book couldn’t be opened.', null, 7000); }
 }
 
 /* ---------- Notes tab: highlights, notes and bookmarks from every book ---------- */
@@ -2872,6 +2989,7 @@ async function boot(){
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
   try{ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')) navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
   if(!LS.get('seeded',false) && !LIB.length){ try{ const sm=await addDoc(sampleDoc()); sm.sv=SAMPLE_V; touch(sm); LS.set('seeded',true); }catch(e){} }
+  await seedShelf();
   renderLibrary(); renderWords();
   initBackups();
   const onHash=()=>{ if(location.hash==='#paste'){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} openPaste(true); } };

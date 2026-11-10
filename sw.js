@@ -2,7 +2,7 @@
    - The app's own files: network first, so updates arrive right away; cached copy when offline.
    - The EPUB/PDF readers and fonts: cached after first download, so files open offline.
    - Everything else (articles you load by link) is left alone. */
-const CACHE = 'tooz-v2';
+const CACHE = 'tooz-v3';
 const CORE = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-512.png'];
 const LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
@@ -31,6 +31,8 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  /* starter-shelf books are saved inside the app once downloaded, so they aren't kept twice */
+  if (url.origin === self.location.origin && url.pathname.includes('/books/')) return;
   if (url.origin === self.location.origin) {
     /* Network first so updates show up, but on a weak signal fall back to the saved copy after 3 seconds
        (the network answer still refreshes the cache for next time). */
