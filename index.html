@@ -63,6 +63,21 @@ h2{font-size:1.15rem;font-weight:600}
 .row>.btn{flex:1}
 
 /* Library */
+#libTools{display:flex;flex-direction:column;gap:10px;width:100%}
+#libFind{width:100%;box-sizing:border-box}
+#libSort button{font-size:.8rem;padding:8px 2px}
+#libTags{gap:6px}
+#libTags .chip,.tagchips .chip{padding:5px 10px;font-size:.82rem;border-radius:999px}
+.grp{margin:10px 2px -2px;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:baseline}
+.grp span{font-weight:400;letter-spacing:0}
+.doc .a{grid-column:1;font-size:.9rem;color:var(--ink);opacity:.8;margin-top:-2px}
+.doc .tg{grid-column:1;display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.doc .tg span{font-size:.72rem;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.tagchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tagchips .chip .x{margin-left:6px;opacity:.6}
+.addopt{display:flex;gap:14px;align-items:center;text-align:left;width:100%;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);cursor:pointer;font:inherit}
+.addopt svg{flex:none;width:26px;height:26px;color:var(--accent)}
+.addopt b{display:block;font-size:1rem}.addopt small{display:block;color:var(--muted);font-size:.82rem;margin-top:2px}
 .doc{display:grid;grid-template-columns:1fr auto;gap:4px 8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 8px 14px 16px;cursor:pointer;text-align:left}
 .doc .t{font-weight:700;font-size:1.05rem;min-width:0;overflow-wrap:anywhere}
 .doc .m{grid-column:1;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -259,6 +274,14 @@ code{font-family:var(--f-mono);font-size:.85em;background:var(--raise);padding:1
 .result{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:10px 2px;cursor:pointer;color:var(--ink);font-size:.92rem;line-height:1.45}
 .result mark{background:var(--accent-soft);color:var(--accent);font-weight:700;border-radius:3px;padding:0 1px}
 .result .where{display:block;font-size:.76rem;color:var(--muted);margin-top:2px}
+.nbook{border:1px solid var(--line);border-radius:14px;padding:10px 14px 4px;background:var(--surface);min-width:0;max-width:100%;box-sizing:border-box}
+.nbook .nt{background:var(--raise)}
+#notesHl,#notesBm,#wordsPane{width:100%;min-width:0}
+.nbook-h .btn{flex:none}
+.nbook-h{display:flex;align-items:center;gap:8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.nbook-h b{flex:1;min-width:0;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nbook-h .small{color:var(--muted);font-size:.78rem}
+.nbook .hlrow:last-child{border-bottom:0}
 .hlrow{display:flex;gap:10px;align-items:flex-start;border-bottom:1px solid var(--line);padding:10px 0}
 .hlrow .bar{width:5px;align-self:stretch;border-radius:3px;flex:none}
 .hlrow .grow{flex:1;min-width:0;cursor:pointer}
@@ -343,21 +366,27 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
       <div class="topbar">
         <div><div class="eyebrow">Your library</div><h1>Tooz eReader</h1></div>
       </div>
-      <div class="row">
-        <button class="btn primary" id="addPaste" type="button"></button>
-        <button class="btn" id="addLink" type="button"></button>
-        <button class="btn" id="addFile" type="button"></button>
+      <button class="btn primary block" id="addBtn" type="button"></button>
+      <div id="libTools">
+        <input class="input" id="libFind" type="search" placeholder="Search titles, authors, categories and tags" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Search your library">
+        <div class="seg" id="libSort" role="group" aria-label="Sort and group"></div>
+        <div class="chips" id="libTags" hidden></div>
       </div>
       <div id="docList" class="wrap" style="gap:10px"></div>
       <p class="note" id="fileNote">Opens EPUB, PDF, TXT, Markdown and HTML files. Books bought in Apple Books are copy-protected and can't be opened here.</p>
     </div>
   </section>
 
-  <section id="v-words" class="view" aria-label="Words" hidden>
+  <section id="v-words" class="view" aria-label="Notes" hidden>
     <div class="wrap">
-      <div class="topbar"><div><div class="eyebrow">Looked up while reading</div><h1>Words</h1></div></div>
-      <p class="note">Swipe a word left to remove it. Tap a word to look it up again or jump back to where you found it.</p>
-      <div id="wordList" class="wrap" style="gap:10px"></div>
+      <div class="topbar"><div><div class="eyebrow">From every book</div><h1>Notes</h1></div></div>
+      <div class="seg" id="notesSeg"><button type="button" data-n="hl">Highlights</button><button type="button" data-n="bm">Bookmarks</button><button type="button" data-n="w">Words</button></div>
+      <div id="notesHl" class="wrap" style="gap:14px"></div>
+      <div id="notesBm" class="wrap" style="gap:14px" hidden></div>
+      <div id="wordsPane" class="wrap" style="gap:10px" hidden>
+        <p class="note">Swipe a word left to remove it. Tap a word to look it up again or jump back to where you found it.</p>
+        <div id="wordList" class="wrap" style="gap:10px"></div>
+      </div>
     </div>
   </section>
 
@@ -384,6 +413,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
       <button class="icon-btn" id="rBack" type="button" aria-label="Back to library"></button>
       <div class="title"><span id="rTitle"></span><span class="sub" id="rSub"></span></div>
       <button class="icon-btn" id="rSearch" type="button" aria-label="Search in this book"></button>
+      <button class="icon-btn" id="rNotes" type="button" aria-label="Highlights, notes and bookmarks"></button>
       <button class="icon-btn" id="rToc" type="button" aria-label="Contents, bookmarks and highlights"></button>
       <button class="icon-btn" id="rAa" type="button" aria-label="Reading options">Aa</button>
     </header>
@@ -496,7 +526,8 @@ const ICON = {
   speaker: I('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>'),
   stop: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect fill="currentColor" x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>`,
   note: I('<path d="M5 4h14v12l-5 4H5z"/><path d="M14 20v-4h5"/>'),
-  hl: I('<path d="M4 20h7"/><path d="M14.5 4.5l5 5L10 19l-5 1 1-5z"/>')
+  hl: I('<path d="M4 20h7"/><path d="M14.5 4.5l5 5L10 19l-5 1 1-5z"/>'),
+  link: I('<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/>')
 };
 
 /* ---------- utilities ---------- */
@@ -536,7 +567,7 @@ const DEFAULTS = {
   turn:'slide', tapZones:'edges', twoCol:true, focus:true,
   autoScroll:false, scrollWpm:220, asRamp:true, asPauses:true,
   wpm:350, multi:false, charBudget:14, ramp:true, rampSecs:6, commaPause:1.6, sentPause:2.3, paraPause:3.0, longWord:true, autoRewind:3, speedSize:44, focusColor:'#E0303F', context:true,
-  speedFont:'same', adaptive:false, ttsRate:1, ttsVoice:'', info:0, measuredWpm:0, goalMins:0, linkService:''
+  speedFont:'same', adaptive:false, ttsRate:1, ttsVoice:'', info:0, measuredWpm:0, goalMins:0, linkService:'', bkRemind:7
 };
 const S = (()=>{
   const saved=LS.get('settings',{})||{};
@@ -812,6 +843,8 @@ async function parseEpub(buf, fname, onP){
   const opf=parseXML(opfText);
   const title=(byTag(opf,'title')[0]?.textContent||'').trim() || fname.replace(/\.[^.]+$/,'');
   const lang=(byTag(opf,'language')[0]?.textContent||'').trim().slice(0,12);
+  const author=[...new Set(byTag(opf,'creator').map(c=>c.textContent.replace(/\s+/g,' ').trim()).filter(Boolean))].slice(0,3).join(', ');
+  const category=(byTag(opf,'subject')[0]?.textContent||'').replace(/\s+/g,' ').trim().slice(0,60);
   const items={}; let navHref=null;
   for(const it of byTag(opf,'item')){ const href=resolvePath(base,it.getAttribute('href')||''); items[it.getAttribute('id')]={href, type:it.getAttribute('media-type')||'', props:it.getAttribute('properties')||''}; if(/\bnav\b/.test(it.getAttribute('properties')||'')) navHref=href; }
   const spineEl=byTag(opf,'spine')[0]; if(!spineEl) throw new Error('This EPUB has no readable chapters.');
@@ -881,7 +914,7 @@ async function parseEpub(buf, fname, onP){
   P('Looking for the book’s font…', 92);
   let font=null; try{ font=await epubFont(items, read, files, encSet); }catch(e){ font=null; }
   const secs=[...new Set(fileStarts.map(f=>f.i))].filter(i=>i>0&&i<ctx.words.length);
-  return {title, lang, kind:'epub', words:ctx.words, ends:ctx.ends, chapters, blocks:ctx.blocks, wf:ctx.wf, notes, breaks:ctx.breaks, secs, font, images: at.length?{files:imgFiles, at}:null, imagesMissing:missing};
+  return {title, author, category, lang, kind:'epub', words:ctx.words, ends:ctx.ends, chapters, blocks:ctx.blocks, wf:ctx.wf, notes, breaks:ctx.breaks, secs, font, images: at.length?{files:imgFiles, at}:null, imagesMissing:missing};
 }
 /* the font the book's own stylesheet uses for body text, if it ships one */
 async function epubFont(items, read, files, encSet){
@@ -927,7 +960,7 @@ async function parsePdf(buf, fname, onP){
   try{ pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf), isEvalSupported:false, disableFontFace:true}).promise; }
   catch(e){ throw new Error(e&&e.name==='PasswordException' ? 'This PDF is password-protected, so its text can\u2019t be read.' : 'This PDF couldn\u2019t be read. It may be damaged or incomplete. If it\u2019s stored in iCloud, download it in the Files app first.'); }
   let title=fname.replace(/\.[^.]+$/,'');
-  try{ const md=await pdf.getMetadata(); const t=md?.info?.Title; if(t&&t.trim().length>2) title=t.trim(); }catch(e){}
+  let author=''; try{ const md=await pdf.getMetadata(); const t=md?.info?.Title; if(t&&t.trim().length>2) title=t.trim(); const au=md?.info?.Author; if(au&&au.trim()) author=au.trim().slice(0,80); }catch(e){}
   const words=[], ends=[], chapters=[];
   try{
   for(let p=1;p<=pdf.numPages;p++){
@@ -949,7 +982,7 @@ async function parsePdf(buf, fname, onP){
   }
   }catch(e){ try{ pdf.destroy(); }catch(_){} throw e; }
   if(!words.length) throw new Error('This PDF has no selectable text. It may be scanned pages saved as images.');
-  return {title, kind:'pdf', words, ends, chapters};
+  return {title, author, kind:'pdf', words, ends, chapters};
 }
 
 async function parseFile(file, onP){
@@ -975,44 +1008,15 @@ async function addDoc(d){
   const text={id, words:d.words, ends:d.ends, images:d.images||null, blocks:d.blocks||null, wf:d.wf||null, notes:d.notes||null, breaks:d.breaks||null, secs:d.secs||null, font:d.font||null, lang:d.lang||null};
   await Store.put('texts',text);
   const now=Date.now();
-  const meta={id, title:d.title||'Untitled', kind:d.kind, source:d.source||null, count:d.words.length, pos:0, added:now, lastRead:0, mod:now, chapters:d.chapters||[], bookmarks:[], highlights:[], finished:false, imageCount:d.images?d.images.at.length:0};
+  const meta={id, title:d.title||'Untitled', kind:d.kind, source:d.source||null, count:d.words.length, pos:0, added:now, lastRead:0, mod:now, chapters:d.chapters||[], bookmarks:[], highlights:[], author:(d.author||'').trim(), category:(d.category||'').trim(), tags:[], finished:false, imageCount:d.images?d.images.at.length:0};
   await Store.put('meta',meta); LIB.push(meta); renderLibrary(); return meta;
 }
 const KIND={epub:'EPUB', pdf:'PDF', text:'Text', md:'Text', web:'Web', link:'Web', paste:'Pasted', sample:'Sample'};
-function renderLibrary(){
-  const el=$('#docList');
-  if(!LIB.length){ el.innerHTML=`<div class="empty">Nothing here yet. Paste some text or open a file to start reading.</div>`; return; }
-  const docs=[...LIB].sort((a,b)=>(b.lastRead||b.added)-(a.lastRead||a.added));
-  el.innerHTML=docs.map(d=>{
-    const pct=d.finished?100:Math.round(100*d.pos/Math.max(1,d.count-1));
-    const left=fmtMins((d.count-d.pos)/(S.measuredWpm||230));
-    return `<div class="doc" data-open="${d.id}" role="button" tabindex="0">
-      <div class="t"><span class="tag">${KIND[d.kind]||'Text'}</span>${esc(d.title)}</div>
-      <button class="icon-btn more" type="button" data-more="${d.id}" aria-label="Options for ${esc(d.title)}">${ICON.more}</button>
-      <div class="m">${d.count.toLocaleString()} words · ${d.finished?'Finished':pct+'% · '+left+' left'}${d.chapters.length?' · '+d.chapters.length+' sections':''}${d.imageCount?' · '+d.imageCount+' image'+(d.imageCount===1?'':'s'):''}</div>
-      <div class="bar"><i style="width:${pct}%"></i></div></div>`;
-  }).join('');
-}
 $('#docList').addEventListener('click',e=>{
   const m=e.target.closest('[data-more]'); if(m){ e.stopPropagation(); docOptions(m.dataset.more); return; }
   const o=e.target.closest('[data-open]'); if(o) openDoc(o.dataset.open);
 });
 $('#docList').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const o=e.target.closest('[data-open]'); if(o&&!e.target.closest('[data-more]')) openDoc(o.dataset.open); } });
-
-function docOptions(id){
-  const d=LIB.find(x=>x.id===id); if(!d) return;
-  openSheet(`Options`, `
-    <div class="field"><label for="renameIn">Title</label><input class="input" id="renameIn" value="${esc(d.title)}"></div>
-    <button class="btn block" type="button" data-act="rename">Save title</button>
-    <button class="btn block" type="button" data-act="restart">Start over from the beginning</button>
-    <div id="delZone"><button class="btn block danger" type="button" data-act="askdel">${ICON.trash} Delete from library</button></div>`, {
-    rename: async()=>{ const v=$('#renameIn').value.trim(); if(!v) return; d.title=v; touch(d); renderLibrary(); closeSheet(); toast('Title saved'); },
-    restart: async()=>{ if(R.meta&&R.meta.id===id&&R.mode) closeReader(); d.pos=0; d.finished=false; d.lastRead=Date.now(); LS.set('pos.'+d.id,{pos:0,t:d.lastRead,fin:false}); touch(d); renderLibrary(); closeSheet(); toast('Back to the beginning'); },
-    askdel: ()=>{ $('#delZone').innerHTML=`<p class="note">Delete “${esc(d.title)}” and its bookmarks? Your saved words stay in Words.</p><div class="row"><button class="btn" type="button" data-act="nodel">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" type="button" data-act="del">Delete</button></div>`; },
-    nodel: ()=>docOptions(id),
-    del: async()=>{ if(R.meta&&R.meta.id===id){ if(R.mode) closeReader(); R.meta=null; } try{ localStorage.removeItem('rf.pos.'+id); }catch(e){} await Store.del('meta',id); await Store.del('texts',id); LIB=LIB.filter(x=>x.id!==id); renderLibrary(); closeSheet(); toast('Deleted'); }
-  });
-}
 
 /* ---------- paste ---------- */
 function openPaste(fromShare){
@@ -1039,13 +1043,6 @@ function openPaste(fromShare){
     }
   });
 }
-$('#addPaste').innerHTML=ICON.paste+'Paste text';
-$('#addLink').innerHTML=ICON.define+'Paste link';
-$('#addFile').innerHTML=ICON.file+'Open file';
-$('#addPaste').onclick=()=>openPaste(false);
-$('#addLink').onclick=()=>openLink();
-$('#addFile').onclick=()=>{ $('#fileIn').value=''; $('#fileIn').click(); };
-
 function openLink(){
   openSheet('Paste a link', `
     <div class="field"><label for="linkUrl">Article, EPUB or PDF link</label><input class="input" id="linkUrl" type="url" placeholder="https://…" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
@@ -1205,8 +1202,9 @@ function extractArticle(html, url){
   const h1=(root.querySelector('h1')||doc.querySelector('h1'))?.textContent.replace(/\s+/g,' ').trim()||'';
   let out=fromParagraphs(paras);
   const textLen=paras.reduce((n,p)=>n+(p.heading?0:p.text.length),0);
+  const byline=[metaC('meta[name="author"]'),metaC('meta[property="article:author"]'),metaC('meta[name="byl"]').replace(/^by\s+/i,'')].find(x=>x&&!/^https?:/i.test(x))||'';
   if(textLen<300){ const ctx=newCtx(false); walkHTML(root,ctx,''); if(ctx.words.length>out.words.length) out={words:ctx.words, ends:ctx.ends, blocks:ctx.blocks, wf:ctx.wf, chapters:[]}; }
-  return {title:title||h1.slice(0,120), ...out};
+  return {title:title||h1.slice(0,120), author:byline.slice(0,80), ...out};
 }
 $('#fileIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -1432,7 +1430,7 @@ function saveProgress(force){
 const SAVE={lsOK:0, dbOK:0, err:null, warned:false};
 function saveFailed(where, e){
   SAVE.err=`${where}: ${(e&&(e.name||e.message))||'unknown error'}`;
-  if(!SAVE.warned){ SAVE.warned=true; toast('Your place couldn’t be saved ('+SAVE.err+'). See Settings → Storage check.', null, 9000); }
+  if(!SAVE.warned){ SAVE.warned=true; toast('Your place couldn’t be saved ('+SAVE.err+'). Save a backup from Settings soon.', null, 9000); }
 }
 function applySavedPos(m){
   const p=LS.get('pos.'+m.id,null);
@@ -1955,7 +1953,7 @@ $('#rScrub').addEventListener('change',e=>{ scrubbing=false; goTo(+e.target.valu
 $('#rMark').onclick=()=>{
   const ex=bookmarkHere(); const bm=R.meta.bookmarks||(R.meta.bookmarks=[]);
   if(ex){ bm.splice(bm.indexOf(ex),1); toast('Bookmark removed'); }
-  else { const ch=currentChapter(R.pos); bm.push({i:R.pos, name:ch?ch.t:'', at:Date.now()}); bm.sort((a,b)=>a.i-b.i); toast('Bookmarked'); }
+  else { const ch=currentChapter(R.pos); bm.push({i:R.pos, name:ch?ch.t:'', at:Date.now()}); bm.sort((a,b)=>a.i-b.i); toast('Bookmarked', {label:'See all', fn:()=>openToc('marks')}); }
   touch(R.meta); updateChrome();
 };
 
@@ -2018,7 +2016,8 @@ async function openDoc(id){
 function closeReader(){
   stopActivity(); noteProgress(); saveProgress(true); selClear();
   if(R.mode) MODES[R.mode].leave(); R.mode=null; R.meta=null; /* nothing may save a closed book's record again */
-  showView('library'); applyLook();
+  const back=R.returnTo||'library'; R.returnTo=null;
+  showView(back); applyLook();
 }
 document.addEventListener('visibilitychange',()=>{ if(document.hidden && R.meta && R.mode){ stopActivity(); noteProgress(); saveProgress(true); } });
 const leaving=()=>{ if(R.meta && R.mode){ stopActivity(); saveProgress(true); } };
@@ -2104,7 +2103,7 @@ function openFootnote(i){
 function openToc(tab){
   if(R.mode==='speed' && R.playing) pause();
   const t=tab||'toc';
-  const seg=`<div class="seg" style="margin-bottom:4px">${[['toc','Contents'],['marks','Bookmarks'],['hls','Highlights']].map(([k,l])=>`<button type="button" data-act="tab" data-t="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>`;
+  const seg=`<div class="seg" style="margin-bottom:4px">${[['toc','Contents'],['marks','Bookmarks'],['hls','Highlights & notes']].map(([k,l])=>`<button type="button" data-act="tab" data-t="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>`;
   let body='';
   if(t==='toc'){
     const ch=R.meta.chapters||[]; const cur=currentChapter(R.pos);
@@ -2343,6 +2342,7 @@ function bindPanel(){
 }
 $('#rAa').onclick=openPanel;
 $('#rToc').onclick=()=>openToc('toc');
+$('#rNotes').onclick=()=>openToc('hls');
 $('#rSearch').onclick=openSearch;
 $('#markBtn').onclick=()=>openToc('marks');
 /* night theme switch and phone light/dark changes */
@@ -2475,36 +2475,30 @@ function renderSettings(){
     </div></div>
     <h2>Your library</h2>
     <div class="group"><div class="set">
-      <div class="desc">Your library lives on this phone, inside this browser. Save a backup now and then so nothing is lost if browser data is cleared. Backups include highlights, notes and bookmarks.</div>
+      <div class="desc">Your library lives on this device, inside this browser. A backup keeps your books, highlights, notes, bookmarks, saved words and reading log safe if browser data is cleared.</div>
       <div class="row"><button class="btn" type="button" id="backupBtn">Save backup</button><button class="btn" type="button" id="restoreBtn">Restore backup</button></div>
+      <div class="desc" id="bkLast"></div>
       <div class="desc" id="storeNote"></div>
-    </div></div>
-    <h2>Storage check</h2>
-    <div class="group"><div class="set">
-      <div class="desc">Shows whether this phone is letting Tooz save. If something here says blocked or failed, send me a screenshot.</div>
-      <div id="storeDiag" class="note" style="font-family:var(--f-mono);font-size:.8rem;line-height:1.7;color:var(--ink)">Checking…</div>
-      <div class="row"><button class="btn" type="button" id="diagRun">Run check again</button><button class="btn" type="button" id="persistBtn">Ask iPhone to keep data</button></div>
-    </div></div>`;
-  runDiag();
+    </div>
+    ${canPickFolder()?`<div class="set">
+      <div class="hd"><b>Backup folder</b></div>
+      <div class="desc" id="bkFolder"></div>
+      <div class="row"><button class="btn" type="button" id="bkPick">Choose folder</button><button class="btn" type="button" id="bkOff" hidden>Stop automatic backups</button></div>
+      <div class="desc">Tooz saves <b>tooz-backup.json</b> to this folder by itself: when you close or switch away from the app, and every few minutes while something has changed. It also keeps one dated copy per day for the last week.</div>
+    </div>`:`<div class="set">
+      <div class="hd"><b>Backup reminder</b></div>
+      <div class="seg" id="bkRemind">${[['0','Off'],['1','Daily'],['7','Weekly']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(S.bkRemind)===v}">${l}</button>`).join('')}</div>
+      <div class="desc">On iPhone, Apple doesn’t let web apps pick a folder or save files without a tap, so automatic backups aren’t possible here. Instead, Tooz reminds you when your library has changed and it’s been a while. When you tap <b>Save backup</b>, choose <b>Save to Files</b>; iPhone opens the folder you used last time.</div>
+    </div>`}</div>`;
   $('#storeNote').textContent=Store.db?'':'Storage is unavailable in this view, so documents will disappear when you close the app.';
-  $('#diagRun').onclick=runDiag;
-  $('#persistBtn').onclick=async()=>{ try{ const ok=navigator.storage&&navigator.storage.persist?await navigator.storage.persist():false; toast(ok?'iPhone will keep Tooz’s data':'iPhone didn’t agree to keep the data permanently'); }catch(e){ toast('This view can’t ask for that'); } runDiag(); };
   $('#sLinkSvc').addEventListener('change',e=>{ S.linkService=e.target.value.trim(); saveSettings(); toast(S.linkService?'Reader service saved':'Reader service cleared'); });
   $('#backupBtn').onclick=backup;
+  bkSettingsUI();
+  if($('#bkPick')) $('#bkPick').onclick=pickBackupFolder;
+  if($('#bkOff')) $('#bkOff').onclick=async()=>{ BK.dir=null; await kvSet('backupDir',null); bkSettingsUI(); toast('Automatic backups turned off'); };
+  if($('#bkRemind')) $('#bkRemind').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.bkRemind=+b.dataset.v; saveSettings(); $('#bkRemind').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); };
   $('#restoreBtn').onclick=()=>{ $('#restoreIn').value=''; $('#restoreIn').click(); };
   $('#resetBtn').onclick=()=>{ resetReading(); toast('Reading options reset'); };
-}
-async function runDiag(){
-  const out=[]; const t=(ms)=>ms?new Date(ms).toLocaleTimeString():'never this session';
-  out.push('Database: '+(Store.db?'open':'NOT AVAILABLE'));
-  try{ localStorage.setItem('rf.__t','1'); const ok=localStorage.getItem('rf.__t')==='1'; localStorage.removeItem('rf.__t'); out.push('Quick storage: '+(ok?'working':'NOT WORKING')); }catch(e){ out.push('Quick storage: BLOCKED ('+(e.name||e)+')'); }
-  if(Store.db){ try{ const probe={id:'__probe', t:Date.now()}; await Store.put('meta',probe); const back=await Store.get('meta','__probe'); await Store.del('meta','__probe'); out.push('Database write: '+(back&&back.t===probe.t?'working':'FAILED (read back wrong)')); }catch(e){ out.push('Database write: FAILED ('+(e.name||e)+')'); } }
-  out.push('Last quick save: '+t(SAVE.lsOK)); out.push('Last database save: '+t(SAVE.dbOK));
-  if(SAVE.err) out.push('Last error: '+SAVE.err);
-  try{ if(navigator.storage&&navigator.storage.estimate){ const e=await navigator.storage.estimate(); out.push(`Space used: ${(e.usage/1048576).toFixed(1)} MB of ${(e.quota/1048576).toFixed(0)} MB`); } }catch(e){}
-  try{ if(navigator.storage&&navigator.storage.persisted){ out.push('Kept permanently: '+((await navigator.storage.persisted())?'yes':'no')); } }catch(e){}
-  try{ const last=[...LIB].sort((a,b)=>(b.lastRead||0)-(a.lastRead||0))[0]; if(last){ const p=LS.get('pos.'+last.id,null); out.push(`Last book: ${last.title.slice(0,28)} — saved at word ${(last.pos+1).toLocaleString()}`+(p?`, quick copy word ${(p.pos+1).toLocaleString()}`:', no quick copy')); } }catch(e){}
-  const el=$('#storeDiag'); if(el) el.innerHTML=out.map(esc).join('<br>');
 }
 
 /* ---------- backup / restore ---------- */
@@ -2519,22 +2513,35 @@ function fromPortable(t){
   if(t.font&&Array.isArray(t.font.faces)) t.font={family:t.font.family, faces:t.font.faces.filter(f=>f.data||f.blob).map(f=>f.data&&!f.blob?{w:f.w, st:f.st, blob:dataURLToBlob(f.data)}:f)};
   return t;
 }
+/* the backup file, built as one JSON string; each book's converted text is cached so repeat backups are quick */
+async function buildBackup(){
+  const meta=(await Store.all('meta')).filter(m=>m.id!=='__probe'); const ids=new Set(meta.map(m=>m.id));
+  const parts=[];
+  for(const id of ids){
+    let j=BK.cache.get(id);
+    if(j==null){ const t=await Store.get('texts',id).catch(()=>null); if(!t) continue; j=JSON.stringify(await toPortable(t)); BK.cache.set(id,j); }
+    parts.push(j);
+  }
+  for(const k of [...BK.cache.keys()]) if(!ids.has(k)) BK.cache.delete(k);
+  const head=JSON.stringify({app:'Tooz', version:2, savedAt:new Date().toISOString(), meta, words:WORDS, stats:LS.get('stats',{})});
+  return head.slice(0,-1)+',"texts":['+parts.join(',')+']}';
+}
+function backupDone(){ LS.set('bk.at',Date.now()); LS.set('bk.sig',librarySig()); if($('#bkLast')) bkSettingsUI(); }
 async function backup(){
+  if(BK.dir){ await folderBackup(true); return; }
   try{
     progress('Preparing the backup…', null);
-    const meta=await Store.all('meta'); const raw=await Store.all('texts'); const texts=[];
-    for(const t of raw) texts.push(await toPortable(t));
-    const data=JSON.stringify({app:'Tooz', version:2, savedAt:new Date().toISOString(), meta, texts, words:WORDS, stats:LS.get('stats',{})});
+    const data=await buildBackup();
     const filename=`tooz-backup-${dayKey()}.json`;
     const blob=new Blob([data], {type:'application/json'});
     $('#toast').hidden=true;
     if(navigator.share && navigator.canShare){
       const file=new File([blob], filename, {type:'application/json'});
-      if(navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Tooz backup'}); toast('Backup ready — choose Files or iCloud Drive'); return; }
+      if(navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Tooz backup'}); backupDone(); toast('Backup saved'); return; }
     }
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-    toast('Backup downloaded');
+    backupDone(); toast('Backup downloaded');
   }catch(e){ if(e && e.name==='AbortError') toast('Backup cancelled'); else toast('Couldn’t save the backup'); }
 }
 $('#restoreIn').addEventListener('change',async e=>{
@@ -2545,6 +2552,7 @@ $('#restoreIn').addEventListener('change',async e=>{
       closeSheet(); if(R.meta && !R.mode) R.meta=null;
       try{
         let k=0; const tot=b.texts.length+b.meta.length;
+        BK.cache.clear();
         for(const t of b.texts){ progress('Restoring … '+(++k)+' of '+tot, 100*k/tot); await Store.put('texts',fromPortable(t)); }
         for(const m of b.meta){ progress('Restoring … '+(++k)+' of '+tot, 100*k/tot); await Store.put('meta',m); }
         LIB=await Store.all('meta');
@@ -2553,6 +2561,220 @@ $('#restoreIn').addEventListener('change',async e=>{
         renderLibrary(); renderWords(); toast('Backup restored');
       }catch(err){ console.error(err); toast('The backup couldn’t be fully restored'+(err&&err.name==='QuotaExceededError'?' because the phone’s storage for Tooz is full':'')+'.', null, 8000); try{ LIB=await Store.all('meta'); renderLibrary(); }catch(_){} }
     }});
+});
+
+
+/* ---------- backup folder and automatic backups ---------- */
+const BK={dir:null, busy:false, cache:new Map(), asked:false, reminded:false, timer:0};
+function canPickFolder(){ try{ return typeof window.showDirectoryPicker==='function' && window.self===window.top; }catch(e){ return false; } }
+function kvDB(){ return new Promise(res=>{ try{ const r=indexedDB.open('tooz-kv',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>res(r.result); r.onerror=()=>res(null); r.onblocked=()=>res(null); }catch(e){ res(null); } }); }
+async function kvGet(k){ const db=await kvDB(); if(!db) return null; return new Promise(res=>{ try{ const q=db.transaction('kv').objectStore('kv').get(k); q.onsuccess=()=>res(q.result||null); q.onerror=()=>res(null); }catch(e){ res(null); } }); }
+async function kvSet(k,v){ const db=await kvDB(); if(!db) return; return new Promise(res=>{ try{ const t=db.transaction('kv','readwrite'); const os=t.objectStore('kv'); if(v==null) os.delete(k); else os.put(v,k); t.oncomplete=()=>res(); t.onerror=()=>res(); }catch(e){ res(); } }); }
+/* changes whenever anything a backup holds changes */
+function librarySig(){
+  let mod=0; for(const m of LIB) mod=Math.max(mod, m.mod||0, m.lastRead||0);
+  const st=LS.get('stats',{}); let ms=0; for(const k in st) ms+=(st[k].ms||0);
+  return [LIB.length, mod, WORDS.length, WORDS[0]?WORDS[0].at:0, Math.round(ms/1000)].join('|');
+}
+const bkChanged=()=>LS.get('bk.sig','')!==librarySig();
+function fmtWhen(t){ if(!t) return 'never'; const d=new Date(t); return d.toDateString()===new Date().toDateString()? 'today at '+d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : d.toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'}); }
+function bkSettingsUI(){
+  const last=$('#bkLast'); if(last) last.textContent='Last backup: '+fmtWhen(LS.get('bk.at',0))+(LS.get('bk.at',0)&&bkChanged()?' · changes since then':'');
+  const f=$('#bkFolder'); if(!f) return;
+  f.innerHTML=BK.dir?`Saving to <b>${esc(BK.dir.name)}</b>`+(LS.get('bk.err','')?`<br><span style="color:var(--danger)">${esc(LS.get('bk.err',''))}</span>`:''):'No folder chosen. Choose one and backups happen automatically.';
+  $('#bkPick').textContent=BK.dir?'Change folder':'Choose folder'; $('#bkOff').hidden=!BK.dir;
+}
+async function pickBackupFolder(){
+  let h; try{ h=await window.showDirectoryPicker({id:'tooz-backup', mode:'readwrite', startIn:'documents'}); }catch(e){ if(!(e&&e.name==='AbortError')) toast('This browser wouldn’t open a folder picker.'); return; }
+  BK.dir=h; await kvSet('backupDir',h); LS.set('bk.err',''); bkSettingsUI();
+  await folderBackup(true);
+}
+async function folderPermission(ask){
+  try{
+    const o={mode:'readwrite'}; if(await BK.dir.queryPermission(o)==='granted') return true;
+    if(ask) return (await BK.dir.requestPermission(o))==='granted';
+  }catch(e){}
+  return false;
+}
+/* write tooz-backup.json, plus one dated copy per day (the last 7 are kept) */
+async function folderBackup(manual){
+  if(!BK.dir || BK.busy) return false;
+  if(!manual && !bkChanged()) return true;
+  if(!await folderPermission(manual)){ if(manual) toast('Tooz needs permission to save in “'+BK.dir.name+'”.'); else askFolderAgain(); return false; }
+  BK.busy=true;
+  try{
+    if(manual) progress('Saving the backup…', null);
+    const sig=librarySig(); const data=await buildBackup(); const blob=new Blob([data],{type:'application/json'});
+    for(const name of ['tooz-backup.json', `tooz-backup-${dayKey()}.json`]){
+      const fh=await BK.dir.getFileHandle(name,{create:true}); const w=await fh.createWritable(); await w.write(blob); await w.close();
+    }
+    try{ const dated=[]; for await (const [n] of BK.dir.entries()) if(/^tooz-backup-\d{4}-\d{2}-\d{2}\.json$/.test(n)) dated.push(n); dated.sort(); for(const n of dated.slice(0,Math.max(0,dated.length-7))) await BK.dir.removeEntry(n); }catch(e){}
+    LS.set('bk.at',Date.now()); LS.set('bk.sig',sig); LS.set('bk.err','');
+    if(manual) toast('Backup saved to “'+BK.dir.name+'”');
+    bkSettingsUI(); return true;
+  }catch(e){
+    LS.set('bk.err','The last automatic backup failed ('+((e&&(e.name||e.message))||'error')+'). Choose the folder again if it was moved.');
+    if(manual) toast('Couldn’t save to “'+BK.dir.name+'”. Choose the folder again.', null, 6000); bkSettingsUI(); return false;
+  }finally{ BK.busy=false; }
+}
+function askFolderAgain(){
+  if(BK.asked || document.hidden) return; BK.asked=true;
+  toast('Allow Tooz to keep saving backups to “'+BK.dir.name+'”?', {label:'Allow', fn:()=>folderBackup(true)}, 12000);
+}
+function remindBackup(){
+  if(BK.dir || BK.reminded || !S.bkRemind || !LIB.some(m=>m.kind!=='sample') || !bkChanged()) return;
+  const at=LS.get('bk.at',0); if(at && Date.now()-at < S.bkRemind*864e5) return;
+  BK.reminded=true;
+  setTimeout(()=>{ if($('#v-library').hidden && $('#v-words').hidden) { BK.reminded=false; return; } toast(at?'It’s been a while since your last backup':'Your library hasn’t been backed up yet', {label:'Save backup', fn:backup}, 12000); }, 1500);
+}
+async function initBackups(){
+  if(canPickFolder()){
+    const h=await kvGet('backupDir'); if(h && h.kind==='directory'){ BK.dir=h; if(!await folderPermission(false)) askFolderAgain(); }
+  }
+  const auto=()=>{ if(BK.dir) folderBackup(false); };
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) auto(); else remindBackup(); });
+  window.addEventListener('pagehide',auto);
+  BK.timer=setInterval(()=>{ if(!document.hidden) auto(); }, 3*60*1000);
+  remindBackup();
+}
+
+
+/* ---------- library: add, sort, group, tags ---------- */
+const LIBSORTS=[['recent','Recent'],['title','Title'],['author','Author'],['category','Category'],['tags','Tags']];
+let LIBV={sort:LS.get('libSort','recent'), tag:LS.get('libTag',''), q:''};
+const normTag=t=>t.replace(/\s+/g,' ').trim().slice(0,40);
+const tagsOf=d=>Array.isArray(d.tags)?d.tags:[];
+const sortKey=t=>(t||'').toLowerCase().replace(/^(the|a|an)\s+/,'').trim();
+const byName=(a,b)=>a.localeCompare(b, undefined, {sensitivity:'base', numeric:true});
+function allTags(){ const m=new Map(); for(const d of LIB) for(const t of tagsOf(d)){ const k=t.toLowerCase(); if(!m.has(k)) m.set(k,t); } return [...m.values()].sort(byName); }
+function allOf(key){ const m=new Map(); for(const d of LIB){ const v=(d[key]||'').trim(); if(v && !m.has(v.toLowerCase())) m.set(v.toLowerCase(), v); } return [...m.values()].sort(byName); }
+function docCard(d){
+  const pct=d.finished?100:Math.round(100*d.pos/Math.max(1,d.count-1));
+  const left=fmtMins((d.count-d.pos)/(S.measuredWpm||230));
+  const tg=tagsOf(d);
+  return `<div class="doc" data-open="${d.id}" role="button" tabindex="0">
+      <div class="t"><span class="tag">${KIND[d.kind]||'Text'}</span>${esc(d.title)}</div>
+      <button class="icon-btn more" type="button" data-more="${d.id}" aria-label="Edit or organize ${esc(d.title)}">${ICON.more}</button>
+      ${d.author?`<div class="a">${esc(d.author)}</div>`:''}
+      <div class="m">${d.count.toLocaleString()} words · ${d.finished?'Finished':pct+'% · '+left+' left'}${d.category?' · '+esc(d.category):''}</div>
+      ${tg.length?`<div class="tg">${tg.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}
+      <div class="bar"><i style="width:${pct}%"></i></div></div>`;
+}
+function renderLibrary(){
+  const el=$('#docList');
+  if(!LIBSORTS.some(([k])=>k===LIBV.sort)) LIBV.sort='recent';
+  $('#libSort').innerHTML=LIBSORTS.map(([k,l])=>`<button type="button" data-s="${k}" aria-pressed="${LIBV.sort===k}">${l}</button>`).join('');
+  const tags=allTags(); if(LIBV.tag && !tags.some(t=>t.toLowerCase()===LIBV.tag.toLowerCase())) LIBV.tag='';
+  $('#libTags').hidden=!tags.length;
+  $('#libTags').innerHTML=tags.length?[`<button class="chip" type="button" data-tag="" aria-pressed="${!LIBV.tag}">All</button>`,...tags.map(t=>`<button class="chip" type="button" data-tag="${esc(t)}" aria-pressed="${LIBV.tag.toLowerCase()===t.toLowerCase()}">${esc(t)}</button>`)].join(''):'';
+  $('#libTools').hidden=LIB.length<2;
+  if(!LIB.length){ el.innerHTML=`<div class="empty">Nothing here yet. Tap <b>Add to library</b> to paste text, load a link or open a book file.</div>`; return; }
+  let docs=[...LIB];
+  if(LIBV.tag) docs=docs.filter(d=>tagsOf(d).some(t=>t.toLowerCase()===LIBV.tag.toLowerCase()));
+  const q=LIBV.q.trim().toLowerCase();
+  if(q) docs=docs.filter(d=>[d.title,d.author,d.category,...tagsOf(d)].some(x=>(x||'').toLowerCase().includes(q)));
+  if(!docs.length){ el.innerHTML=`<div class="empty">Nothing matches${q?' “'+esc(LIBV.q.trim())+'”':''}${LIBV.tag?' with the tag “'+esc(LIBV.tag)+'”':''}.</div>`; return; }
+  const recent=(a,b)=>(b.lastRead||b.added)-(a.lastRead||a.added);
+  const titleSort=(a,b)=>byName(sortKey(a.title),sortKey(b.title));
+  const s=LIBV.sort;
+  if(s==='recent'){ el.innerHTML=docs.sort(recent).map(docCard).join(''); return; }
+  if(s==='title'){ el.innerHTML=docs.sort(titleSort).map(docCard).join(''); return; }
+  const groups=new Map(); const none={author:'Unknown author', category:'No category', tags:'No tags'}[s];
+  const put=(k,d)=>{ const key=k.toLowerCase(); if(!groups.has(key)) groups.set(key,{name:k, docs:[]}); groups.get(key).docs.push(d); };
+  for(const d of docs){
+    if(s==='tags'){ const tg=tagsOf(d).filter(t=>!LIBV.tag||t.toLowerCase()===LIBV.tag.toLowerCase()); if(tg.length) tg.forEach(t=>put(t,d)); else put(none,d); }
+    else put((d[s]||'').trim()||none, d);
+  }
+  const keys=[...groups.values()].sort((a,b)=> a.name===none?1 : b.name===none?-1 : byName(s==='author'?authorKey(a.name):a.name, s==='author'?authorKey(b.name):b.name));
+  el.innerHTML=keys.map(g=>`<h3 class="grp">${esc(g.name)} <span>${g.docs.length}</span></h3>`+g.docs.sort(titleSort).map(docCard).join('')).join('');
+}
+/* "Jane Austen" sorts under Austen */
+function authorKey(a){ const first=a.split(/,|&| and /)[0].trim(); if(a.includes(',')&&!/,.*,/.test(a)&&first.split(' ').length===1) return a.toLowerCase(); const p=first.split(/\s+/); return (p.length>1?p[p.length-1]+' '+p.slice(0,-1).join(' '):first).toLowerCase(); }
+$('#libSort').addEventListener('click',e=>{ const b=e.target.closest('button[data-s]'); if(!b) return; LIBV.sort=b.dataset.s; LS.set('libSort',LIBV.sort); renderLibrary(); });
+$('#libTags').addEventListener('click',e=>{ const b=e.target.closest('button[data-tag]'); if(!b) return; LIBV.tag=b.dataset.tag; LS.set('libTag',LIBV.tag); renderLibrary(); });
+$('#libFind').addEventListener('input',e=>{ LIBV.q=e.target.value; renderLibrary(); });
+$('#addBtn').innerHTML=ICON.plus+'Add to library';
+$('#addBtn').onclick=()=>openSheet('Add to library', `
+  <button class="addopt" type="button" data-act="file">${ICON.file}<span><b>Open a file</b><small>EPUB, PDF, TXT, Markdown or HTML</small></span></button>
+  <button class="addopt" type="button" data-act="link">${ICON.link}<span><b>Paste a link</b><small>Loads the article from a web page</small></span></button>
+  <button class="addopt" type="button" data-act="paste">${ICON.paste}<span><b>Paste text</b><small>Copied text, or anything you type</small></span></button>`, {
+  file:()=>{ closeSheet(); $('#fileIn').value=''; $('#fileIn').click(); },
+  link:()=>{ closeSheet(); openLink(); },
+  paste:()=>{ closeSheet(); openPaste(false); }
+});
+
+function docOptions(id, keep){
+  const d=LIB.find(x=>x.id===id); if(!d) return;
+  const draft=keep||{title:d.title, author:d.author||'', category:d.category||'', tags:[...tagsOf(d)]};
+  const cats=allOf('category'), auths=allOf('author'), known=allTags().filter(t=>!draft.tags.some(x=>x.toLowerCase()===t.toLowerCase()));
+  const nNotes=(d.highlights||[]).length+(d.bookmarks||[]).length;
+  const grab=()=>{ draft.title=$('#edTitle').value; draft.author=$('#edAuthor').value; draft.category=$('#edCat').value; };
+  const addTag=()=>{ grab(); const v=normTag($('#edTag').value); if(v && !draft.tags.some(x=>x.toLowerCase()===v.toLowerCase())) draft.tags.push(v); docOptions(id, draft); setTimeout(()=>{ const t=$('#edTag'); t&&t.focus(); },30); };
+  openSheet('Edit and organize', `
+    <div class="field"><label for="edTitle">Title</label><input class="input" id="edTitle" value="${esc(draft.title)}"></div>
+    <div class="field"><label for="edAuthor">Author</label><input class="input" id="edAuthor" list="dlAuthors" value="${esc(draft.author)}" placeholder="Unknown"><datalist id="dlAuthors">${auths.map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
+    <div class="field"><label for="edCat">Category</label><input class="input" id="edCat" list="dlCats" value="${esc(draft.category)}" placeholder="For example Fiction, Work, History"><datalist id="dlCats">${cats.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
+      ${cats.length?`<div class="tagchips">${cats.slice(0,12).map(c=>`<button class="chip" type="button" data-act="setcat" data-v="${esc(c)}" aria-pressed="${c.toLowerCase()===draft.category.trim().toLowerCase()}">${esc(c)}</button>`).join('')}</div>`:''}</div>
+    <div class="field"><label for="edTag">Tags</label>
+      <div class="row" style="flex-wrap:nowrap"><input class="input" id="edTag" placeholder="Add a tag" enterkeyhint="done" style="flex:1;min-width:0"><button class="btn" type="button" data-act="addtag" style="flex:none;padding-left:20px;padding-right:20px">Add</button></div>
+      ${draft.tags.length?`<div class="tagchips">${draft.tags.map((t,k)=>`<button class="chip" type="button" data-act="rmtag" data-k="${k}" aria-pressed="true" aria-label="Remove tag ${esc(t)}">${esc(t)}<span class="x">✕</span></button>`).join('')}</div>`:''}
+      ${known.length?`<div class="small" style="margin-top:10px;color:var(--muted)">Your other tags</div><div class="tagchips">${known.map(t=>`<button class="chip" type="button" data-act="usetag" data-v="${esc(t)}">+ ${esc(t)}</button>`).join('')}</div>`:''}
+    </div>
+    <button class="btn primary block" type="button" data-act="save">Save</button>
+    ${nNotes?`<button class="btn block" type="button" data-act="notes">${ICON.note} Highlights &amp; bookmarks (${nNotes})</button>`:''}
+    <button class="btn block" type="button" data-act="restart">Start over from the beginning</button>
+    <div id="delZone"><button class="btn block danger" type="button" data-act="askdel">${ICON.trash} Delete from library</button></div>`, {
+    setcat:(b)=>{ grab(); draft.category=b.dataset.v; docOptions(id, draft); },
+    addtag:addTag,
+    usetag:(b)=>{ grab(); if(!draft.tags.some(x=>x.toLowerCase()===b.dataset.v.toLowerCase())) draft.tags.push(b.dataset.v); docOptions(id, draft); },
+    rmtag:(b)=>{ grab(); draft.tags.splice(+b.dataset.k,1); docOptions(id, draft); },
+    save:()=>{ grab(); const t=draft.title.trim(); if(!t){ toast('The title can’t be empty'); return; }
+      const pend=normTag($('#edTag').value); if(pend && !draft.tags.some(x=>x.toLowerCase()===pend.toLowerCase())) draft.tags.push(pend);
+      d.title=t; d.author=draft.author.replace(/\s+/g,' ').trim(); d.category=draft.category.replace(/\s+/g,' ').trim(); d.tags=draft.tags.map(normTag).filter(Boolean);
+      touch(d); renderLibrary(); closeSheet(); toast('Saved'); },
+    notes:async()=>{ closeSheet(); if(await openDoc(id)!==false){ R.returnTo='library'; openToc((d.highlights||[]).length?'hls':'marks'); } },
+    restart:async()=>{ if(R.meta&&R.meta.id===id&&R.mode) closeReader(); d.pos=0; d.finished=false; d.lastRead=Date.now(); LS.set('pos.'+d.id,{pos:0,t:d.lastRead,fin:false}); touch(d); renderLibrary(); closeSheet(); toast('Back to the beginning'); },
+    askdel:()=>{ $('#delZone').innerHTML=`<p class="note">Delete “${esc(d.title)}” and its highlights and bookmarks? Your saved words stay in Notes.</p><div class="row"><button class="btn" type="button" data-act="nodel">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" type="button" data-act="del">Delete</button></div>`; },
+    nodel:()=>docOptions(id, draft),
+    del:async()=>{ if(R.meta&&R.meta.id===id){ if(R.mode) closeReader(); R.meta=null; } try{ localStorage.removeItem('rf.pos.'+id); }catch(e){} await Store.del('meta',id); await Store.del('texts',id); LIB=LIB.filter(x=>x.id!==id); renderLibrary(); closeSheet(); toast('Deleted'); }
+  });
+  const ti=$('#edTag'); if(ti) ti.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addTag(); } });
+}
+
+/* ---------- Notes tab: highlights, notes and bookmarks from every book ---------- */
+let NOTESEG=LS.get('notesSeg','hl'), notesTok=0; const SNIPS=new Map();
+function joinWords(t,s,e){ const wf=(t.wf&&t.wf.length===t.words.length)?t.wf:null; let o=''; for(let k=s;k<=e&&k<t.words.length;k++){ if(k>s && !(wf&&(wf[k]&F_GLUE))) o+=' '; o+=t.words[k]; } return o; }
+async function bookSnips(d){
+  const need=[]; for(const h of d.highlights||[]) need.push([h.s,h.e]); for(const b of d.bookmarks||[]) need.push([b.i,b.i+11]);
+  if(need.every(([s,e])=>SNIPS.has(d.id+'|'+s+'|'+e))) return;
+  let t=(R.meta&&R.meta.id===d.id&&R.text)||await Store.get('texts',d.id).catch(()=>null)||fetchText(d); if(!t||!t.words) return;
+  for(const [s,e] of need) SNIPS.set(d.id+'|'+s+'|'+e, joinWords(t,s,e));
+}
+const snip=(d,s,e)=>SNIPS.get(d.id+'|'+s+'|'+e)||'';
+const pctOf=(d,i)=>Math.round(100*i/Math.max(1,(d.count||1)-1));
+function chapterName(d,i){ let c=null; for(const x of d.chapters||[]){ if(x.i<=i) c=x; else break; } return c?c.t:''; }
+async function renderNotes(){
+  if(!['hl','bm','w'].includes(NOTESEG)) NOTESEG='hl';
+  document.querySelectorAll('#notesSeg button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.n===NOTESEG));
+  $('#notesHl').hidden=NOTESEG!=='hl'; $('#notesBm').hidden=NOTESEG!=='bm'; $('#wordsPane').hidden=NOTESEG!=='w';
+  if(NOTESEG==='w'){ renderWords(); return; }
+  const hl=NOTESEG==='hl', key=hl?'highlights':'bookmarks', el=hl?$('#notesHl'):$('#notesBm');
+  const books=LIB.filter(d=>(d[key]||[]).length).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0));
+  if(!books.length){ el.innerHTML=`<div class="empty">${hl?'Highlights and notes from all your books appear here. In a book, press and hold a word, drag to select, then pick a color or tap Note.':'Bookmarks from all your books appear here. In a book, tap the bookmark button at the bottom left.'}</div>`; return; }
+  const tok=++notesTok; await Promise.all(books.map(bookSnips)); if(tok!==notesTok) return;
+  el.innerHTML=books.map(d=>{
+    const L=d[key]; const n=L.length;
+    const rows=hl? L.map((h,k)=>{ const t=snip(d,h.s,h.e); return `<div class="hlrow"><span class="bar" style="background:var(--hl${h.c||1})"></span><div class="grow" data-nb="${d.id}" data-ni="${h.s}"><div class="t">${esc(t.length>320?t.slice(0,320)+'…':t)}</div>${h.note?`<div class="nt">${esc(h.note)}</div>`:''}<div class="where">${esc(chapterName(d,h.s))}${chapterName(d,h.s)?' · ':''}${pctOf(d,h.s)}%</div></div></div>`; }).join('')
+      : L.map(b=>`<div class="hlrow"><span class="bar" style="background:var(--accent)"></span><div class="grow" data-nb="${d.id}" data-ni="${b.i}"><div class="t"><b>${esc(b.name||'Bookmark')}</b></div><div class="where">${pctOf(d,b.i)}% · ${esc(snip(d,b.i,b.i+11))}…</div></div></div>`).join('');
+    return `<div class="nbook"><div class="nbook-h"><b>${esc(d.title)}</b><span class="small">${n} ${hl?'highlight':'bookmark'}${n===1?'':'s'}</span>${hl?`<button class="btn" type="button" data-copy="${d.id}" style="padding:6px 10px;font-size:.8rem">Copy</button>`:''}</div>${rows}</div>`;
+  }).join('');
+}
+$('#notesSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; NOTESEG=b.dataset.n; LS.set('notesSeg',NOTESEG); renderNotes(); });
+for(const id of ['#notesHl','#notesBm']) $(id).addEventListener('click',async e=>{
+  const c=e.target.closest('[data-copy]');
+  if(c){ const d=LIB.find(x=>x.id===c.dataset.copy); if(!d) return; await bookSnips(d); const txt=d.title+'\n\n'+d.highlights.map(h=>'“'+snip(d,h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+d.highlights.length+' highlight'+(d.highlights.length===1?'':'s')); }catch(err){ toast('Couldn’t copy on this device.'); } return; }
+  const g=e.target.closest('[data-nb]'); if(!g) return;
+  const i=+g.dataset.ni; if(await openDoc(g.dataset.nb)!==false){ R.returnTo='words'; goTo(i,true); }
 });
 
 /* ---------- sheet, toast, views ---------- */
@@ -2580,11 +2802,11 @@ function showView(v){
   for(const x of VIEWS) $('#v-'+x).hidden=(x!==v);
   $('#v-reader').hidden=v!=='reader'; $('#tabs').hidden=v==='reader';
   document.querySelectorAll('#tabs button').forEach(b=>{ if(b.dataset.tab===v) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
-  if(v==='stats') renderStats(); if(v==='settings') renderSettings(); if(v==='words') renderWords(); if(v==='library') renderLibrary();
+  if(v==='stats') renderStats(); if(v==='settings') renderSettings(); if(v==='words') renderNotes(); if(v==='library') renderLibrary();
 }
-const TABS={library:['book','Library'], words:['words','Words'], stats:['stats','Stats'], settings:['gear','Settings']};
+const TABS={library:['book','Library'], words:['note','Notes'], stats:['stats','Stats'], settings:['gear','Settings']};
 document.querySelectorAll('#tabs button').forEach(b=>{ const [ic,l]=TABS[b.dataset.tab]; b.innerHTML=ICON[ic]+l; b.onclick=()=>showView(b.dataset.tab); });
-$('#rBack').innerHTML=ICON.back; $('#rSearch').innerHTML=ICON.search; $('#rToc').innerHTML=ICON.toc; $('#rMark').innerHTML=ICON.mark; $('#rTts').innerHTML=ICON.speaker;
+$('#rBack').innerHTML=ICON.back; $('#rSearch').innerHTML=ICON.search; $('#rToc').innerHTML=ICON.toc; $('#rNotes').innerHTML=ICON.note; $('#rMark').innerHTML=ICON.mark; $('#rTts').innerHTML=ICON.speaker;
 $('#bSent').innerHTML=ICON.bsent; $('#bWord').innerHTML=ICON.back; $('#fWord').innerHTML=ICON.fwd; $('#fSent').innerHTML=ICON.fsent;
 $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown').innerHTML=ICON.minus; $('#asUp').innerHTML=ICON.plus; $('#asPlay').innerHTML=ICON.play;
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
@@ -2651,6 +2873,7 @@ async function boot(){
   try{ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')) navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
   if(!LS.get('seeded',false) && !LIB.length){ try{ const sm=await addDoc(sampleDoc()); sm.sv=SAMPLE_V; touch(sm); LS.set('seeded',true); }catch(e){} }
   renderLibrary(); renderWords();
+  initBackups();
   const onHash=()=>{ if(location.hash==='#paste'){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} openPaste(true); } };
   onHash(); window.addEventListener('hashchange', onHash);
   if(document.fonts) document.fonts.ready.then(()=>{ if(R.mode==='speed'&&!$('#v-reader').hidden) showChunk(R.pos); });
