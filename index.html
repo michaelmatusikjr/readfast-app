@@ -105,6 +105,20 @@ h2{font-size:1.15rem;font-weight:600}
 .addopt b{display:block;font-size:1rem}.addopt small{display:block;color:var(--muted);font-size:.82rem;margin-top:2px}
 :root{--fill:color-mix(in srgb, var(--accent) 16%, var(--surface))}
 .doc{background:linear-gradient(90deg,var(--fill) 0,var(--fill) var(--p,0%),var(--surface) var(--p,0%)) !important}
+/* OpenDyslexic (SIL Open Font License) ships with the app so it works offline */
+@font-face{font-family:'OpenDyslexic';src:url('fonts/OpenDyslexic-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'OpenDyslexic';src:url('fonts/OpenDyslexic-Bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'OpenDyslexic';src:url('fonts/OpenDyslexic-Italic.woff2') format('woff2');font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:'OpenDyslexic';src:url('fonts/OpenDyslexic-Bold-Italic.woff2') format('woff2');font-weight:700;font-style:italic;font-display:swap}
+.tdet{margin-top:12px}
+.tdet summary{cursor:pointer;color:var(--muted);font-size:.85rem;list-style:none;display:flex;align-items:center;gap:6px}
+.tdet summary::-webkit-details-marker{display:none}
+.tdet summary::before{content:"›";display:inline-block;transition:transform .15s}
+.tdet[open] summary::before{transform:rotate(90deg)}
+.tdet summary span{opacity:.75}
+#tagSet .tdet{margin-top:0}#tagSet .tdet summary{font-size:.95rem;color:var(--ink);font-weight:600;padding:2px 0}
+#tagSet .tdet .list{margin-top:10px}
+.book w.nb{color:var(--link,var(--accent));text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
 .stars{display:flex;gap:4px;margin-top:4px}
 .stars button{font-size:2rem;line-height:1;background:none;border:0;color:var(--accent);padding:2px 4px;cursor:pointer}
 .winner .wdel{flex:none;align-self:center;color:var(--muted)}
@@ -165,6 +179,7 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 .book p{margin:0;text-indent:var(--pind);orphans:2;widows:2}
 .book p+p{margin-top:var(--pgap)}
 .book h1,.book h2,.book h3,.book h4,.book h5,.book h6{font-family:inherit;font-weight:var(--bwb);line-height:1.25;margin:1.1em 0 .7em;text-indent:0;text-align:center;letter-spacing:0;text-wrap:balance;break-after:avoid;-webkit-hyphens:manual;hyphens:manual}
+.book .hl{text-align:left}
 .book h1{font-size:1.5em}.book h2{font-size:1.32em}.book h3{font-size:1.15em}.book h4,.book h5,.book h6{font-size:1em}
 .book .sec>:first-child{margin-top:.2em}
 .book p.bli{padding-left:1.3em;text-indent:0;position:relative;margin-top:.35em}
@@ -630,7 +645,8 @@ const FONTS = {
   georgia:{label:'Georgia', css:'Georgia,serif', note:'Screen serif'},
   system:{label:'San Francisco', css:'-apple-system,BlinkMacSystemFont,system-ui,sans-serif', note:'iPhone sans'},
   atkinson:{label:'Atkinson', css:'"Atkinson Hyperlegible",-apple-system,system-ui,sans-serif', note:'High legibility'},
-  lexend:{label:'Lexend', css:'"Lexend",-apple-system,system-ui,sans-serif', note:'Dyslexia-friendly'}
+  lexend:{label:'Lexend', css:'"Lexend",-apple-system,system-ui,sans-serif', note:'Dyslexia-friendly'},
+  opendyslexic:{label:'OpenDyslexic', css:'"OpenDyslexic","Lexend",-apple-system,system-ui,sans-serif', note:'Dyslexia font'}
 };
 const COLORS = [['Red','#E0303F'],['Amber','#E39B12'],['Teal','#139E9A'],['Blue','#3478F6'],['Violet','#8E5BE8'],['Pink','#E0479E']];
 /* reading themes: page colours; dark ones also switch the app chrome to dark */
@@ -673,7 +689,7 @@ function applyLook(){
   const sf=FONTS[S.speedFont]; st.setProperty('--rfont', S.speedFont==='same'||!sf ? fc : (sf.css||fc)); st.setProperty('--rsize', S.speedSize+'px');
   st.setProperty('--bsize', S.size+'px'); st.setProperty('--blh', S.lineH);
   st.setProperty('--mx', marginPx()+'px');
-  st.setProperty('--pind', S.para==='indent'?'1.4em':'0'); st.setProperty('--pgap', S.para==='indent'?'0':'.8em');
+  st.setProperty('--pind', S.para!=='spaced'?'1.4em':'0'); st.setProperty('--pgap', S.para==='indent'?'0':'.8em');
   st.setProperty('--balign', S.justify?'justify':'left'); st.setProperty('--hyph', S.hyphen?'auto':'manual');
   st.setProperty('--bw', S.boldText?'600':'400'); st.setProperty('--bwb', S.boldText?'800':'700');
   const sh=$('#shade'); const d=S.dim/100*0.65, w=S.warmth/100*0.32;
@@ -721,10 +737,47 @@ const BLOCK=new Set(['p','div','h1','h2','h3','h4','h5','h6','li','blockquote','
 const SKIP=new Set(['script','style','head','title','svg','math','noscript','rt','rp','template']);
 const INLINE_FLAG={em:F_I,i:F_I,cite:F_I,dfn:F_I,var:F_I,strong:F_B,b:F_B,code:F_C,kbd:F_C,samp:F_C,tt:F_C,sup:F_P,sub:F_S,u:F_U,ins:F_U};
 function newCtx(withAnchors){ return {words:[], ends:[], blocks:[], wf:[], notes:[], breaks:[], anchors:withAnchors?{}:null, firstHeading:withAnchors?{}:null, images:withAnchors?[]:null}; }
+/* Some books mark section titles as ordinary paragraphs and make them look like headings with their stylesheet.
+   Read the stylesheet for classes that look like headings (bold, larger, centred, or named head/title), and classes that are bold. */
+function cssClasses(css){
+  const head=new Map(), bold=new Set(); css=String(css||'').replace(/\/\*[\s\S]*?\*\//g,'');
+  const re=/([^{}@]+)\{([^{}]*)\}/g; let m;
+  while((m=re.exec(css))){
+    const d=m[2].toLowerCase();
+    const isBold=/font-weight\s*:\s*(bold|bolder|[6-9]00)\b/.test(d);
+    let big=false; const fs=d.match(/font-size\s*:\s*(?:([\d.]+)\s*(em|rem|%|pt|px)?|(larger|large|x-large|xx-large))/);
+    if(fs){ if(fs[3]) big=true; else { const v=parseFloat(fs[1]), u=fs[2]||''; big= u==='%'? v>=112 : (u==='em'||u==='rem')? v>=1.12 : u==='pt'? v>=14 : u==='px'? v>=19 : false; } }
+    const center=/text-align\s*:\s*center/.test(d), caps=/font-variant\s*:\s*small-caps|text-transform\s*:\s*uppercase/.test(d);
+    for(const sel of m[1].split(',')){
+      const last=(sel.trim().split(/[\s>+~]+/).pop()||'').replace(/::?[\w-]+(\(.*?\))?/g,'');
+      const tg=(last.match(/^[a-z][\w-]*/i)||[''])[0].toLowerCase(); if(tg && !/^(p|div|span|section)$/.test(tg)) continue;
+      for(const c of (last.match(/\.[\w-]+/g)||[]).map(x=>x.slice(1))){
+        if(isBold) bold.add(c);
+        if(tg==='span') continue;
+        const hint=/(^|[-_])(h[1-6]|head|header|heading|title|subtitle|subhead|chaptertitle|sectiontitle|chapter-title|section-title)($|[-_\d])/i.test(c);
+        const score=(isBold?1:0)+(big?1:0)+(center?1:0)+(caps?.5:0)+(hint?1.5:0);
+        if(score>=2){ const prev=head.get(c); head.set(c,{big:big||(prev&&prev.big), center:center||(prev&&prev.center)}); }
+      }
+    }
+  }
+  return {head, bold};
+}
+function headingOf(n, ctx){
+  const tx=(n.textContent||'').replace(/\s+/g,' ').trim(); if(!tx || tx.length>160) return null;
+  if(n.querySelector && n.querySelector('p,div,li,table,img,blockquote')) return null;
+  if(ctx.headCls && ctx.headCls.size){ for(const c of (n.getAttribute('class')||'').split(/\s+/)){ const h=ctx.headCls.get(c); if(h) return {tag:h.big?'h3':'h4', center:!!h.center}; } }
+  /* a short paragraph that is entirely bold, with no closing punctuation, reads as a sub-heading */
+  if((n.localName||'').toLowerCase()==='p' && tx.length<=100 && !/[.,;:!?…”"']$/.test(tx) && tx.split(' ').length<=14){
+    const kids=[...n.childNodes].filter(c=>c.nodeType===1||(c.nodeType===3&&c.nodeValue.trim()));
+    if(kids.length===1 && kids[0].nodeType===1){ const k=kids[0], kt=(k.localName||'').toLowerCase(); const kc=(k.getAttribute('class')||'').split(/\s+/);
+      if(kt==='b'||kt==='strong'||(ctx.boldCls&&kc.some(c=>ctx.boldCls.has(c)))) return {tag:'h4', center:false}; }
+  }
+  return null;
+}
 /* walks an HTML tree into words, keeping paragraph types and inline styles */
 function walkHTML(root, ctx, path){
   const rich=!!ctx.blocks;
-  let buf='', segs=[], flags=0, quote=0;
+  let buf='', segs=[], flags=0, quote=0, hLeft=0;
   const stack=[];
   const curType=()=>{ for(let k=stack.length-1;k>=0;k--){ const t=stack[k]; if(/^h[1-6]$/.test(t)) return t; if(t==='li'||t==='dt') return 'li'; if(t==='pre') return 'pre'; if(t==='figcaption'||t==='caption') return 'cap'; } return 'p'; };
   const flush=()=>{
@@ -750,7 +803,7 @@ function walkHTML(root, ctx, path){
       }
     }
     buf=''; segs=[];
-    if(ctx.words.length>s){ ctx.ends.push(ctx.words.length-1); if(rich){ const b={s, e:ctx.words.length, t:curType()}; if(quote) b.q=1; if(ctx.gap){ b.g=1; ctx.gap=false; } ctx.blocks.push(b); } }
+    if(ctx.words.length>s){ ctx.ends.push(ctx.words.length-1); if(rich){ const b={s, e:ctx.words.length, t:curType()}; if(quote) b.q=1; if(hLeft && /^h/.test(b.t)) b.l=1; if(ctx.gap){ b.g=1; ctx.gap=false; } ctx.blocks.push(b); } }
   };
   const addText=(t)=>{ if(rich && (!segs.length || segs[segs.length-1][1]!==flags)) segs.push([buf.length, flags]); buf+=t; };
   const visit=(n)=>{
@@ -777,9 +830,13 @@ function walkHTML(root, ctx, path){
     if(tag==='br'){ flush(); return; }
     if(tag==='hr'){ flush(); if(rich) ctx.breaks.push(ctx.words.length); return; }
     if(/^h[1-3]$/.test(tag) && ctx.firstHeading && !ctx.firstHeading[path]){ const t=(n.textContent||'').trim(); if(t) ctx.firstHeading[path]=t.slice(0,100); }
-    const saveFlags=flags; let isNote=false;
+    const saveFlags=flags; let isNote=false, ptag=tag, left=false;
+    if(rich && (tag==='p'||tag==='div') && !stack.some(x=>/^h[1-6]$/.test(x))){
+      const hd=headingOf(n, ctx); if(hd){ ptag=hd.tag; left=!hd.center; }
+    }
     if(rich){
       if(INLINE_FLAG[tag]) flags|=INLINE_FLAG[tag];
+      if(ctx.boldCls && ctx.boldCls.size){ const cl=(n.getAttribute('class')||'').split(/\s+/); if(cl.some(c=>ctx.boldCls.has(c))) flags|=F_B; }
       if(tag==='a' && ctx.anchors){
         const href=n.getAttribute('href')||'';
         const et=(n.getAttribute('epub:type')||n.getAttributeNS('http://www.idpf.org/2007/ops','type')||n.getAttribute('role')||'');
@@ -794,11 +851,11 @@ function walkHTML(root, ctx, path){
         }
       }
       if(tag==='blockquote') quote++;
-      stack.push(tag);
+      stack.push(ptag); if(left) hLeft++;
     }
     for(let c=n.firstChild;c;c=c.nextSibling) visit(c);
     if(isB) flush(); /* before leaving the element, so the paragraph keeps its type */
-    if(rich){ stack.pop(); if(tag==='blockquote') quote--; flags=saveFlags; }
+    if(rich){ stack.pop(); if(left) hLeft--; if(tag==='blockquote') quote--; flags=saveFlags; }
   };
   visit(root); flush();
 }
@@ -886,6 +943,7 @@ async function parseEpub(buf, fname, onP){
   const seSub=[...opf.getElementsByTagName('meta')].find(m=>m.getAttribute('property')==='se:subject');
   const dcSub=byTag(opf,'subject').map(x=>x.textContent.replace(/\s+/g,' ').trim()).find(x=>x && !x.includes('--') && x.length<=40);
   const category=((seSub&&seSub.textContent)||dcSub||'').replace(/\s+/g,' ').trim().slice(0,60);
+  const subjects=[...new Set([...[...opf.getElementsByTagName('meta')].filter(m=>m.getAttribute('property')==='se:subject').map(m=>m.textContent), ...byTag(opf,'subject').map(x=>x.textContent)].map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean))].slice(0,20);
   const items={}; let navHref=null;
   for(const it of byTag(opf,'item')){ const href=resolvePath(base,it.getAttribute('href')||''); items[it.getAttribute('id')]={href, type:it.getAttribute('media-type')||'', props:it.getAttribute('properties')||''}; if(/\bnav\b/.test(it.getAttribute('properties')||'')) navHref=href; }
   const spineEl=byTag(opf,'spine')[0]; if(!spineEl) throw new Error('This EPUB has no readable chapters.');
@@ -906,6 +964,7 @@ async function parseEpub(buf, fname, onP){
   }
   const refs=byTag(spineEl,'itemref');
   const ctx=newCtx(true); const fileStarts=[];
+  try{ ctx.headCls=new Map(); ctx.boldCls=new Set(); for(const it of Object.values(items)){ if(!/css/.test(it.type)) continue; const css=await read(it.href); if(!css) continue; const r=cssClasses(css); for(const [k,v] of r.head) ctx.headCls.set(k,v); for(const b of r.bold) ctx.boldCls.add(b); } }catch(e){}
   let done=0;
   for(const ref of refs){
     done++;
@@ -914,6 +973,7 @@ async function parseEpub(buf, fname, onP){
     if(it.type && !/html|xml/.test(it.type)) continue;
     const html=await read(it.href); if(html==null) continue;
     const d=parseXHTML(html); const body=d.body||d.getElementsByTagNameNS('*','body')[0]||d.documentElement;
+    try{ for(const st of d.getElementsByTagName('style')){ const r=cssClasses(st.textContent); for(const [k,v] of r.head) if(!ctx.headCls.has(k)) ctx.headCls.set(k,v); for(const b of r.bold) ctx.boldCls.add(b); } }catch(e){}
     ctx.anchors[it.href]=ctx.words.length; fileStarts.push({path:it.href, i:ctx.words.length});
     walkHTML(body, ctx, it.href);
   }
@@ -955,7 +1015,7 @@ async function parseEpub(buf, fname, onP){
   P('Looking for the book’s font…', 92);
   let font=null; try{ font=await epubFont(items, read, files, encSet); }catch(e){ font=null; }
   const secs=[...new Set(fileStarts.map(f=>f.i))].filter(i=>i>0&&i<ctx.words.length);
-  return {title, author, category, lang, kind:'epub', words:ctx.words, ends:ctx.ends, chapters, blocks:ctx.blocks, wf:ctx.wf, notes, breaks:ctx.breaks, secs, font, images: at.length?{files:imgFiles, at}:null, imagesMissing:missing};
+  return {title, author, category, subjects, lang, kind:'epub', words:ctx.words, ends:ctx.ends, chapters, blocks:ctx.blocks, wf:ctx.wf, notes, breaks:ctx.breaks, secs, font, images: at.length?{files:imgFiles, at}:null, imagesMissing:missing};
 }
 /* the font the book's own stylesheet uses for body text, if it ships one */
 async function epubFont(items, read, files, encSet){
@@ -1049,7 +1109,7 @@ async function addDoc(d){
   const text={id, words:d.words, ends:d.ends, images:d.images||null, blocks:d.blocks||null, wf:d.wf||null, notes:d.notes||null, breaks:d.breaks||null, secs:d.secs||null, font:d.font||null, lang:d.lang||null};
   await Store.put('texts',text);
   const now=Date.now();
-  const meta={id, title:d.title||'Untitled', kind:d.kind, source:d.source||null, count:d.words.length, pos:0, added:now, lastRead:0, mod:now, chapters:d.chapters||[], bookmarks:[], highlights:[], author:(d.author||'').trim(), tags:[], finished:false, imageCount:d.images?d.images.at.length:0};
+  const meta={id, title:d.title||'Untitled', kind:d.kind, source:d.source||null, count:d.words.length, pos:0, added:now, lastRead:0, mod:now, chapters:d.chapters||[], bookmarks:[], highlights:[], author:(d.author||'').trim(), tags:[], subjects:(d.subjects||[]).slice(0,20), finished:false, imageCount:d.images?d.images.at.length:0};
   await Store.put('meta',meta); LIB.push(meta); renderLibrary(); return meta;
 }
 const KIND={epub:'EPUB', pdf:'PDF', text:'Text', md:'Text', web:'Web', link:'Web', paste:'Pasted', sample:'Sample'};
@@ -1243,9 +1303,10 @@ function extractArticle(html, url){
   const h1=(root.querySelector('h1')||doc.querySelector('h1'))?.textContent.replace(/\s+/g,' ').trim()||'';
   let out=fromParagraphs(paras);
   const textLen=paras.reduce((n,p)=>n+(p.heading?0:p.text.length),0);
-  const byline=[metaC('meta[name="author"]'),metaC('meta[property="article:author"]'),metaC('meta[name="byl"]').replace(/^by\s+/i,'')].find(x=>x&&!/^https?:/i.test(x))||'';
-  if(textLen<300){ const ctx=newCtx(false); walkHTML(root,ctx,''); if(ctx.words.length>out.words.length) out={words:ctx.words, ends:ctx.ends, blocks:ctx.blocks, wf:ctx.wf, chapters:[]}; }
-  return {title:title||h1.slice(0,120), author:byline.slice(0,80), ...out};
+const byline=[metaC('meta[name="author"]'),metaC('meta[property="article:author"]'),metaC('meta[name="byl"]').replace(/^by\s+/i,'')].find(x=>x&&!/^https?:/i.test(x))||'';
+  const subjects=[...new Set([...doc.querySelectorAll('meta[property="article:tag"],meta[property="article:section"]')].map(m=>(m.getAttribute('content')||'').trim()).concat(metaC('meta[name="keywords"]').split(',').map(x=>x.trim())).filter(x=>x&&x.length<=40))].slice(0,12);
+  { /* some sites keep text outside paragraph tags (a reply under a quoted letter, say); when the full walk finds clearly more, use it */ const ctx=newCtx(false); walkHTML(root,ctx,''); if(textLen<300 ? ctx.words.length>out.words.length : ctx.words.length>out.words.length*1.3+20){ const ch=ctx.blocks.filter(b=>/^h[1-3]$/.test(b.t)&&b.e-b.s<=20).map(b=>({t:ctx.words.slice(b.s,b.e).join(' ').slice(0,100), i:b.s, d:+b.t[1]-1})); out={words:ctx.words, ends:ctx.ends, blocks:ctx.blocks, wf:ctx.wf, chapters:ch}; } }
+  return {title:title||h1.slice(0,120), author:byline.slice(0,80), subjects, ...out};
 }
 $('#fileIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -1567,12 +1628,13 @@ function wsHTML(w){
 }
 function blockHTML(blk,s,e){
   const t=blk.t; const tag=/^h[1-6]$/.test(t)?t:'p';
-  let cls=t==='li'?'bli':t==='pre'?'pre':t==='cap'?'cap':''; /* 'bli', not 'li': that class styles the app's menu rows */ if(blk.q) cls+=(cls?' ':'')+'bq'; if(blk.g) cls+=(cls?' ':'')+'gap';
+  let cls=t==='li'?'bli':t==='pre'?'pre':t==='cap'?'cap':''; /* 'bli', not 'li': that class styles the app's menu rows */ if(blk.q) cls+=(cls?' ':'')+'bq'; if(blk.g) cls+=(cls?' ':'')+'gap'; if(blk.l && tag!=='p') cls+=(cls?' ':'')+'hl';
   let h='<'+tag+(cls?' class="'+cls+'"':'')+'>';
   const wf=R.wf, W=R.words, ws=S.wordStart && t!=='pre';
   for(let k=s;k<e;k++){
     const f=wf?(wf[k]|0):0; let c='';
     if(f){ if(f&F_I)c+=' i'; if(f&F_B)c+=' b'; if(f&F_C)c+=' c'; if(f&F_U)c+=' u'; if(f&F_N)c+=' n'; else { if(f&F_P)c+=' p'; if(f&F_S)c+=' s'; } }
+    if(R.back && R.back.has(k) && !(f&F_N)) c+=' nb';
     const sp=(k<e-1 && !(wf && (wf[k+1]&F_GLUE)))?' ':'';
     h+=(c?'<w class="'+c.slice(1)+'">':'<w>')+(ws&&!(f&(F_C|F_N|F_P|F_S))?wsHTML(W[k]):esc(W[k]))+sp+'</w>';
   }
@@ -1707,7 +1769,7 @@ async function pgFade(fn){
   pgFlow.classList.add('fade'); await sleep(130); await fn(); pgFlow.classList.remove('fade');
 }
 async function pgTurn(d){
-  if(P.busy || R.mode!=='pages') return;
+  if(P.busy || R.mode!=='pages') return; R.anchor=null;
   selClear();
   if(d>0 && S.focus && R.chrome){ setChrome(false); return; } /* the bars cover the page edge; reveal it before turning */
   if(d>0){
@@ -1793,9 +1855,9 @@ scView.addEventListener('pointerup',e=>{
   if(hasSelection()) return;
   if(Math.abs(e.clientX-p.x)<12 && Math.abs(e.clientY-p.y)<12 && performance.now()-p.t<450) readerTap(e);
 });
-scView.addEventListener('touchstart',()=>{ SC.userScrolled=true; },{passive:true});
-scView.addEventListener('wheel',()=>{ SC.userScrolled=true; },{passive:true});
-scView.addEventListener('keydown',()=>{ SC.userScrolled=true; });
+scView.addEventListener('touchstart',()=>{ SC.userScrolled=true; R.anchor=null; },{passive:true});
+scView.addEventListener('wheel',()=>{ SC.userScrolled=true; R.anchor=null; },{passive:true});
+scView.addEventListener('keydown',()=>{ SC.userScrolled=true; R.anchor=null; });
 function asUI(){
   const bar=$('#asBar'); bar.hidden=!(R.mode==='scroll' && S.autoScroll);
   $('#asPlay').innerHTML=SC.auto?ICON.pause:ICON.play; $('#asPlay').setAttribute('aria-label',SC.auto?'Pause auto-scroll':'Start auto-scroll');
@@ -1860,6 +1922,7 @@ function readerTap(e){
     if(mid){ showImage(R.imgList[+fig.dataset.img]); return; }
   }
   const w=t.closest&&t.closest('w');
+  if(w && w.classList.contains('nb')){ goTo(R.back.get(idxOf(w)), true); return; }
   if(w && w.classList.contains('n')){ openFootnote(idxOf(w)); return; }
   if(w && /\bhl[1-4]\b/.test(w.className)){ const h=hlAt(idxOf(w)); if(h){ openHlMenu(h); return; } }
   if(R.mode==='pages'){
@@ -1915,8 +1978,21 @@ function stopActivity(){ if(R.playing) pause(); if(SC.auto) asStop(true); if(TTS
 function setBack(prev){ R.backPos=prev; $('#backPill').hidden=false; clearTimeout(R.backT); R.backT=setTimeout(()=>{ $('#backPill').hidden=true; }, 60000); }
 $('#backGo').onclick=()=>{ const p=R.backPos; if(p==null) return; $('#backPill').hidden=true; goTo(p,true); };
 $('#backX').onclick=()=>{ $('#backPill').hidden=true; R.backPos=null; };
+/* Endnotes: the number in front of each note leads back to where it was cited.
+   R.backTo: a link inside a note that points at its reference (the book's own back-link). R.back: a plain note number. */
+function buildBacklinks(){
+  R.back=new Map(); R.backTo=new Map();
+  const norm=w=>String(w||'').replace(/[\[\]().:,]/g,'');
+  for(const [ref,t] of R.notes){ if(R.notes.has(t) || (R.wf && (R.wf[t]&F_N))) R.backTo.set(ref,t); }
+  for(const [ref,t] of R.notes){
+    if(R.backTo.has(ref) || t<=ref) continue;
+    const num=norm(R.words[ref]); if(!num) continue;
+    for(let k=t;k<Math.min(R.n,t+3);k++){ if(R.wf && (R.wf[k]&F_N)) break; if(norm(R.words[k])===num){ if(!R.back.has(k)) R.back.set(k,ref); break; } }
+  }
+}
 async function goTo(i, jump){
   if(!R.meta || !R.mode) return;
+  R.anchor=null;
   const prev=R.pos; stopActivity(); selClear();
   R.pos=clamp(i|0,0,R.n-1); R.lastNav=true;
   if(R.meta.finished&&R.pos<R.n-1) R.meta.finished=false;
@@ -1931,13 +2007,13 @@ const MODES={
     async enter(){ pgView.hidden=false; pgApplyGeom(); P.k=-1; await pgShow(R.pos); },
     leave(){ PC.token++; $('#pgMeasure').innerHTML=''; pgView.hidden=true; pgFlow.replaceChildren(); P.k=-1; },
     show:(i)=>pgShow(i),
-    async relayout(){ const i=R.pos; pgApplyGeom(); P.k=-1; await pgShow(i); }
+    async relayout(){ /* keep the top-left word until a page is turned, so repeated changes never drift */ if(R.anchor==null) R.anchor=(P.k>=0 && pgFlow.firstElementChild && R.SEC[P.k] && R.pos>=R.SEC[P.k].s)? Math.min(R.pos, pgFirstWord(P.page)) : R.pos; const i=R.anchor; pgApplyGeom(); P.k=-1; await pgShow(i); }
   },
   scroll:{
     async enter(){ scView.hidden=false; SC.userScrolled=false; asUI(); await scShow(R.pos); },
     leave(){ asStop(true); scView.hidden=true; scFlow.replaceChildren(); $('#asBar').hidden=true; },
     show:(i)=>scShow(i),
-    async relayout(){ await scShow(R.pos); }
+    async relayout(){ if(R.anchor==null) R.anchor=R.pos; await scShow(R.anchor); }
   },
   speed:{
     async enter(){ while(R.pos>0 && glued(R.pos)) R.pos--; $('#speedView').hidden=false; el.scrub.max=Math.max(1,R.n-1); setWpm(S.wpm); await new Promise(r=>requestAnimationFrame(r)); buildScrollText(); enableManualScroll(); showPaused(); positionLine(); syncScroll(true); },
@@ -1947,7 +2023,7 @@ const MODES={
   }
 };
 async function switchMode(m){
-  if(!MODES[m]) m='pages';
+  if(!MODES[m]) m='pages'; R.anchor=null;
   if(m===R.mode) return;
   stopActivity(); selClear();
   if(R.mode) MODES[R.mode].leave();
@@ -1956,8 +2032,12 @@ async function switchMode(m){
   await MODES[m].enter(); updateChrome(); resetClock();
 }
 let relayT=null;
-function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; applyLook(); try{ await MODES[R.mode].relayout(); }catch(e){ console.error(e); } updateChrome(); },140); }
+function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
+/* after a rotation the page area can settle a moment later (the notch insets): if the anchor word isn't on screen, lay out once more */
+function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor==null || $('#v-reader').hidden) return; const w=wordEl(R.anchor); if(!w) return; const c=$('#pgClip').getBoundingClientRect(), r=w.getBoundingClientRect(); if(r.left<c.left-2 || r.right>c.right+2){ pgApplyGeom(); P.k=-1; await pgShow(R.anchor); } }, 400); }
 window.addEventListener('resize', relayoutSoon);
+window.addEventListener('orientationchange', ()=>{ relayoutSoon(); setTimeout(relayoutSoon, 500); });
+try{ let rbSize=''; new ResizeObserver(()=>{ const rb=document.getElementById('rBody'); if(!rb) return; const k=rb.clientWidth+'x'+rb.clientHeight; if(k!==rbSize){ const prev=rbSize; rbSize=k; if(prev && !/^0x|x0$/.test(prev) && !/^0x|x0$/.test(k)) relayoutSoon(); } }).observe(document.getElementById('rBody')); }catch(e){}
 /* a font that finishes downloading changes line breaks, so lay the pages out again */
 try{ document.fonts.addEventListener('loadingdone', ()=>{ PC.fontGen++; if(R.mode) relayoutSoon(); }); }catch(e){}
 function fontsReady(ms){ try{ return Promise.race([document.fonts.ready, sleep(ms||1500)]); }catch(e){ return Promise.resolve(); } }
@@ -2032,6 +2112,7 @@ async function loadBookFont(text){
 async function openDoc(id){
   const meta=LIB.find(x=>x.id===id); if(!meta){ toast('That document couldn’t be found.'); return false; }
   if(meta.pending){ if(!await fetchShelfBook(meta)) return false; }
+  R.anchor=null; LS.set('tutOpen', meta.kind==='sample');
   let text=await Store.get('texts',id).catch(()=>null);
   if(!text){ text=fetchText(meta); if(!text){ toast('That document’s text is missing. Delete it and add the file again.', null, 6000); return false; } Store.put('texts',text).catch(()=>{}); }
   if(R.meta){ stopActivity(); saveProgress(true); if(R.mode) MODES[R.mode].leave(); R.mode=null; }
@@ -2039,7 +2120,7 @@ async function openDoc(id){
   R.meta=meta; R.text=text; R.words=text.words; R.n=text.words.length; R.ends=new Set(text.ends);
   R.wf=(text.wf && text.wf.length===R.n)? text.wf : null;
   R.blocks=deriveBlocks(text, meta.chapters);
-  R.notes=new Map(text.notes||[]); R.breaks=new Set(text.breaks||[]);
+  R.notes=new Map(text.notes||[]); R.breaks=new Set(text.breaks||[]); buildBacklinks();
   if(!Array.isArray(meta.highlights)) meta.highlights=[]; if(!Array.isArray(meta.bookmarks)) meta.bookmarks=[];
   (R.imgUrls||[]).forEach(u=>{ if(u&&u.startsWith('blob:')) try{ URL.revokeObjectURL(u); }catch(e){} });
   R.imgUrls=[]; R.imgList=[]; R.imgAt=new Map(); R.imgBefore=new Map(); R.imgAfter=new Map(); R.imgEnd=[];
@@ -2078,7 +2159,7 @@ function closeReader(quiet){
   showView(back); applyLook();
   if(quiet || !m) return;
   /* the tutorial is removed once it's closed (Settings can bring it back) */
-  if(m.kind==='sample'){ if(!keepTutorial()) removeTutorial(m.id); return; }
+  if(m.kind==='sample'){ LS.set('tutOpen',false); if(!keepTutorial()) setTimeout(()=>tutorialPrompt(m.id), 300); return; }
   if(m.finished){ if(!m.finishedAt){ m.finishedAt=Date.now(); touch(m); } if(!m.keepFinished) setTimeout(()=>finishPrompt(m.id), 350); }
 }
 document.addEventListener('visibilitychange',()=>{ if(document.hidden && R.meta && R.mode){ stopActivity(); noteProgress(); saveProgress(true); } });
@@ -2154,7 +2235,8 @@ function openHlMenu(h, focusNote){
 
 /* ---------- footnotes ---------- */
 function openFootnote(i){
-  if(i==null) return; const t=R.notes.get(i); if(t==null) return;
+  if(i==null) return; if(R.backTo && R.backTo.has(i)){ goTo(R.backTo.get(i), true); return; }
+  const t=R.notes.get(i); if(t==null) return;
   const B=R.blocks; let bi=blockAt(t); let s=B[bi].s, e=B[bi].e-1;
   if(e-s<4 && bi+1<B.length) e=B[bi+1].e-1;
   const txt=textOf(s, Math.min(e, s+200));
@@ -2310,7 +2392,7 @@ function panelHTML(){
       <div class="set"><div class="hd"><label>Text size</label></div><div class="stepper"><button type="button" data-step="size" data-d="-1" aria-label="Smaller text" style="font-size:.85rem">A</button><span class="v" data-val="size">${S.size} px</span><button type="button" data-step="size" data-d="1" aria-label="Larger text" style="font-size:1.25rem">A</button></div></div>
       ${pRange('lineH','Line spacing',1.2,2.2,0.05)}
       ${pSeg('margin',[['narrow','Narrow'],['normal','Normal'],['wide','Wide']],'Margins')}
-      ${pSeg('para',[['indent','Indented'],['spaced','Spaced']],'Paragraphs')}
+      ${pSeg('para',[['indent','Indented'],['spaced','Spaced'],['both','Spaced and indented']],'Paragraphs')}
       ${pToggle('justify','Justify text')}
       ${pToggle('hyphen','Hyphenation','Breaks long words at line ends for even spacing.')}
       ${pToggle('boldText','Bold text')}
@@ -2566,12 +2648,12 @@ function renderSettings(){
       <div class="desc">On iPhone, Apple doesn’t let web apps pick a folder or save files without a tap, so automatic backups aren’t possible here. Instead, Tooz reminds you when your library has changed and it’s been a while. When you tap <b>Save backup</b>, choose <b>Save to Files</b>; iPhone opens the folder you used last time.</div>
     </div>`}</div>
     <h2>Tags</h2>
-    <div class="group"><div class="set" id="tagSet">${tagsSettingsHTML()}</div></div>
+    <div class="group"><div class="set" id="tagSet">${(()=>{ const n=tagCounts().length; return n? `<details class="tdet" id="tagDet"${TAGS_OPEN?' open':''}><summary>${n} tag${n===1?'':'s'} <span>· tap to ${TAGS_OPEN?'hide':'show'}</span></summary>${tagsSettingsHTML()}</details>` : tagsSettingsHTML(); })()}</div></div>
     <h2>Archived books${ARCH.list().length?' <span class="muted" style="font-weight:400">('+ARCH.list().length+')</span>':''}</h2>
     <div class="group"><div class="set" id="archSet">${archiveSettingsHTML()}</div></div>
     <h2>Tutorial</h2>
     <div class="group"><div class="set">
-      <div class="desc">${LIB.some(m=>m.kind==='sample')?'The tutorial is in your library. It’s removed when you close it.':'The tutorial book walks you through every feature. It was removed from your library when you closed it.'}</div>
+      <div class="desc">${LIB.some(m=>m.kind==='sample')?'The tutorial is in your library. When you close it, Tooz asks whether to keep it there or tuck it away here.':'The tutorial walks you through every feature. It’s tucked away here until you want it.'}</div>
       <div class="row">${LIB.some(m=>m.kind==='sample')?'':'<button class="btn" type="button" id="tutRestore">Restore tutorial to library</button>'}<button class="btn" type="button" id="tutOpen">Open the tutorial</button></div>
     </div></div>
     <h2>Erase all data</h2>
@@ -2579,6 +2661,7 @@ function renderSettings(){
       <div class="desc">Start fresh: deletes every book, note, setting and reading log in Tooz on this device.</div>
       <button class="btn danger" type="button" id="eraseBtn">Erase everything…</button>
     </div></div>`;
+  const td=$('#tagDet'); if(td) td.addEventListener('toggle',()=>{ TAGS_OPEN=td.open; const sp=td.querySelector('summary span'); if(sp) sp.textContent='· tap to '+(td.open?'hide':'show'); });
   $('#tagSet').addEventListener('click',e=>{ const r=e.target.closest('[data-tren]'), d=e.target.closest('[data-tdel]'); if(r) renameTag(r.dataset.tren); else if(d) deleteTag(d.dataset.tdel); });
   $('#archSet').addEventListener('click',e=>{ const b=e.target.closest('[data-arch]'); if(b) openArchived(+b.dataset.arch); });
   if($('#tutRestore')) $('#tutRestore').onclick=async()=>{ await restoreTutorial(false); renderSettings(); toast('The tutorial is back in your library'); };
@@ -2904,7 +2987,7 @@ function docOptions(id, keep){
       <div class="row" style="flex-wrap:nowrap"><input class="input" id="edTag" placeholder="Add a tag" enterkeyhint="done" autocomplete="off" style="flex:1;min-width:0"><button class="btn" type="button" data-act="addtag" style="flex:none;padding-left:20px;padding-right:20px">Add</button></div>
       ${draft.tags.length?`<div class="tagchips">${draft.tags.map((t,k)=>`<button class="chip" type="button" data-act="rmtag" data-k="${k}" aria-pressed="true" aria-label="Remove tag ${esc(t)}">${esc(t)}<span class="x">✕</span></button>`).join('')}</div>`:''}
       <div id="tagSug">${d.pending?`<p class="note" style="margin:10px 0 0">Download this book to see tag suggestions drawn from its text.</p><button class="btn" type="button" data-act="dltag" style="margin-top:8px">Download “${esc(d.title)}”${SHELF_SIZE[d.id]?' ('+SHELF_SIZE[d.id]+')':''}</button>`:'<p class="note" style="margin:10px 0 0">Finding suggestions…</p>'}</div>
-      ${known.length?`<div class="small" id="knownHd" style="margin-top:12px;color:var(--muted)">Your other tags</div><div class="tagchips" id="knownTags">${known.map(t=>`<button class="chip" type="button" data-act="usetag" data-v="${esc(t)}">+ ${esc(t)}</button>`).join('')}</div>`:''}
+      ${known.length?`<details class="tdet" id="knownDet"><summary id="knownHd">Your other tags <span>(${known.length})</span></summary><div class="tagchips" id="knownTags">${known.map(t=>`<button class="chip" type="button" data-act="usetag" data-v="${esc(t)}">+ ${esc(t)}</button>`).join('')}</div></details>`:''}
     </div>
     <button class="btn primary block" type="button" data-act="save">Save</button>
     ${nNotes?`<button class="btn block" type="button" data-act="notes">${ICON.note} Highlights &amp; bookmarks (${nNotes})</button>`:''}
@@ -2922,7 +3005,7 @@ function docOptions(id, keep){
     notes:async()=>{ closeSheet(); if(await openDoc(id)!==false){ R.returnTo='library'; openToc((d.highlights||[]).length?'hls':'marks'); } },
     restart:async()=>{ if(R.meta&&R.meta.id===id&&R.mode) closeReader(); startOver(d); renderLibrary(); closeSheet(); toast('Back to the beginning'); },
     archive:()=>archiveFlow(id),
-    askdel:()=>{ $('#delZone').innerHTML=`<p class="note">Delete “${esc(d.title)}” and its highlights and bookmarks? Your saved words stay in Notes.</p><div class="row"><button class="btn" type="button" data-act="nodel">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" type="button" data-act="del">Delete</button></div>`; },
+    askdel:()=>{ revealEnd('#delZone'); $('#delZone').innerHTML=`<p class="note">Delete “${esc(d.title)}” and its highlights and bookmarks? Your saved words stay in Notes.</p><div class="row"><button class="btn" type="button" data-act="nodel">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" type="button" data-act="del">Delete</button></div>`; },
     nodel:()=>docOptions(id, draft),
     del:async()=>{ await removeBook(id); renderLibrary(); closeSheet(); toast('Deleted'); }
   });
@@ -2937,7 +3020,10 @@ function docOptions(id, keep){
     filterTagChips($('#edTag').value||''); });
 }
 /* typing in the tag box narrows both chip lists; a list with no matches hides its heading */
-function filterTagChips(v){ const q=(v||'').trim().toLowerCase(); for(const [box,hd] of [['#tagSug','#sugHd'],['#knownTags','#knownHd']]){ const chips=[...document.querySelectorAll(box+' .chip')]; chips.forEach(c=>{ c.hidden=!!q && !c.dataset.v.toLowerCase().includes(q); }); const h=$(hd); if(h) h.hidden=!chips.some(c=>!c.hidden); } }
+function filterTagChips(v){ const q=(v||'').trim().toLowerCase();
+  const sug=[...document.querySelectorAll('#tagSug .chip')]; sug.forEach(c=>{ c.hidden=!!q && !c.dataset.v.toLowerCase().includes(q); }); const h=$('#sugHd'); if(h) h.hidden=!sug.some(c=>!c.hidden);
+  /* your other tags stay folded away unless what you type matches one */
+  const det=$('#knownDet'); if(det){ const kn=[...det.querySelectorAll('.chip')]; kn.forEach(c=>{ c.hidden=!!q && !c.dataset.v.toLowerCase().includes(q); }); const any=kn.some(c=>!c.hidden); det.hidden=!!q && !any; if(q && any) det.open=true; } }
 /* a book at 98% or more that isn't marked finished: ask once, then stay quiet until more of it is read */
 function nearFinishCheck(){
   if($('#v-library').hidden || !$('#sheet').hidden || (R.meta&&R.mode)) return;
@@ -2951,6 +3037,8 @@ function nearFinishCheck(){
     })
   });
 }
+/* bring a confirmation that just appeared at the bottom of a sheet into view */
+function revealEnd(sel){ setTimeout(()=>{ const el=$(sel); if(el) el.scrollIntoView({block:'end', behavior:'smooth'}); }, 60); }
 function startOver(d){ d.pos=0; d.finished=false; d.lastRead=0; d.keepFinished=false; d.finishedAt=null; d.nearAsked=null; LS.set('pos.'+d.id,{pos:0,t:0,fin:false}); touch(d); }
 async function removeBook(id){
   if(R.meta&&R.meta.id===id){ if(R.mode) closeReader(true); R.meta=null; }
@@ -2959,50 +3047,118 @@ async function removeBook(id){
 }
 
 /* ---------- tag suggestions: keywords in the book's own text ---------- */
+/* Topic keywords. A two-word entry is a phrase ("holy spirit"). A topic is suggested when its words are common in the book
+   and at least three different ones turn up regularly, so one frequent word can't carry it alone. */
 const TOPICS={
-  'Theology':['god','christ','grace','faith','sin','salvation','gospel','righteousness','redemption','holy','divine','doctrine'],
-  'Devotional':['soul','prayer','pray','heart','lord','spirit','love','humility','meditate','devotion'],
-  'Prayer':['pray','prayer','prayed','praying','prayers'],
-  'Apologetics':['christianity','reason','belief','truth','sceptic','skeptic','rationalist','materialist','argument'],
-  'Church History':['martyr','martyrs','persecution','bishop','bishops','pope','council','heretic','heretics'],
-  'Bible':['israel','moses','jesus','apostle','prophet','disciples','jerusalem'],
+  'Theology':['god','christ','grace','faith','sin','salvation','gospel','righteousness','redemption','doctrine','divine','atonement','justification','holy spirit'],
+  'Holy Spirit':['holy spirit','holy ghost','spirit','comforter','pentecost','indwelling'],
+  'Prayer':['pray','prayer','prayed','praying','prayers','supplication','intercession'],
+  'Devotional':['soul','the lord','heart','humility','meditate','devotion','communion','abide','dear lord','thy'],
+  'Apologetics':['christianity','reason','belief','truth','sceptic','skeptic','rationalist','materialist','materialism','argument','unbeliever'],
+  'Church History':['martyr','martyrs','persecution','bishop','bishops','pope','council','heretic','heretics','reformers','emperor'],
+  'Church':['church','congregation','pastor','minister','elders','sacrament','baptism','the church','deacons'],
+  'Worship':['worship','praise','hymn','hymns','sing','glory','psalm','adoration'],
+  'Heaven':['heaven','eternal','eternity','paradise','angels','eternal life','the kingdom','celestial'],
+  'Suffering':['suffering','affliction','afflictions','trial','trials','sorrow','grief','pain','tears','comfort'],
+  'Holiness':['holiness','sanctification','sanctified','obedience','mortify','mortification','purity','sanctify'],
+  'Grace':['grace','mercy','forgiveness','pardon','gracious','undeserved','free grace'],
+  'Marriage':['marriage','husband','wife','married','wedding','bride','bridegroom'],
+  'Scripture':['scripture','scriptures','the bible','the word','word of god','apostle','prophet','prophets','israel','moses'],
+  'Missions':['missionary','missionaries','missions','heathen','nations','the gospel','preached'],
   'Adventure':['ship','island','treasure','captain','sword','voyage','pirate','escape','danger','journey'],
-  'Sea':['sea','ship','whale','sail','sailors','deck','boat','ocean','waves'],
-  'Mystery':['detective','clue','inspector','mystery','evidence','suspect','case','crime'],
-  'Romance':['love','marriage','married','marry','lover','engagement','affection','heart'],
-  'War':['war','battle','soldier','soldiers','army','enemy','regiment','troops'],
-  'History':['king','empire','century','history','kingdom','emperor','revolution','nation'],
-  'Philosophy':['reason','virtue','nature','wisdom','truth','philosophy','universe','soul','happiness'],
-  'Family':['mother','father','brother','sister','children','family','son','daughter'],
+  'Sea':['sea','ship','whale','sail','sailors','deck','boat','ocean','waves','harpoon'],
+  'Mystery':['detective','clue','inspector','mystery','evidence','suspect','the case','scotland yard'],
+  'Romance':['love','marriage','married','marry','lover','engagement','affection','in love'],
+  'War':['war','battle','soldier','soldiers','army','enemy','regiment','troops','general'],
+  'History':['king','empire','century','history','kingdom','emperor','revolution','nation','reign'],
+  'Philosophy':['reason','virtue','nature','wisdom','truth','philosophy','universe','soul','happiness','existence'],
   'Crime':['crime','murder','prison','police','criminal','guilt','punishment','theft'],
-  'Mythology':['gods','goddess','zeus','olympus','athena','apollo','heroes'],
+  'Mythology':['gods','goddess','zeus','olympus','athena','apollo','heroes','jove'],
   'Nature':['trees','forest','river','mountain','flowers','fields','birds'],
-  'Politics':['government','law','liberty','state','rights','parliament','republic'],
-  'Slavery':['slave','slavery','slaves','master','freedom','plantation'],
+  'Politics':['government','law','liberty','state','rights','parliament','republic','citizens'],
+  'Slavery':['slave','slavery','slaves','master','freedom','plantation','overseer'],
   'Death':['death','grave','dying','funeral','dead','tomb'],
-  'Money':['money','wealth','rich','fortune','poor','poverty'],
-  'Travel':['journey','travel','road','city','voyage','traveller'],
-  'Children':['child','children','boy','girl','school','little']
+  'Money':['money','wealth','rich','fortune','poor','poverty','pounds'],
+  'Travel':['journey','travel','road','city','voyage','traveller','inn'],
+  'Gothic':['castle','ghost','gloomy','dread','horror','ruins','haunted','candle','corridor'],
+  'Horror':['horror','terror','monster','dread','fiend','blood','shriek'],
+  'Fantasy':['magic','wizard','dragon','enchanted','fairy','spell','enchantment','elves'],
+  'Science Fiction':['machine','planet','scientist','experiment','martian','martians','invention','time machine'],
+  'Western':['ranch','cattle','sheriff','cowboy','saddle','frontier','prairie','canyon'],
+  'Revenge':['revenge','vengeance','avenge','enemy','enemies','hatred'],
+  'Russian Literature':['russian','moscow','petersburg','rouble','roubles','prince','count'],
+  'France':['paris','french','monsieur','madame','france'],
+  'England':['london','england','english','lord','lady','parish'],
+  'America':['america','american','states','washington','yankee','dollars']
 };
 const STOP=new Set('the and of to a in that he it was his i is with as for had you not be her on at by which have but this they from she all were him my so me or one we an are there no their them if when been what would said will who could more then into out up do upon its our like your any only some should now very than these two may made such these those great man men time can much'.split(' '));
 const SUGG=new Map();
+/* a book's own subject labels (Library of Congress subjects, Standard Ebooks' genre, Gutenberg bookshelves), tidied into short tags */
+const titleCase=s=>s.split(' ').map((w,k)=>(k && /^(and|or|of|the|in|on|to|for|a|an|at|by)$/i.test(w))? w.toLowerCase() : w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+const GENRE_PART={'fiction':'Fiction','juvenile fiction':'Children','juvenile literature':'Children','poetry':'Poetry','drama':'Drama','short stories':'Short Stories','sermons':'Sermons','correspondence':'Letters','humor':'Humor'};
+function tidySubjects(list){
+  const out=[];
+  const add=t=>{ t=t.replace(/\s+/g,' ').trim(); if(t && t.length<=32 && !/\d/.test(t) && !out.some(x=>x.toLowerCase()===t.toLowerCase())) out.push(t); };
+  for(let s of list||[]){
+    s=String(s).replace(/^(browsing|category|bookshelf)\s*:\s*/i,'').trim();
+    if(!s || /listings|harvard classics|best books|bestseller|banned|top \d|gutenberg|movie|reviewed|-- ?translations/i.test(s)) continue;
+    const parts=s.split(/\s*--\s*/).map(x=>x.replace(/[.;:,]+$/,'').trim()).filter(Boolean); if(!parts.length) continue;
+    let main=parts[0].replace(/\s*\([^)]*\)\s*/g,' ').replace(/,\s*(English|American|French|German|Russian|Italian|Spanish|Latin|Greek|Scottish|Irish)$/i,'').split('/')[0].trim();
+    if(/^bible\b/i.test(main)) main='Bible';
+    /* a person ("Lewis, C. S., 1898-1963") is a subject, not a tag */
+    if(!/\d/.test(parts[0]) && !/^[A-Z][a-z]+, [A-Z]/.test(main) && !/^(authors|women|men|persons|characters|literature|english literature|american literature|translations)$/i.test(main)) add(titleCase(main));
+    for(const p of parts.slice(1)){ const g=GENRE_PART[p.toLowerCase()]; if(g) add(g); }
+  }
+  return out.slice(0,6);
+}
+/* the book's form, read from its layout and its contents list */
+function formTags(t, d){
+  const out=[]; const B=t.blocks||[]; const W=t.words; const ch=d.chapters||[];
+  const paras=B.filter(b=>b.t==='p');
+  if(paras.length>=60){
+    let short=0, open=0, caps=0;
+    for(const b of paras){ const n=b.e-b.s; if(n<=10){ short++; if(!/[.!?]["”’)\]]*$/.test(W[b.e-1]||'')) open++; } if(/^[A-Z][A-Z'’-]{2,}[.:]?$/.test(W[b.s]||'') && n>1) caps++; }
+    if(short/paras.length>=0.45 && open/Math.max(1,short)>=0.5) out.push('Poetry');
+    if(caps/paras.length>=0.15) out.push('Drama');
+  }
+  const titles=ch.map(c=>(c.t||'').trim()); const cnt=re=>titles.filter(x=>re.test(x)).length;
+  if(cnt(/^(act|scene)\b/i)>=3 && !out.includes('Drama')) out.push('Drama');
+  if(cnt(/\bsermons?\b/i)>=3) out.push('Sermons');
+  if(cnt(/^(letter\b|epistle\b|to (the|my|mr|mrs|miss|a)\b)/i)>=3) out.push('Letters');
+  if(cnt(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}\b|^day\s+\d+|\b(morning|evening)\b/i)>=10 && !out.includes('Devotional')) out.push('Devotional');
+  /* many separately titled pieces, no numbered chapters and no parts: a collection */
+  const skip=/^(contents|table of contents|preface|introduction|foreword|index|notes|endnotes|acknowledg|imprint|colophon|title ?page|half ?title|uncopyright|copyright|dedication|epigraph|about|glossary|appendix|bibliography|loi|landmarks)/i;
+  const top=ch.filter(c=>!c.d).map(c=>(c.t||'').trim());
+  const named=top.filter(x=>x && !skip.test(x) && !/^(chapter|book|part|section|canto|psalm|letter|sermon|volume)\b|^[ivxlcdm]+\.?$|^\d+\.?$/i.test(x));
+  const numbered=top.filter(x=>/^(chapter|book|part|volume)\b|^[ivxlcdm]+\.?$|^\d+\.?$/i.test(x)).length;
+  if(named.length>=5 && named.length<=60 && !numbered){
+    const avg=W.length/named.length; let q=0; for(const w of W) if(/^[“"]/.test(w)) q++;
+    if(avg>=800 && avg<=15000) out.push(q*1000/W.length>6 ? 'Short Stories' : 'Essays');
+  }
+  return out;
+}
 async function suggestTags(d){
   if(SUGG.has(d.id)) return SUGG.get(d.id);
   const t=(R.meta&&R.meta.id===d.id&&R.text)||await Store.get('texts',d.id).catch(()=>null)||fetchText(d); if(!t||!t.words) return [];
-  const freq=new Map(); const N=t.words.length; const step=N>200000?Math.ceil(N/200000):1;
-  for(let k=0;k<N;k+=step){ const w=t.words[k].toLowerCase().replace(/^[^\p{L}]+|[^\p{L}]+$/gu,''); if(w.length>2 && !STOP.has(w)) freq.set(w,(freq.get(w)||0)+1); }
-  const n=N/step, per=w=>(freq.get(w)||0)*10000/n;
-  const scores=[];
-  for(const [tag,words] of Object.entries(TOPICS)){ const hits=words.map(per); const sc=hits.reduce((a,b)=>a+b,0), spread=hits.filter(h=>h>=1.5).length; if(sc>=18 && spread>=3) scores.push([tag,sc]); }
-  /* your own tags whose words show up a lot in this book, and tags you gave the same author's other books */
-  for(const tag of allTags()){ if(TOPICS[tag]) continue; const ws=tag.toLowerCase().split(/[^\p{L}]+/u).filter(w=>w.length>2&&!STOP.has(w)); if(!ws.length) continue; const sc=Math.min(...ws.map(per)); if(sc>=3) scores.push([tag,sc*4]); }
-  if(d.author) for(const o of LIB) if(o.id!==d.id && o.author && o.author.toLowerCase()===d.author.toLowerCase()) for(const tag of tagsOf(o)) scores.push([tag,1000]);
+  const N=t.words.length, clean=w=>w.toLowerCase().replace(/^[^\p{L}]+|[^\p{L}]+$/gu,'');
+  /* count words and two-word phrases; very long books are read in evenly spaced stretches */
+  const freq=new Map(), pairs=new Map(); let n=0; const span=1000, every=N>200000? Math.ceil(N/200000) : 1;
+  for(let a=0;a<N;a+=span*every){ let prev=''; for(let k=a;k<Math.min(N,a+span);k++){ const w=clean(t.words[k]); if(!w){ prev=''; continue; } n++; if(w.length>2 && !STOP.has(w)) freq.set(w,(freq.get(w)||0)+1); if(prev){ const p=prev+' '+w; pairs.set(p,(pairs.get(p)||0)+1); } prev=w; } }
+  const per=w=>((w.includes(' ')? (pairs.get(w)||0)*2 : (freq.get(w)||0)))*10000/Math.max(1,n);
+  const ranked=[];
+  tidySubjects(d.subjects).forEach((tag,k)=>ranked.push([tag,5000-k]));
+  formTags(t,d).forEach((tag,k)=>ranked.push([tag,4000-k]));
+  if(d.author) for(const o of LIB) if(o.id!==d.id && o.author && o.author.toLowerCase()===d.author.toLowerCase()) for(const tag of tagsOf(o)) ranked.push([tag,3000]);
+  for(const [tag,words] of Object.entries(TOPICS)){ const hits=words.map(per); const sc=hits.reduce((a,b)=>a+b,0), spread=hits.filter(h=>h>=1.5).length; if(sc>=18 && spread>=3) ranked.push([tag,sc]); }
+  /* your own tags whose words show up a lot in this book */
+  for(const tag of allTags()){ if(TOPICS[tag]) continue; const ws=tag.toLowerCase().split(/[^\p{L}]+/u).filter(w=>w.length>2&&!STOP.has(w)); if(!ws.length) continue; const sc=Math.min(...ws.map(per)); if(sc>=3) ranked.push([tag,sc*4]); }
   const seen=new Set(), out=[];
-  for(const [tag] of scores.sort((a,b)=>b[1]-a[1])){ const k=tag.toLowerCase(); if(seen.has(k)) continue; seen.add(k); out.push(tag); if(out.length>=8) break; }
+  for(const [tag] of ranked.sort((a,b)=>b[1]-a[1])){ const k=tag.toLowerCase(); if(seen.has(k)) continue; seen.add(k); out.push(tag); if(out.length>=10) break; }
   SUGG.set(d.id,out); return out;
 }
 
 /* ---------- tags in Settings: rename or delete everywhere ---------- */
+let TAGS_OPEN=false;
 function tagCounts(){ const m=new Map(); for(const d of LIB) for(const t of tagsOf(d)){ const k=t.toLowerCase(); const v=m.get(k)||{name:t,n:0}; v.n++; m.set(k,v); } return [...m.values()].sort((a,b)=>byName(a.name,b.name)); }
 function tagsSettingsHTML(){
   const tc=tagCounts();
@@ -3105,7 +3261,7 @@ function openArchived(k, confirmDel){
     <div id="arcDel">${confirmDel?`<p class="note">Delete “${esc(a.title)}” from the archive for good, with its rating, review and everything kept with it?</p><div class="row"><button class="btn" type="button" data-act="keep">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" type="button" data-act="del">Delete for good</button></div>`:`<button class="btn block danger" type="button" data-act="ask">${ICON.trash} Delete permanently</button>`}</div>`, {
     copy:async()=>{ const txt=a.title+(a.author?' — '+a.author:'')+'\n\n'+hl.map(h=>(h.noteOnly?'':'“'+h.q+'”')+(h.note?(h.noteOnly?'':'\n')+'Note: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied'); }catch(e){ toast('Couldn’t copy on this device.'); } },
     back:()=>restoreArchived(k),
-    ask:()=>openArchived(k,true), keep:()=>openArchived(k,false),
+    ask:()=>{ openArchived(k,true); revealEnd('#arcDel'); }, keep:()=>openArchived(k,false),
     del:()=>{ ARCH.list().splice(k,1); ARCH.save(); closeSheet(); renderSettings(); toast('Deleted for good'); }
   });
 }
@@ -3157,7 +3313,7 @@ function finishPrompt(id, step){
     <div id="finDel">${step==='del'?`<p class="note">Delete “${esc(d.title)}” and all its highlights, notes and bookmarks? This can’t be undone.</p><div class="row"><button class="btn" type="button" data-act="back">Go back</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" type="button" data-act="del">Delete</button></div>`:`<button class="btn block danger" type="button" data-act="ask">${ICON.trash} Delete it</button>`}</div>`, {
     keep:()=>{ d.keepFinished=true; touch(d); closeSheet(); },
     arch:()=>archiveSheet(id,true),
-    ask:()=>finishPrompt(id,'del'), back:()=>finishPrompt(id),
+    ask:()=>{ finishPrompt(id,'del'); revealEnd('#finDel'); }, back:()=>finishPrompt(id),
     del:async()=>{ await removeBook(id); closeSheet(); renderLibrary(); toast('Deleted'); }
   });
 }
@@ -3165,6 +3321,16 @@ function finishPrompt(id, step){
 /* ---------- the tutorial book ---------- */
 const keepTutorial=()=>!!window.__toozKeepSample;
 async function removeTutorial(id){ await removeBook(id); renderLibrary(); }
+/* leaving the tutorial (or reopening the app after closing it there) asks where it should live */
+function tutorialPrompt(id){
+  if(!LIB.some(m=>m.id===id)) return;
+  openSheet('Keep the tutorial handy?', `<p class="note" style="margin-top:0">You can tuck the tutorial away in Settings, where you can open it any time, or keep it in your library.</p>
+    <button class="btn primary block" type="button" data-act="tuck">Tuck it away in Settings</button>
+    <button class="btn block" type="button" data-act="keep">Keep it in my library</button>`, {
+    tuck:async()=>{ closeSheet(); await removeTutorial(id); if(!$('#v-settings').hidden) renderSettings(); toast('The tutorial is in Settings → Tutorial'); },
+    keep:()=>closeSheet()
+  });
+}
 async function restoreTutorial(open){
   let sm=LIB.find(m=>m.kind==='sample');
   if(!sm){ sm=await addDocPlain(sampleDoc()); sm.sv=SAMPLE_V; sm.added=Date.now(); touch(sm); renderLibrary(); }
@@ -3254,7 +3420,7 @@ async function fetchShelfBook(meta){
   P('Saving to your library…', 97);
   const text={id:meta.id, words:d.words, ends:d.ends, images:d.images||null, blocks:d.blocks||null, wf:d.wf||null, notes:d.notes||null, breaks:d.breaks||null, secs:d.secs||null, font:d.font||null, lang:d.lang||null};
   try{ await Store.put('texts',text); }catch(e){ toast('There isn’t enough storage on this device to save “'+meta.title+'”.', null, 7000); return false; }
-  Object.assign(meta,{count:d.words.length, chapters:d.chapters||[], imageCount:d.images?d.images.at.length:0, pending:null});
+  Object.assign(meta,{count:d.words.length, chapters:d.chapters||[], imageCount:d.images?d.images.at.length:0, pending:null, subjects:(d.subjects||[]).slice(0,20)}); SUGG.delete(meta.id);
   if(!meta.author && d.author) meta.author=d.author;
   touch(meta); BK.cache.delete(meta.id); renderLibrary(); $('#toast').hidden=true;
   return true;
@@ -3287,7 +3453,7 @@ async function searchGutenberg(q){
   if(FB.q!==q) return;
   FB.busy=false;
   if(!data) FB.err='The book search isn’t answering right now. Check your connection and try again in a minute.';
-  else FB.results=data.results.filter(r=>r.formats&&Object.keys(r.formats).some(k=>k.startsWith('application/epub'))).slice(0,30).map(r=>({id:r.id, title:(r.title||'').replace(/\s*\r?\n\s*/g,': ').replace(/\$/g,''), author:(r.authors||[]).slice(0,2).map(a=>flipName(a.name)).join(', ')}));
+  else FB.results=data.results.filter(r=>r.formats&&Object.keys(r.formats).some(k=>k.startsWith('application/epub'))).slice(0,30).map(r=>({id:r.id, title:(r.title||'').replace(/\s*\r?\n\s*/g,': ').replace(/\$/g,''), author:(r.authors||[]).slice(0,2).map(a=>flipName(a.name)).join(', '), subjects:[...(r.subjects||[]), ...(r.bookshelves||[])].slice(0,16)}));
   if(!$('#sheet').hidden && $('#fbQ')) openFreeBooks();
 }
 async function addGutenberg(r){
@@ -3298,7 +3464,7 @@ async function addGutenberg(r){
   if(!buf){ toast('Couldn’t download “'+r.title+'”. Check your connection and try again.', null, 7000); return; }
   try{
     const d=await parseFile(new File([buf], r.title+'.epub'), (m,p)=>P(m, p==null?null:65+p*0.3));
-    d.title=r.title||d.title; d.author=r.author||d.author; d.source='gutenberg:'+r.id;
+    d.title=r.title||d.title; d.author=r.author||d.author; d.source='gutenberg:'+r.id; d.subjects=[...(r.subjects||[]), ...(d.subjects||[])];
     const m=await addDoc(d); toast('Added “'+m.title+'”');
   }catch(e){ toast(e&&e.message||'That book couldn’t be opened.', null, 7000); }
 }
@@ -3374,10 +3540,10 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=5;
+const SAMPLE_V=6;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
-<p>This short book is a tour of Tooz. It opens by itself the first time you use the app, and it leaves your library when you close it. You can bring it back any time from <strong>Settings → Tutorial</strong>.</p>
+<p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
 <p>Swipe left, or tap the right edge of the page, to turn it. Tap the left edge to go back. Tap the <em>middle</em> of the page to show or hide the controls.</p>
 <p>While you read, the controls stay out of the way. The chapter name sits at the top and your page number at the bottom.</p>
 <h2>Three ways to read</h2>
@@ -3393,7 +3559,8 @@ const SAMPLE_HTML=`
 <p>Hyphenated words like well-known and twenty-five stay on screen a little longer. A dash joins the word before it—like this—and gets the same short pause as a comma.</p>
 <h2>Make it yours</h2>
 <p>Aa only shows the options for the mode you are in. For Pages and Scroll you can change:</p>
-<ul><li>The theme, from white through sepia to black, with a night theme that can switch on by itself.</li><li>The font, text size, line spacing and margins.</li><li>Brightness and warmth, for reading in the dark.</li><li>How pages turn, and where you tap to turn them.</li></ul>
+<ul><li>The theme, from white through sepia to black, with a night theme that can switch on by itself.</li><li>The font (including the dyslexia-friendly Lexend and OpenDyslexic), text size, line spacing and margins.</li><li>Paragraphs: indented, spaced, or spaced and indented.</li><li>Brightness and warmth, for reading in the dark.</li><li>How pages turn, and where you tap to turn them.</li></ul>
+<p>Change any of these, or turn your phone sideways, and the page keeps the word you were reading in view.</p>
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>
 <p>Press and hold a word, then drag to select more. A small bar appears with four highlight colours, plus <strong>Note</strong>, <strong>Copy</strong> and <strong>Define</strong>. Tap a highlight later to change its colour, add a note or remove it.</p>
@@ -3417,7 +3584,7 @@ const SAMPLE_HTML=`
 <p>Start typing in the search bar and matching titles, authors and tags appear underneath; tap one to filter by it. Each filter shows as a coloured pill under the search bar; tap its ✕ to remove it. Filters clear when you close the app.</p>
 <p>If a book is 98% read but not marked finished, Tooz asks whether you finished it when you come back to the library.</p>
 <h2>Tags</h2>
-<p>Tap the three dots on any book to change its title or author and to tag it. As you add tags, Tooz suggests some drawn from the words in the book itself (download a free book first to see them). Type a few letters to narrow the list. Filter by a tag to see those books together.</p>
+<p>Tap the three dots on any book to change its title or author and to tag it. As you add tags, Tooz suggests some: the subjects the publisher or library gave the book, its form (poetry, sermons, letters, short stories), and topics drawn from the words in the book itself (download a free book first to see them). Your other tags are folded away underneath; tap to open them. Type a few letters to narrow the list. Filter by a tag to see those books together.</p>
 <p>To rename a tag or delete it from every book at once, go to <strong>Settings → Tags</strong>.</p>
 <h2>Finishing and archiving</h2>
 <p>When you reach the end of a book and leave it, Tooz asks whether to keep it, archive it or delete it. Archiving removes the book itself but can keep your place, bookmarks, highlights and notes, along with an optional star rating and review. The date you finished is saved for you.</p>
@@ -3425,9 +3592,9 @@ const SAMPLE_HTML=`
 <p><strong>Start over from the beginning</strong>, also in the three dots, puts a book back to <em>Not started</em>.</p>
 <h2>Keeping your library safe</h2>
 <p>In Settings, <strong>Save backup</strong> keeps everything in one file, including your archive. If you ever want a clean slate, <strong>Erase all data</strong> removes every book, note and setting from this device.</p>
-<p>That’s the tour. Close this book with the back arrow and it will tidy itself away.</p>
+<p>That’s the tour. Close this book with the back arrow whenever you’re ready.</p>
 <h2>Notes</h2>
-<p id="note1">1. This is the footnote. Tap “Go to this note in the book” to jump here, then use Back to where you were to return.</p>`;
+<p id="note1">1. This is the footnote. Tap “Go to this note in the book” to jump here. In a list of notes like this one, tap the number at the start of a note to go back to where it was mentioned.</p>`;
 function sampleDoc(){
   const d=new DOMParser().parseFromString(SAMPLE_HTML,'text/html'); const ctx=newCtx(true); walkHTML(d.body,ctx,'');
   const notes=resolveNotes(ctx, f=>ctx.anchors[f]);
@@ -3461,6 +3628,7 @@ async function boot(){
   showView('library');
   /* the first time Tooz opens, the tutorial opens with it */
   if(firstRun && !keepTutorial()) openDoc(firstRun);
+  else if(LS.get('tutOpen',false) && !keepTutorial()){ LS.set('tutOpen',false); const sm=LIB.find(m=>m.kind==='sample'); if(sm) setTimeout(()=>tutorialPrompt(sm.id), 700); }
 }
 boot();
 </script>
