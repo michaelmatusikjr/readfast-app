@@ -64,13 +64,35 @@ h2{font-size:1.15rem;font-weight:600}
 
 /* Library */
 #libTools{display:flex;flex-direction:column;gap:10px;width:100%}
-#libFind{width:100%;box-sizing:border-box}
-#libSort button{font-size:.8rem;padding:8px 2px}
-#libTags,#libStatus{gap:6px}
-#libStatus .chip{padding:5px 10px;font-size:.82rem;border-radius:999px}
-#libStatus .chip span{font-weight:400;opacity:.75;margin-left:4px}
-#libTags{border-top:1px solid var(--line);padding-top:10px}
-#libTags .chip,.tagchips .chip{padding:5px 10px;font-size:.82rem;border-radius:999px}
+.libbar{display:flex;gap:8px;align-items:center}
+#libFind{flex:1;min-width:0;box-sizing:border-box}
+.tbtn{flex:none;position:relative;width:46px;height:46px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.tbtn.on{border-color:var(--accent);color:var(--accent)}
+.tbtn .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:var(--surface);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
+#libSug,#libPills{gap:6px}
+.tagchips .chip{padding:5px 10px;font-size:.82rem;border-radius:999px}
+/* filter colors: status, title, author, tag */
+.pill{--c:var(--accent);display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 8px;border-radius:999px;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);background:color-mix(in srgb,var(--c) 22%,var(--surface));color:var(--ink);max-width:100%}
+.pill .x{font-size:.7rem;opacity:.75;color:var(--c)}
+.pill .k{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--c);font-weight:700}
+.pill span.v{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f-st{--c:#2f9e6e}.f-ti{--c:#3a6fd8}.f-au{--c:#c47a12}.f-tg{--c:#9b4dca}
+.pill.clear{--c:var(--muted);font-weight:500}
+.fsec{border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.fsec summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;font-weight:700}
+.fsec summary::-webkit-details-marker{display:none}
+.fsec summary .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.fsec summary .n{margin-left:auto;font-weight:500;color:var(--muted);font-size:.85rem}
+.fsec summary .chev{transition:transform .15s;color:var(--muted)}
+.fsec[open] summary .chev{transform:rotate(90deg)}
+.fsec .fin{margin:0 12px 8px;width:calc(100% - 24px);box-sizing:border-box}
+.fsec .fopts{max-height:260px;overflow:auto;padding:0 6px 8px}
+.fopt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 8px;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer;border-radius:8px}
+.fopt .bx{flex:none;width:20px;height:20px;border-radius:6px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--surface)}
+.fopt[aria-pressed=true] .bx{background:var(--c);border-color:var(--c)}
+.fopt .lb{flex:1;min-width:0}.fopt .ct{color:var(--muted);font-size:.8rem}
+.sortopt{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left}
+.sortopt[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}
 .grp{margin:10px 2px -2px;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:baseline}
 .grp span{font-weight:400;letter-spacing:0}
 .doc .a{grid-column:1;font-size:.9rem;color:var(--ink);opacity:.8;margin-top:-2px}
@@ -382,10 +404,9 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
       </div>
       <button class="btn primary block" id="addBtn" type="button"></button>
       <div id="libTools">
-        <input class="input" id="libFind" type="search" placeholder="Search titles, authors, categories and tags" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Search your library">
-        <div class="seg" id="libSort" role="group" aria-label="Sort and group"></div>
-        <div class="chips" id="libStatus"></div>
-        <div class="chips" id="libTags" hidden></div>
+        <div class="libbar"><input class="input" id="libFind" type="search" placeholder="Search titles, authors and tags" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" aria-label="Search your library"><button class="icon-btn tbtn" id="sortBtn" type="button" aria-label="Sort"></button><button class="icon-btn tbtn" id="filterBtn" type="button" aria-label="Filter"></button></div>
+        <div class="chips" id="libSug" hidden></div>
+        <div class="chips" id="libPills" hidden></div>
       </div>
       <div id="docList" class="wrap" style="gap:10px"></div>
       <p class="note" id="fileNote">Opens EPUB, PDF, TXT, Markdown and HTML files. Books bought in Apple Books are copy-protected and can't be opened here.</p>
@@ -543,6 +564,8 @@ const ICON = {
   note: I('<path d="M5 4h14v12l-5 4H5z"/><path d="M14 20v-4h5"/>'),
   hl: I('<path d="M4 20h7"/><path d="M14.5 4.5l5 5L10 19l-5 1 1-5z"/>'),
   archive: I('<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9M10 13h4"/>'),
+  sort: I('<path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/>'),
+  filter: I('<path d="M3 5h18l-7 8v6l-4 2v-8z"/>'),
   link: I('<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/>')
 };
 
@@ -1253,10 +1276,10 @@ const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
 const isSentEnd=(k)=>R.ends.has(k)||SENT.test(R.words[k]||'');
 function chunkEnd(i){
   if(i>=R.n) return R.n;
-  let j=i+1; while(j<R.n && glued(j)) j++;   /* a superscript or note number travels with its word */
-  if(!S.multi) return j;
+  let j=i+1; while(j<R.n && (glued(j)||isDashTok(j))) j++;   /* a superscript, note number or dash travels with its word */
+  if(!S.multi || dashParts(i)) return j;
   let len=textOf(i,j-1).length;
-  while(j<R.n && j-i<6 && !isSentEnd(j-1) && !SOFT.test(R.words[j-1])){ let e=j+1; while(e<R.n && glued(e)) e++; const add=textOf(j,e-1).length; if(len+1+add>S.charBudget) break; len+=1+add; j=e; }
+  while(j<R.n && j-i<6 && !isSentEnd(j-1) && !SOFT.test(R.words[j-1]) && !dashParts(j)){ let e=j+1; while(e<R.n && (glued(e)||isDashTok(e))) e++; const add=textOf(j,e-1).length; if(len+1+add>S.charBudget) break; len+=1+add; j=e; }
   return j;
 }
 function orp(w){
@@ -1377,7 +1400,7 @@ function openImageFull(a){
   document.body.appendChild(ov);
 }
 }
-function showChunk(i){ const j=chunkEnd(i); renderWord(textOf(i,j-1)); syncScroll(); return j; }
+function showChunk(i){ const P=dashParts(i), sub=R.subFor===i?R.sub:0; if(P && sub<P.length-1){ renderWord(P[sub]); syncScroll(); return i+1; } const j=chunkEnd(i); renderWord(speedText(i,j-1,P?P[P.length-1]:null)); syncScroll(); return j; }
 function sentStart(i){ let k=i; while(k>0 && !isSentEnd(k-1)) k--; return k; }
 function sentEndIdx(i){ let k=i; while(k<R.n-1 && !isSentEnd(k)) k++; return k; }
 function renderContext(){
@@ -1405,7 +1428,8 @@ function showPaused(){ showChunk(R.pos); renderContext(); updateProgress(); setP
 function effWpm(){ if(!S.ramp) return S.wpm; const s=(performance.now()-R.t0)/1000; return s>=S.rampSecs? S.wpm : S.wpm*(0.6+0.4*s/S.rampSecs); }
 function delayFor(i,j){
   const base=60000/effWpm(); let t=0;
-  for(let k=i;k<j;k++){ if(k>i && glued(k)) continue; let m=1; if(S.longWord){ const L=R.words[k].replace(/[^\p{L}\p{N}]/gu,'').length; if(L>7) m+=Math.min(.7,(L-7)*.07); } t+=base*m; }
+  { const P=dashParts(i), sub=R.subFor===i?R.sub:0; if(P && sub<P.length-1){ let m=1+hyphenSlow(P[sub]); t=base*m+base*(S.commaPause-1); if(S.adaptive) t*=difficulty(i); return t; } }
+  for(let k=i;k<j;k++){ if(k>i && (glued(k)||isDashTok(k))) continue; let m=1; if(S.longWord){ const L=R.words[k].replace(/[^\p{L}\p{N}]/gu,'').length; if(L>7) m+=Math.min(.7,(L-7)*.07); } m+=hyphenSlow(R.words[k]); t+=base*m; }
   const last=j-1;
   if(R.ends.has(last)) t+=base*(S.paraPause-1);
   else if(SENT.test(R.words[last])) t+=base*(S.sentPause-1);
@@ -1424,7 +1448,8 @@ function tick(){
   if(performance.now()-R.lastSave>2000) saveProgress();
   R.timer=setTimeout(()=>{
     if(!R.playing) return;
-    R.runWords+=j-i;
+    { const P=dashParts(i), sub=R.subFor===i?R.sub:0; if(P && sub<P.length-1){ R.sub=sub+1; R.subFor=i; tick(); return; } }
+    R.subFor=-1; R.runWords+=j-i;
     if(j>=R.n){ R.meta.finished=true; pause(); toast('Finished “'+R.meta.title+'”'); return; }
     R.pos=j; tick();
   }, delayFor(i,j));
@@ -1519,6 +1544,18 @@ function buildSections(){
   R.SEC=out.length?out:[[0,n]];
 }
 const glued=(k)=>!!(R.wf && (R.wf[k]&F_GLUE));
+/* Speed mode and dashes: a dash standing alone joins the word before it; "this—that" shows as "this—" then "that"; both pause like a comma */
+const DASH_TOK=/^(?:[—–]+|-{2,})['"”’»)\]]*$/;
+const isDashTok=(k)=>DASH_TOK.test(R.words[k]||'');
+function dashParts(k){
+  const w=R.words[k]; if(!w || !/[^—–-](?:[—–]+|-{2,})[^—–-]/.test(w)) return null;
+  const p=w.match(/.*?(?:[—–]+|-{2,})|.+$/g).filter(Boolean);
+  if(p.length>1 && /^(?:[—–]+|-{2,})$/.test(p[0])){ p[1]=p[0]+p[1]; p.shift(); }
+  return p.length>1? p : null;
+}
+function speedText(s,e,first){ let t=''; for(let k=s;k<=e&&k<R.n;k++){ if(k>s && !glued(k) && !isDashTok(k)) t+=' '; t+= (k===s&&first!=null)? first : R.words[k]; } return t; }
+/* hyphenated words get a little longer on screen */
+function hyphenSlow(w){ const n=(w.match(/\p{L}-(?=\p{L})/gu)||[]).length; return n? Math.min(.8, .35+.15*(n-1)) : 0; }
 function textOf(s,e){ let t=''; for(let k=s;k<=e&&k<R.n;k++){ if(k>s && !(R.wf && (R.wf[k]&F_GLUE))) t+=' '; t+=R.words[k]; } return t; }
 
 /* ---------- rendering a section as book text ---------- */
@@ -2698,12 +2735,13 @@ async function initBackups(){
 }
 
 
-/* ---------- library: add, sort, group, tags ---------- */
-const LIBSORTS=[['recent','Recent'],['title','Title'],['author','Author'],['tags','Tags']];
-let LIBV={sort:LS.get('libSort','recent'), tag:LS.get('libTag',''), status:LS.get('libStatus','all'), q:''};
+/* ---------- library: sort, filter, search ---------- */
+const LIBSORTS=[['recent','Recently read'],['title','Title A–Z'],['author','Author A–Z']];
+let LIBV={sort:LS.get('libSort','recent'), q:''};
+if(!LIBSORTS.some(([k])=>k===LIBV.sort)) LIBV.sort='recent';
 /* opened and not finished = in progress */
 const isReading=d=>!d.pending && !d.finished && ((d.pos||0)>0 || (d.lastRead||0)>0);
-const STATUS=[['all','All',()=>true],['reading','Reading',isReading],['unread','Not started',d=>!d.finished&&!isReading(d)],['done','Finished',d=>!!d.finished]];
+const STATUS=[['reading','Reading',isReading],['unread','Not started',d=>!d.finished&&!isReading(d)],['done','Finished',d=>!!d.finished]];
 const normTag=t=>t.replace(/\s+/g,' ').trim().slice(0,40);
 const tagsOf=d=>Array.isArray(d.tags)?d.tags:[];
 const sortKey=t=>(t||'').toLowerCase().replace(/^(the|a|an)\s+/,'').trim();
@@ -2721,45 +2759,123 @@ function docCard(d){
       <div class="m">${d.pending? 'Free book · tap to download'+(sz?' ('+sz+')':'') : d.count.toLocaleString()+' words · '+(d.finished?'Finished':pct+'% · '+left+' left')}</div>
       ${tg.length?`<div class="tg">${tg.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}</div>`;
 }
-function renderLibrary(){
-  const el=$('#docList');
-  if(!LIBSORTS.some(([k])=>k===LIBV.sort)) LIBV.sort='recent';
-  $('#libSort').innerHTML=LIBSORTS.map(([k,l])=>`<button type="button" data-s="${k}" aria-pressed="${LIBV.sort===k}">${l}</button>`).join('');
-  const tags=allTags(); if(LIBV.tag && !tags.some(t=>t.toLowerCase()===LIBV.tag.toLowerCase())) LIBV.tag='';
-  $('#libTags').hidden=!tags.length;
-  $('#libTags').innerHTML=tags.length?[`<button class="chip" type="button" data-tag="" aria-pressed="${!LIBV.tag}">All</button>`,...tags.map(t=>`<button class="chip" type="button" data-tag="${esc(t)}" aria-pressed="${LIBV.tag.toLowerCase()===t.toLowerCase()}">${esc(t)}</button>`)].join(''):'';
-  $('#libTools').hidden=LIB.length<2;
-  if(!STATUS.some(([k])=>k===LIBV.status)) LIBV.status='all';
-  $('#libStatus').innerHTML=STATUS.map(([k,l,f])=>{ const n=k==='all'?0:LIB.filter(f).length; return `<button class="chip" type="button" data-st="${k}" aria-pressed="${LIBV.status===k}">${l}${n?`<span>${n}</span>`:''}</button>`; }).join('');
-  if(!LIB.length){ el.innerHTML=`<div class="empty">Nothing here yet. Tap <b>Add to library</b> to paste text, load a link or open a book file.</div>`; return; }
-  let docs=[...LIB];
-  if(LIBV.tag) docs=docs.filter(d=>tagsOf(d).some(t=>t.toLowerCase()===LIBV.tag.toLowerCase()));
-  const stf=(STATUS.find(([k])=>k===LIBV.status)||STATUS[0])[2]; docs=docs.filter(stf);
-  const q=LIBV.q.trim().toLowerCase();
-  if(q) docs=docs.filter(d=>[d.title,d.author,...tagsOf(d)].some(x=>(x||'').toLowerCase().includes(q)));
-  if(!docs.length){ el.innerHTML=`<div class="empty">${LIBV.status==='reading'&&!q&&!LIBV.tag?'No books in progress. Open any book to start it.':LIBV.status==='done'&&!q&&!LIBV.tag?'No finished books yet.':`Nothing matches${q?' “'+esc(LIBV.q.trim())+'”':''}${LIBV.tag?' with the tag “'+esc(LIBV.tag)+'”':''}.`}</div>`; return; }
-  /* books in progress sit at the top under Continue reading, whatever the sort */
-  let top='';
-  if(LIBV.status==='all'){ const cont=docs.filter(isReading).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0)); if(cont.length && cont.length<docs.length){ top=`<h3 class="grp">Continue reading <span>${cont.length}</span></h3>`+cont.map(docCard).join('')+(LIBV.sort==='recent'||LIBV.sort==='title'?'<h3 class="grp">Everything else</h3>':''); docs=docs.filter(d=>!isReading(d)); } }
-  const recent=(a,b)=>(b.lastRead||b.added)-(a.lastRead||a.added);
-  const titleSort=(a,b)=>byName(sortKey(a.title),sortKey(b.title));
-  const s=LIBV.sort;
-  if(s==='recent'){ el.innerHTML=top+docs.sort(recent).map(docCard).join(''); return; }
-  if(s==='title'){ el.innerHTML=top+docs.sort(titleSort).map(docCard).join(''); return; }
-  const groups=new Map(); const none={author:'Unknown author', tags:'No tags'}[s];
-  const put=(k,d)=>{ const key=k.toLowerCase(); if(!groups.has(key)) groups.set(key,{name:k, docs:[]}); groups.get(key).docs.push(d); };
-  for(const d of docs){
-    if(s==='tags'){ const tg=tagsOf(d).filter(t=>!LIBV.tag||t.toLowerCase()===LIBV.tag.toLowerCase()); if(tg.length) tg.forEach(t=>put(t,d)); else put(none,d); }
-    else put((d[s]||'').trim()||none, d);
-  }
-  const keys=[...groups.values()].sort((a,b)=> a.name===none?1 : b.name===none?-1 : byName(s==='author'?authorKey(a.name):a.name, s==='author'?authorKey(b.name):b.name));
-  el.innerHTML=top+keys.map(g=>`<h3 class="grp">${esc(g.name)} <span>${g.docs.length}</span></h3>`+g.docs.sort(titleSort).map(docCard).join('')).join('');
-}
 /* "Jane Austen" sorts under Austen */
 function authorKey(a){ const first=a.split(/,|&| and /)[0].trim(); if(a.includes(',')&&!/,.*,/.test(a)&&first.split(' ').length===1) return a.toLowerCase(); const p=first.split(/\s+/); return (p.length>1?p[p.length-1]+' '+p.slice(0,-1).join(' '):first).toLowerCase(); }
-$('#libSort').addEventListener('click',e=>{ const b=e.target.closest('button[data-s]'); if(!b) return; LIBV.sort=b.dataset.s; LS.set('libSort',LIBV.sort); renderLibrary(); });
-$('#libStatus').addEventListener('click',e=>{ const b=e.target.closest('button[data-st]'); if(!b) return; LIBV.status=b.dataset.st; LS.set('libStatus',LIBV.status); renderLibrary(); });
-$('#libTags').addEventListener('click',e=>{ const b=e.target.closest('button[data-tag]'); if(!b) return; LIBV.tag=b.dataset.tag; LS.set('libTag',LIBV.tag); renderLibrary(); });
+
+/* Filters last until the app is closed. OR inside a section, AND across sections. */
+const FSEC=[['st','Reading status'],['ti','Title'],['au','Author'],['tg','Tags']];
+const F={st:new Set(), ti:new Set(), au:new Set(), tg:new Set()};
+const fCount=()=>F.st.size+F.ti.size+F.au.size+F.tg.size;
+const NOAUTH='Unknown author';
+const authorOf=d=>(d.author||'').trim()||NOAUTH;
+function matchSec(d, sec, set){
+  set=set||F[sec]; if(!set.size) return true;
+  if(sec==='st') return [...set].some(k=>STATUS.find(x=>x[0]===k)[2](d));
+  if(sec==='ti') return set.has(d.id);
+  if(sec==='au') return set.has(authorOf(d).toLowerCase());
+  return tagsOf(d).some(t=>set.has(t.toLowerCase()));
+}
+const matchAll=(d,except)=>FSEC.every(([k])=>k===except || matchSec(d,k));
+/* the choices a section offers: only those with a book that fits every other section; anything already picked stays listed */
+function secOptions(sec){
+  const pool=LIB.filter(d=>matchAll(d,sec)); const out=new Map();
+  const add=(key,label,sortk)=>{ const o=out.get(key)||{key,label,sortk,n:0}; o.n++; out.set(key,o); };
+  for(const d of pool){
+    if(sec==='st'){ for(const [k,l,f] of STATUS) if(f(d)) add(k,l,STATUS.findIndex(x=>x[0]===k)); }
+    else if(sec==='ti') add(d.id, d.title, sortKey(d.title));
+    else if(sec==='au'){ const a=authorOf(d); add(a.toLowerCase(), a, a===NOAUTH?'￿':authorKey(a)); }
+    else for(const t of tagsOf(d)) add(t.toLowerCase(), t, t.toLowerCase());
+  }
+  for(const k of F[sec]) if(!out.has(k)) out.set(k, {key:k, label:labelOf(sec,k), sortk:sec==='st'?STATUS.findIndex(x=>x[0]===k):(labelOf(sec,k)||'').toLowerCase(), n:0});
+  return [...out.values()].sort((a,b)=> sec==='st'? a.sortk-b.sortk : byName(String(a.sortk),String(b.sortk)));
+}
+function labelOf(sec,k){
+  if(sec==='st') return (STATUS.find(x=>x[0]===k)||[,k])[1];
+  if(sec==='ti'){ const d=LIB.find(x=>x.id===k); return d?d.title:'(removed)'; }
+  if(sec==='au'){ const d=LIB.find(x=>authorOf(x).toLowerCase()===k); return d?authorOf(d):k; }
+  for(const d of LIB) for(const t of tagsOf(d)) if(t.toLowerCase()===k) return t; return k;
+}
+function toggleFilter(sec,k,on){ const s=F[sec]; if(on===undefined) on=!s.has(k); on? s.add(k) : s.delete(k); }
+function clearFilters(){ for(const [k] of FSEC) F[k].clear(); }
+/* drop picks that no longer exist (a deleted book or tag) */
+function pruneFilters(){ for(const k of [...F.ti]) if(!LIB.some(d=>d.id===k)) F.ti.delete(k); for(const k of [...F.au]) if(!LIB.some(d=>authorOf(d).toLowerCase()===k)) F.au.delete(k); for(const k of [...F.tg]) if(!LIB.some(d=>tagsOf(d).some(t=>t.toLowerCase()===k))) F.tg.delete(k); }
+const SECCLS={st:'f-st',ti:'f-ti',au:'f-au',tg:'f-tg'}, SECKEY={st:'Status',ti:'Title',au:'Author',tg:'Tag'};
+function renderLibTools(){
+  $('#sortBtn').innerHTML=ICON.sort; const n=fCount();
+  $('#filterBtn').innerHTML=ICON.filter+(n?`<span class="badge">${n}</span>`:''); $('#filterBtn').classList.toggle('on',!!n);
+  const pills=[]; for(const [sec] of FSEC) for(const k of F[sec]) pills.push(`<button class="pill ${SECCLS[sec]}" type="button" data-unf="${sec}" data-k="${esc(k)}" aria-label="Remove ${SECKEY[sec]} filter ${esc(labelOf(sec,k))}"><span class="x">✕</span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(labelOf(sec,k))}</span></button>`);
+  if(pills.length>1) pills.push('<button class="pill clear" type="button" data-unf="all">Clear all</button>');
+  $('#libPills').hidden=!pills.length; $('#libPills').innerHTML=pills.join('');
+  renderSuggest();
+}
+/* typing shows matching titles, authors and tags to tap */
+function renderSuggest(){
+  const q=LIBV.q.trim().toLowerCase(), box=$('#libSug');
+  if(!q){ box.hidden=true; box.innerHTML=''; return; }
+  const hits=[];
+  for(const [sec] of [['tg'],['au'],['ti']]){ let n=0; for(const o of secOptions(sec)){ if(F[sec].has(o.key) || !o.label.toLowerCase().includes(q)) continue; hits.push(`<button class="pill ${SECCLS[sec]}" type="button" data-sug="${sec}" data-k="${esc(o.key)}"><span class="x">+</span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(o.label)}</span></button>`); if(++n>=6) break; } }
+  box.hidden=!hits.length; box.innerHTML=hits.join('');
+}
+function renderLibrary(){
+  const el=$('#docList');
+  pruneFilters(); renderLibTools();
+  $('#libTools').hidden=LIB.length<2 && !fCount();
+  if(!LIB.length){ el.innerHTML=`<div class="empty">Nothing here yet. Tap <b>Add to library</b> to paste text, load a link or open a book file.</div>`; return; }
+  const q=LIBV.q.trim().toLowerCase();
+  let docs=LIB.filter(d=>matchAll(d));
+  if(q) docs=docs.filter(d=>[d.title,d.author,...tagsOf(d)].some(x=>(x||'').toLowerCase().includes(q)));
+  if(!docs.length){ el.innerHTML=`<div class="empty">No books match${q?' “'+esc(LIBV.q.trim())+'”':''}${fCount()?' with these filters':''}.${fCount()?' <button class="btn" type="button" data-unf="all" style="margin-top:10px">Clear all filters</button>':''}</div>`; return; }
+  /* books in progress sit on top under Continue reading, but only while nothing is filtered or searched */
+  let top='';
+  if(!fCount() && !q){ const cont=docs.filter(isReading).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0)); if(cont.length && cont.length<docs.length){ top=`<h3 class="grp">Continue reading <span>${cont.length}</span></h3>`+cont.map(docCard).join('')+'<h3 class="grp">Everything else</h3>'; docs=docs.filter(d=>!isReading(d)); } }
+  const recent=(a,b)=>(b.lastRead||b.added)-(a.lastRead||a.added);
+  const titleSort=(a,b)=>byName(sortKey(a.title),sortKey(b.title));
+  if(LIBV.sort==='title'){ el.innerHTML=top+docs.sort(titleSort).map(docCard).join(''); return; }
+  if(LIBV.sort==='author'){
+    const groups=new Map(); for(const d of docs){ const a=authorOf(d); const k=a.toLowerCase(); if(!groups.has(k)) groups.set(k,{name:a,docs:[]}); groups.get(k).docs.push(d); }
+    const keys=[...groups.values()].sort((a,b)=> a.name===NOAUTH?1 : b.name===NOAUTH?-1 : byName(authorKey(a.name),authorKey(b.name)));
+    el.innerHTML=top+keys.map(g=>`<h3 class="grp">${esc(g.name)} <span>${g.docs.length}</span></h3>`+g.docs.sort(titleSort).map(docCard).join('')).join(''); return;
+  }
+  el.innerHTML=top+docs.sort(recent).map(docCard).join('');
+}
+function openSort(){
+  openSheet('Sort by', LIBSORTS.map(([k,l])=>`<button class="sortopt" type="button" data-act="pick" data-s="${k}" aria-pressed="${LIBV.sort===k}">${LIBV.sort===k?'✓ ':''}${l}</button>`).join(''), {
+    pick:(b)=>{ LIBV.sort=b.dataset.s; LS.set('libSort',LIBV.sort); closeSheet(); renderLibrary(); }
+  });
+}
+/* Filter sheet: four collapsible sections; lists update in place so open sections and typed searches stay put */
+const FOPEN={st:true, ti:false, au:false, tg:false}, FQ={st:'',ti:'',au:'',tg:''};
+function openFilter(){
+  openSheet('Filter', `${FSEC.map(([sec,l])=>`<details class="fsec ${SECCLS[sec]}" data-sec="${sec}"${FOPEN[sec]?' open':''}><summary><span class="dot"></span>${l}<span class="n" data-n="${sec}"></span><span class="chev">›</span></summary>${sec==='st'?'':`<input class="input fin" type="search" data-fq="${sec}" placeholder="Search ${l.toLowerCase()}" value="${esc(FQ[sec])}" autocomplete="off" autocapitalize="off" spellcheck="false">`}<div class="fopts" data-opts="${sec}"></div></details>`).join('')}
+    <div class="row" style="margin-top:6px"><button class="btn" type="button" data-act="clear">Clear all filters</button><button class="btn primary" type="button" data-act="done" id="fDone">Show books</button></div>`, {
+    clear:()=>{ clearFilters(); fillFilter(); renderLibrary(); },
+    done:()=>closeSheet()
+  });
+  const sh=$('#sheet');
+  sh.querySelectorAll('details.fsec').forEach(d=>d.addEventListener('toggle',()=>{ FOPEN[d.dataset.sec]=d.open; }));
+  sh.querySelectorAll('[data-fq]').forEach(i=>i.addEventListener('input',()=>{ FQ[i.dataset.fq]=i.value; fillFilter(); }));
+  fillFilter();
+}
+function fillFilter(){
+  for(const [sec] of FSEC){
+    const box=document.querySelector(`#sheet [data-opts="${sec}"]`); if(!box) return;
+    const q=FQ[sec].trim().toLowerCase();
+    const opts=secOptions(sec).filter(o=>!q || o.label.toLowerCase().includes(q));
+    box.innerHTML=opts.length? opts.map(o=>`<button class="fopt" type="button" data-fopt="${sec}" data-k="${esc(o.key)}" aria-pressed="${F[sec].has(o.key)}"><span class="bx">${F[sec].has(o.key)?'✓':''}</span><span class="lb">${esc(o.label)}</span><span class="ct">${o.n}</span></button>`).join('') : `<p class="note" style="margin:6px 8px">${q?'Nothing matches.':'No matching books.'}</p>`;
+    const n=document.querySelector(`#sheet [data-n="${sec}"]`); if(n) n.textContent=F[sec].size? F[sec].size+' selected' : '';
+  }
+  const shown=LIB.filter(d=>matchAll(d)).length; const b=$('#fDone'); if(b) b.textContent=`Show ${shown} book${shown===1?'':'s'}`;
+}
+document.addEventListener('click',e=>{
+  const o=e.target.closest('#sheet [data-fopt]'); if(!o) return;
+  toggleFilter(o.dataset.fopt, o.dataset.k); fillFilter(); renderLibrary();
+});
+$('#sortBtn').onclick=openSort;
+$('#filterBtn').onclick=openFilter;
+$('#v-library').addEventListener('click',e=>{
+  const u=e.target.closest('[data-unf]'); if(u){ if(u.dataset.unf==='all') clearFilters(); else toggleFilter(u.dataset.unf,u.dataset.k,false); renderLibrary(); return; }
+  const g=e.target.closest('[data-sug]'); if(g){ toggleFilter(g.dataset.sug,g.dataset.k,true); LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
+});
 $('#libFind').addEventListener('input',e=>{ LIBV.q=e.target.value; renderLibrary(); });
 $('#addBtn').innerHTML=ICON.plus+'Add to library';
 $('#addBtn').onclick=()=>openSheet('Add to library', `
@@ -2822,7 +2938,20 @@ function docOptions(id, keep){
 }
 /* typing in the tag box narrows both chip lists; a list with no matches hides its heading */
 function filterTagChips(v){ const q=(v||'').trim().toLowerCase(); for(const [box,hd] of [['#tagSug','#sugHd'],['#knownTags','#knownHd']]){ const chips=[...document.querySelectorAll(box+' .chip')]; chips.forEach(c=>{ c.hidden=!!q && !c.dataset.v.toLowerCase().includes(q); }); const h=$(hd); if(h) h.hidden=!chips.some(c=>!c.hidden); } }
-function startOver(d){ d.pos=0; d.finished=false; d.lastRead=0; d.keepFinished=false; d.finishedAt=null; LS.set('pos.'+d.id,{pos:0,t:0,fin:false}); touch(d); }
+/* a book at 98% or more that isn't marked finished: ask once, then stay quiet until more of it is read */
+function nearFinishCheck(){
+  if($('#v-library').hidden || !$('#sheet').hidden || (R.meta&&R.mode)) return;
+  const d=LIB.filter(m=>!m.pending && !m.finished && m.kind!=='sample' && (m.count||0)>1 && (m.pos||0)/(m.count-1)>=0.98 && !((m.nearAsked||-1)>=(m.pos||0))).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0))[0];
+  if(!d) return;
+  openSheet('Have you finished this book?', `<p class="note" style="margin-top:0">You’re ${Math.floor(100*(d.pos||0)/(d.count-1))}% of the way through “${esc(d.title)}”. Have you finished it?</p><div class="row"><button class="btn" type="button" data-act="no">Not yet</button><button class="btn primary" type="button" data-act="yes">Yes, I finished</button></div>`, {
+    yes:()=>{ d.finished=true; d.finishedAt=Date.now(); d.keepFinished=false; touch(d); renderLibrary(); finishPrompt(d.id); },
+    no:()=>openSheet('Finish it now?', `<p class="note" style="margin-top:0">Do you want to finish “${esc(d.title)}” now?</p><div class="row"><button class="btn" type="button" data-act="later">No</button><button class="btn primary" type="button" data-act="now">Yes, open it</button></div>`, {
+      now:()=>{ closeSheet(); openDoc(d.id); },
+      later:()=>{ d.nearAsked=d.pos||0; touch(d); closeSheet(); }
+    })
+  });
+}
+function startOver(d){ d.pos=0; d.finished=false; d.lastRead=0; d.keepFinished=false; d.finishedAt=null; d.nearAsked=null; LS.set('pos.'+d.id,{pos:0,t:0,fin:false}); touch(d); }
 async function removeBook(id){
   if(R.meta&&R.meta.id===id){ if(R.mode) closeReader(true); R.meta=null; }
   try{ localStorage.removeItem('rf.pos.'+id); }catch(e){}
@@ -2885,7 +3014,7 @@ function renameTag(name){
   openSheet('Rename tag', `<div class="field"><label for="tagNew">New name for “${esc(name)}”</label><input class="input" id="tagNew" value="${esc(name)}" autocomplete="off"></div><button class="btn primary block" type="button" data-act="ok">Rename</button>`, {
     ok:()=>{ const v=normTag($('#tagNew').value); if(!v){ toast('The tag name can’t be empty'); return; }
       const n=forEachTagged(name, tg=> tg.some(t=>t.toLowerCase()===v.toLowerCase())? tg : [...tg, v]);
-      if(LIBV.tag.toLowerCase()===name.toLowerCase()){ LIBV.tag=v; LS.set('libTag',v); }
+      if(F.tg.has(name.toLowerCase())){ F.tg.delete(name.toLowerCase()); F.tg.add(v.toLowerCase()); }
       closeSheet(); renderSettings(); renderLibrary(); toast('Renamed on '+n+' book'+(n===1?'':'s')); }
   });
   setTimeout(()=>{ const i=$('#tagNew'); if(i){ i.focus(); i.select(); i.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#sheet [data-act=ok]').click(); } }); } },60);
@@ -2894,7 +3023,7 @@ function deleteTag(name){
   const n=tagCounts().find(t=>t.name.toLowerCase()===name.toLowerCase()); const c=n?n.n:0;
   openSheet('Delete tag?', `<p class="note">Deleting “${esc(name)}” removes it from ${c===1?'the 1 book':'all '+c+' books'} it’s on. The books themselves stay in your library.</p><div class="row"><button class="btn" type="button" data-act="no">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" type="button" data-act="yes">Delete tag</button></div>`, {
     no:()=>closeSheet(),
-    yes:()=>{ forEachTagged(name, tg=>tg); if(LIBV.tag.toLowerCase()===name.toLowerCase()){ LIBV.tag=''; LS.set('libTag',''); } closeSheet(); renderSettings(); renderLibrary(); toast('Tag deleted'); }
+    yes:()=>{ forEachTagged(name, tg=>tg); F.tg.delete(name.toLowerCase()); closeSheet(); renderSettings(); renderLibrary(); toast('Tag deleted'); }
   });
 }
 /* categories became tags: an old category is kept as a tag; starter books get their tags once */
@@ -2914,7 +3043,7 @@ let ARCH_RESTORE=null;
 const pctRead=d=>d.finished?100:Math.floor(100*(d.pos||0)/Math.max(1,(d.count||1)-1));
 function archiveFlow(id){
   const d=LIB.find(x=>x.id===id); if(!d) return;
-  if(!d.finished && pctRead(d)<99) openSheet('Did you finish it?', `<p class="note">You’re ${pctRead(d)}% of the way through “${esc(d.title)}”. Did you finish reading it?</p><div class="row"><button class="btn" type="button" data-act="no">No, I didn’t finish</button><button class="btn primary" type="button" data-act="yes">Yes, I finished</button></div>`, { yes:()=>archiveSheet(id,true), no:()=>archiveSheet(id,false) });
+  if(!d.finished) openSheet('Did you finish it?', `<p class="note">You’re ${pctRead(d)}% of the way through “${esc(d.title)}”. Did you finish reading it?</p><div class="row"><button class="btn" type="button" data-act="no">No, I didn’t finish</button><button class="btn primary" type="button" data-act="yes">Yes, I finished</button></div>`, { yes:()=>archiveSheet(id,true), no:()=>archiveSheet(id,false) });
   else archiveSheet(id,true);
 }
 function archiveSheet(id, finished, st){
@@ -3235,7 +3364,7 @@ function showView(v){
   for(const x of VIEWS) $('#v-'+x).hidden=(x!==v);
   $('#v-reader').hidden=v!=='reader'; $('#tabs').hidden=v==='reader';
   document.querySelectorAll('#tabs button').forEach(b=>{ if(b.dataset.tab===v) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
-  if(v==='stats') renderStats(); if(v==='settings') renderSettings(); if(v==='words') renderNotes(); if(v==='library') renderLibrary();
+  if(v==='stats') renderStats(); if(v==='settings') renderSettings(); if(v==='words') renderNotes(); if(v==='library'){ renderLibrary(); setTimeout(nearFinishCheck, 600); }
 }
 const TABS={library:['book','Library'], words:['note','Notes'], stats:['stats','Stats'], settings:['gear','Settings']};
 document.querySelectorAll('#tabs button').forEach(b=>{ const [ic,l]=TABS[b.dataset.tab]; b.innerHTML=ICON[ic]+l; b.onclick=()=>showView(b.dataset.tab); });
@@ -3245,7 +3374,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=4;
+const SAMPLE_V=5;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app, and it leaves your library when you close it. You can bring it back any time from <strong>Settings → Tutorial</strong>.</p>
@@ -3261,6 +3390,7 @@ const SAMPLE_HTML=`
 <h2>Speed reading</h2>
 <p>In Speed, press play and keep your eyes on the coloured letter. Tap anywhere to pause, and the whole sentence appears so you can find your place. The buttons step back or forward by a word or a sentence, and the slider sets your speed.</p>
 <p>Every speed setting is in Aa while you are in Speed: pauses at commas and full stops, a gentle ramp up to speed, two or three words at once, and the colour of the focus letter.</p>
+<p>Hyphenated words like well-known and twenty-five stay on screen a little longer. A dash joins the word before it—like this—and gets the same short pause as a comma.</p>
 <h2>Make it yours</h2>
 <p>Aa only shows the options for the mode you are in. For Pages and Scroll you can change:</p>
 <ul><li>The theme, from white through sepia to black, with a night theme that can switch on by itself.</li><li>The font, text size, line spacing and margins.</li><li>Brightness and warmth, for reading in the dark.</li><li>How pages turn, and where you tap to turn them.</li></ul>
@@ -3282,13 +3412,16 @@ const SAMPLE_HTML=`
 <ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li></ul>
 <h2>Your library</h2>
 <p>Tap <strong>Add to library</strong> to open a file, paste a link or some text, or find free books. Twenty-eight classics and two Bibles are already waiting on your shelf; each downloads the first time you open it.</p>
-<p>Books you have started sit at the top under <strong>Continue reading</strong>, and each tile fills with colour from left to right as you read. The chips under the sort buttons show only what you are reading, what you haven’t started, or what you have finished.</p>
+<p>Books you have started sit at the top under <strong>Continue reading</strong>, and each tile fills with colour from left to right as you read.</p>
+<p>The <strong>sort</strong> button beside the search bar orders the library by recently read, title or author. The <strong>filter</strong> button opens four sections: reading status, title, author and tags. Pick as many as you like: books matching any choice in a section are shown, and every section you use must match. Once you pick something, the other sections only offer choices that still have books.</p>
+<p>Start typing in the search bar and matching titles, authors and tags appear underneath; tap one to filter by it. Each filter shows as a coloured pill under the search bar; tap its ✕ to remove it. Filters clear when you close the app.</p>
+<p>If a book is 98% read but not marked finished, Tooz asks whether you finished it when you come back to the library.</p>
 <h2>Tags</h2>
-<p>Tap the three dots on any book to change its title or author and to tag it. As you add tags, Tooz suggests some drawn from the words in the book itself (download a free book first to see them). Type a few letters to narrow the list. Sort by <strong>Tags</strong>, or tap a tag chip, to see those books together.</p>
+<p>Tap the three dots on any book to change its title or author and to tag it. As you add tags, Tooz suggests some drawn from the words in the book itself (download a free book first to see them). Type a few letters to narrow the list. Filter by a tag to see those books together.</p>
 <p>To rename a tag or delete it from every book at once, go to <strong>Settings → Tags</strong>.</p>
 <h2>Finishing and archiving</h2>
 <p>When you reach the end of a book and leave it, Tooz asks whether to keep it, archive it or delete it. Archiving removes the book itself but can keep your place, bookmarks, highlights and notes, along with an optional star rating and review. The date you finished is saved for you.</p>
-<p>You can also archive a book from its three dots at any time. If you haven’t reached the end, Tooz asks whether you finished it; if not, it is kept as <em>Did not finish</em>. Archived books live in <strong>Settings → Archived books</strong>, where you can read your notes, add a book back to your library with everything you kept, or delete it for good.</p>
+<p>You can also archive a book from its three dots at any time. Unless you have reached the very end, Tooz asks whether you finished it; if not, it is kept as <em>Did not finish</em>. Archived books live in <strong>Settings → Archived books</strong>, where you can read your notes, add a book back to your library with everything you kept, or delete it for good.</p>
 <p><strong>Start over from the beginning</strong>, also in the three dots, puts a book back to <em>Not started</em>.</p>
 <h2>Keeping your library safe</h2>
 <p>In Settings, <strong>Save backup</strong> keeps everything in one file, including your archive. If you ever want a clean slate, <strong>Erase all data</strong> removes every book, note and setting from this device.</p>
