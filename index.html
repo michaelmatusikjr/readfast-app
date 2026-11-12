@@ -1989,7 +1989,8 @@ $('#backX').onclick=()=>{ $('#backPill').hidden=true; R.backPos=null; };
 function buildBacklinks(){
   R.back=new Map(); R.backTo=new Map();
   const norm=w=>String(w||'').replace(/[\[\]().:,]/g,'');
-  for(const [ref,t] of R.notes){ if(R.notes.has(t) || (R.wf && (R.wf[t]&F_N))) R.backTo.set(ref,t); }
+  /* only a link that points backwards (from the notes to the text) is a back-link; the note numbers in the text keep opening the note */
+  for(const [ref,t] of R.notes){ if(t<ref && (R.notes.has(t) || (R.wf && (R.wf[t]&F_N)))) R.backTo.set(ref,t); }
   for(const [ref,t] of R.notes){
     if(R.backTo.has(ref) || t<=ref) continue;
     const num=norm(R.words[ref]); if(!num) continue;
