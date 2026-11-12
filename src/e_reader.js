@@ -141,6 +141,7 @@ function decorate(sec){
     for(let k=Math.max(h.s,a); k<=Math.min(h.e,b-1); k++){ const w=sec._ws[k-a]; if(w){ w.classList.add('hl'+h.c); if(h.note) w.classList.add('hn'); } }
   }
   if(TTS.on && TTS.cur>=a && TTS.cur<b){ const w=sec._ws[TTS.cur-a]; if(w) w.classList.add('tts'); }
+  if(typeof TS!=='undefined' && TS.on) for(let k=Math.max(TS.a,a); k<=Math.min(TS.b,b-1); k++){ const w=sec._ws[k-a]; if(w) w.classList.add('tsel'); }
 }
 function redecorate(){ const h=hostEl(); if(h) for(const sec of h.children) if(sec._ws) decorate(sec); }
 
@@ -233,7 +234,7 @@ async function pgFade(fn){
 }
 async function pgTurn(d){
   if(P.busy || R.mode!=='pages') return; R.anchor=null;
-  selClear();
+  if(!TS.edge) selClear();
   if(d>0 && S.focus && R.chrome){ setChrome(false); return; } /* the bars cover the page edge; reveal it before turning */
   if(d>0){
     if(P.page<P.pages-1){ if(S.turn==='fade') await pgFade(()=>pgSet(P.page+1,false)); else pgSet(P.page+1,true); }
@@ -740,18 +741,54 @@ function tsPaint(){
 }
 function tsSet(a,b){ TS.on=true; TS.a=Math.min(a,b); TS.b=Math.max(a,b); SEL={s:TS.a, e:TS.b}; $('#selBar').hidden=false; if(SC.auto) asStop(); tsPaint(); }
 function wordAtPoint(x,y){ const el=document.elementFromPoint(x,y); const w=el&&el.closest?el.closest('w'):null; if(!w || !hostEl() || !hostEl().contains(w)) return null; return idxOf(w); }
+/* the word under the finger, or the nearest one above/below it (between lines, in the margins, past the last line) */
+function wordNear(x,y){
+  const W=innerWidth; x=Math.max(24,Math.min(W-24,x));
+  for(let d=0; d<=160; d+=6){ for(const yy of d?[y-d,y+d]:[y]){ if(yy<0||yy>innerHeight) continue; const i=wordAtPoint(x,yy); if(i!=null) return i; } }
+  return null;
+}
+function tsExtendTo(i){
+  if(i==null) return;
+  if(TS.extending && TS.start) tsSet(TS.start.i, i);
+  else if(TS.drag==='tsA') tsSet(Math.min(i,TS.b), TS.b);
+  else if(TS.drag==='tsB') tsSet(TS.a, Math.max(i,TS.a));
+}
+/* dragging a selection to the top or bottom edge scrolls (Scroll) or turns the page (Pages) so it can keep going */
+const EDGE={top:100, bottom:70, dwell:650};
+function tsEdgeStart(){ document.body.classList.add('tsdrag'); if(TS.loop) return; TS.dwellAt=0; TS.loop=setInterval(tsEdgeTick,40); }
+function tsEdgeStop(){ document.body.classList.remove('tsdrag'); clearInterval(TS.loop); TS.loop=0; TS.dwellAt=0; }
+async function tsEdgeTick(){
+  if(!(TS.extending||TS.drag) || !TS.pt){ if(!(TS.extending||TS.drag)) tsEdgeStop(); return; }
+  const {x,y}=TS.pt, H=innerHeight;
+  const zone= y>=H-EDGE.bottom ? 1 : y<=EDGE.top ? -1 : 0;
+  if(!zone){ TS.dwellAt=0; return; }
+  if(R.mode==='scroll'){
+    const depth= zone>0 ? (y-(H-EDGE.bottom))/EDGE.bottom : (EDGE.top-y)/EDGE.top;
+    scView.scrollTop += zone*Math.round(4+Math.min(1,Math.max(0,depth))*16);
+    SC.gestureAt=Date.now();
+    tsExtendTo(wordNear(x, zone>0? H-EDGE.bottom-6 : EDGE.top+6));
+  } else if(R.mode==='pages'){
+    const now=performance.now();
+    if(!TS.dwellAt){ TS.dwellAt=now; return; }
+    if(now-TS.dwellAt<EDGE.dwell || P.busy || TS.turning) return;
+    TS.turning=true; TS.edge=true;
+    try{ await pgTurn(zone); } finally{ TS.edge=false; TS.turning=false; TS.dwellAt=performance.now(); }
+    if(TS.extending||TS.drag) tsExtendTo(wordNear(x, zone>0? H-EDGE.bottom-6 : EDGE.top+6));
+    tsPaint();
+  }
+}
 for(const host of [pgView, scView]){
   host.addEventListener('pointerdown',e=>{
     if(e.pointerType==='mouse' || !coarse()) return;
     clearTimeout(TS.timer); const w=e.target.closest&&e.target.closest('w'); if(!w) return; const i=idxOf(w); if(i==null) return;
     TS.start={x:e.clientX,y:e.clientY,i};
-    TS.timer=setTimeout(()=>{ if(!TS.start) return; tsSet(TS.start.i, TS.start.i); TS.extending=true; markActivity(); try{ navigator.vibrate&&navigator.vibrate(8); }catch(_){} }, 450);
+    TS.timer=setTimeout(()=>{ if(!TS.start) return; tsSet(TS.start.i, TS.start.i); TS.extending=true; TS.pt={x:TS.start.x,y:TS.start.y}; tsEdgeStart(); markActivity(); try{ navigator.vibrate&&navigator.vibrate(8); }catch(_){} }, 450);
   });
   host.addEventListener('pointermove',e=>{
-    if(TS.extending){ const i=wordAtPoint(e.clientX,e.clientY); if(i!=null) tsSet(TS.start.i, i); return; }
+    if(TS.extending){ TS.pt={x:e.clientX,y:e.clientY}; tsExtendTo(wordNear(e.clientX,e.clientY)); return; }
     if(TS.start && Math.hypot(e.clientX-TS.start.x, e.clientY-TS.start.y)>9){ clearTimeout(TS.timer); TS.start=null; }
   });
-  const end=()=>{ clearTimeout(TS.timer); if(TS.extending){ TS.extending=false; TS.justSelected=performance.now(); } TS.start=null; };
+  const end=()=>{ clearTimeout(TS.timer); if(TS.extending){ TS.extending=false; TS.justSelected=performance.now(); } TS.start=null; if(!TS.drag) tsEdgeStop(); };
   host.addEventListener('pointerup',end); host.addEventListener('pointercancel',end);
   /* while a press-and-hold is extending the selection, the page mustn't scroll */
   host.addEventListener('touchmove',e=>{ if(TS.extending||TS.drag) e.preventDefault(); },{passive:false});
@@ -759,9 +796,9 @@ for(const host of [pgView, scView]){
 }
 for(const id of ['tsA','tsB']){
   const h=$('#'+id);
-  h.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); TS.drag=id; try{ h.setPointerCapture(e.pointerId); }catch(_){} });
-  h.addEventListener('pointermove',e=>{ if(TS.drag!==id) return; e.preventDefault(); const i=wordAtPoint(e.clientX, id==='tsA'? e.clientY+22 : e.clientY-22); if(i==null) return; if(id==='tsA') tsSet(Math.min(i,TS.b), TS.b); else tsSet(TS.a, Math.max(i,TS.a)); });
-  const up=()=>{ TS.drag=null; }; h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
+  h.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); TS.drag=id; TS.pt={x:e.clientX,y:e.clientY}; tsEdgeStart(); try{ h.setPointerCapture(e.pointerId); }catch(_){} });
+  h.addEventListener('pointermove',e=>{ if(TS.drag!==id) return; e.preventDefault(); TS.pt={x:e.clientX,y:e.clientY}; tsExtendTo(wordNear(e.clientX, id==='tsA'? e.clientY+22 : e.clientY-22)); });
+  const up=()=>{ TS.drag=null; TS.justSelected=performance.now(); tsEdgeStop(); }; h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
   h.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 }
 /* a tap anywhere else lets go of the selection */
