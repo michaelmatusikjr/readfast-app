@@ -1,0 +1,43 @@
+const { chromium } = require('playwright-core');
+const S='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
+(async()=>{
+  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', hasTouch:true, isMobile:true, colorScheme:'dark'}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
+  const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); await pg.goto('http://localhost:8750/'); await sleep(1500);
+  const press=async(sel)=>pg.evaluate(async()=>{ const h=hostEl(); const ws=[...h.querySelectorAll('w')].filter(e=>{const r=e.getBoundingClientRect(); return r.width>0&&r.top>140&&r.top<300&&r.left>=0&&r.right<=innerWidth;}); const w=ws[0]; const r=w.getBoundingClientRect(); const x=r.left+r.width/2,y=r.top+r.height/2;
+    w.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerType:'touch',clientX:x,clientY:y,isPrimary:true})); await new Promise(r=>setTimeout(r,550));
+    return [TS.on, TS.a, x, y]; });
+  const move=(x,y)=>pg.evaluate(([x,y])=>{ const h=hostEl(); h.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerType:'touch',clientX:x,clientY:y,isPrimary:true})); },[x,y]);
+  const up=(x,y)=>pg.evaluate(([x,y])=>{ const h=hostEl(); h.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerType:'touch',clientX:x,clientY:y,isPrimary:true})); },[x,y]);
+  // SCROLL
+  await pg.evaluate(async()=>{ closeSheet(); S.mode='scroll'; S.font='opendyslexic'; S.lineH=1.5; saveSettings(); applyLook(); await openDoc(LIB.find(x=>x.kind==='sample').id); setChrome(false); }); await sleep(1200);
+  let p=await press(); ok('scroll press selects', p[0], p);
+  await move(200, 600); await sleep(100);
+  const mid=await pg.evaluate(()=>[TS.b, scView.scrollTop]);
+  await move(200, 840); await sleep(1500);
+  const after=await pg.evaluate(()=>[TS.b, scView.scrollTop, document.body.classList.contains('tsdrag')]);
+  ok('scroll auto-scrolls while at bottom', after[1]>mid[1]+100 && after[0]>mid[0]+20 && after[2], [mid, after]);
+  await move(200, 500); await sleep(400);
+  const still=await pg.evaluate(()=>scView.scrollTop);
+  await sleep(400); ok('stops when finger leaves edge', await pg.evaluate(()=>scView.scrollTop)===still);
+  await up(200,500); await sleep(200);
+  ok('selection kept after lift', await pg.evaluate(()=>TS.on && !document.body.classList.contains('tsdrag') && !$('#selBar').hidden));
+  await pg.evaluate(()=>{ for(let k=0;k<1;k++); }); await sleep(300);
+  await pg.screenshot({path:S+'sel_scroll.png'});
+  await pg.evaluate(()=>selClear()); await sleep(300);
+  // PAGES
+  await pg.evaluate(async()=>{ S.mode='pages'; saveSettings(); switchMode('pages'); setChrome(false); }); await sleep(1200);
+  p=await press(); ok('pages press selects', p[0], p);
+  const pg0=await pg.evaluate(()=>[P.k,P.page]);
+  await move(200, 845); await sleep(1100);
+  const pg1=await pg.evaluate(()=>[P.k,P.page,TS.on,TS.a,TS.b]);
+  ok('pages turns while held at bottom, keeps selection', (pg1[0]!==pg0[0]||pg1[1]!==pg0[1]) && pg1[2] && pg1[3]===p[1] && pg1[4]>p[1]+30, [pg0,pg1]);
+  await move(200, 400); await sleep(200); await up(200,400); await sleep(200);
+  const fin=await pg.evaluate(()=>[TS.on, TS.a, TS.b, document.querySelectorAll('w.tsel').length]);
+  ok('pages selection spans pages', fin[0] && fin[2]>fin[1], fin);
+  await pg.screenshot({path:S+'sel_pages.png'});
+  ok('no page errors', errs.length===0, errs);
+  await b.close();
+})();
