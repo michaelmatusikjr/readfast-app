@@ -79,6 +79,12 @@ h2{font-size:1.15rem;font-weight:600}
 .pill span.v{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .f-st{--c:#2f9e6e}.f-ti{--c:#3a6fd8}.f-au{--c:#c47a12}.f-tg{--c:#9b4dca}
 .pill.clear{--c:var(--muted);font-weight:500}
+.pill.ftpill{--c:var(--ink)}
+button.hlrow.ftrow{width:100%;background:none;border:0;border-bottom:1px solid var(--line);font:inherit;color:inherit;text-align:left;cursor:pointer}
+.ftrow mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.wn-i{padding:10px 0;border-bottom:1px solid var(--line)}.wn-i:last-child{border:0}.wn-i .small{margin-top:3px;line-height:1.45}
+.wn{margin-bottom:14px}
+details.yr{margin-top:10px}
 .fsec{border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden}
 .fsec summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;font-weight:700}
 .fsec summary::-webkit-details-marker{display:none}
@@ -111,6 +117,13 @@ h2{font-size:1.15rem;font-weight:600}
 @font-face{font-family:'OpenDyslexic';src:url('fonts/OpenDyslexic-Bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
 @font-face{font-family:'OpenDyslexic';src:url('fonts/OpenDyslexic-Italic.woff2') format('woff2');font-weight:400;font-style:italic;font-display:swap}
 @font-face{font-family:'OpenDyslexic';src:url('fonts/OpenDyslexic-Bold-Italic.woff2') format('woff2');font-weight:700;font-style:italic;font-display:swap}
+ /* on touch screens Tooz does its own selection in a book, so the phone's Copy / Look Up menu stays out of the way */
+@media (hover:none),(pointer:coarse){ #pagesView,#scFlow{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none} }
+.book w.tsel{background:color-mix(in srgb,var(--accent) 32%,transparent);border-radius:2px}
+.tsh{position:fixed;z-index:13;width:28px;height:36px;margin-left:-14px;touch-action:none;cursor:grab}
+.tsh::before{content:"";position:absolute;left:13px;top:0;width:2px;height:22px;background:var(--accent)}
+.tsh::after{content:"";position:absolute;left:7px;top:20px;width:14px;height:14px;border-radius:50%;background:var(--accent)}
+.qcard-prev{width:100%;max-width:360px;aspect-ratio:1;display:block;margin:0 auto 12px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.2)}
 .tdet{margin-top:12px}
 .tdet summary{cursor:pointer;color:var(--muted);font-size:.85rem;list-style:none;display:flex;align-items:center;gap:6px}
 .tdet summary::-webkit-details-marker{display:none}
@@ -352,7 +365,8 @@ code{font-family:var(--f-mono);font-size:.85em;background:var(--raise);padding:1
 .stepper button{width:48px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--raise);cursor:pointer;font-family:Georgia,serif;font-weight:700;color:var(--ink)}
 .stepper .v{flex:1;text-align:center;font-family:var(--f-mono);font-size:.9rem;color:var(--accent)}
 .fontgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
-.fontgrid .chip{text-align:center;padding:10px 6px;font-weight:600;font-size:1rem}
+.fontgrid .chip{text-align:center;padding:10px 6px;font-weight:600;font-size:1rem;min-width:0;overflow:hidden;overflow-wrap:anywhere;line-height:1.2}
+.fontgrid .chip.wide{font-size:.78rem;letter-spacing:-.01em}
 .fontgrid .chip small{display:block;font-family:var(--f-ui);font-weight:400;font-size:.68rem;color:var(--muted);margin-top:2px}
 .timerow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.9rem}
 .timerow input{width:auto;padding:6px 8px}
@@ -529,6 +543,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
   </section>
 </div>
 
+<div id="tsA" class="tsh" hidden></div><div id="tsB" class="tsh" hidden></div>
 <div id="selBar" hidden role="toolbar" aria-label="Selected text">
   <button class="dot" type="button" data-hl="1" aria-label="Yellow highlight"></button>
   <button class="dot" type="button" data-hl="2" aria-label="Green highlight"></button>
@@ -538,6 +553,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
   <button class="tb" type="button" data-sel="note">Note</button>
   <button class="tb" type="button" data-sel="copy">Copy</button>
   <button class="tb" type="button" data-sel="define">Define</button>
+  <button class="tb" type="button" data-sel="share">Share</button>
 </div>
 <div id="shade" aria-hidden="true"></div>
 <div id="backdrop" hidden></div>
@@ -622,7 +638,7 @@ const DEFAULTS = {
   turn:'slide', tapZones:'edges', twoCol:true, focus:true,
   autoScroll:false, scrollWpm:220, asRamp:true, asPauses:true,
   wpm:350, multi:false, charBudget:14, ramp:true, rampSecs:6, commaPause:1.6, sentPause:2.3, paraPause:3.0, longWord:true, autoRewind:3, speedSize:44, focusColor:'#E0303F', context:true,
-  speedFont:'same', adaptive:false, ttsRate:1, ttsVoice:'', info:0, measuredWpm:0, goalMins:0, linkService:'', bkRemind:7
+  speedFont:'same', adaptive:false, ttsRate:1, ttsVoice:'', info:0, measuredWpm:0, goalMins:0, linkService:'', bkRemind:7, idleMins:5, yearGoal:0
 };
 const S = (()=>{
   const saved=LS.get('settings',{})||{};
@@ -1792,7 +1808,7 @@ pgView.addEventListener('pointercancel',()=>{ pgPt=null; });
 pgView.addEventListener('pointerup',e=>{
   const p=pgPt; pgPt=null; if(!p) return;
   const dx=e.clientX-p.x, dy=e.clientY-p.y, dt=performance.now()-p.t;
-  if(hasSelection()) return;
+  if(hasSelection() || performance.now()-(TS.clearedAt||0)<600) return;
   if(Math.abs(dx)>45 && Math.abs(dx)>Math.abs(dy)*1.3 && dt<900){ pgTurn(dx<0?1:-1); return; }
   if(Math.abs(dx)<12 && Math.abs(dy)<12 && dt<450) readerTap(e);
 });
@@ -1855,7 +1871,7 @@ let scPt=null;
 scView.addEventListener('pointerdown',e=>{ SC.wasAuto=SC.auto; if(SC.auto) asStop(); scPt={x:e.clientX,y:e.clientY,t:performance.now()}; if(e.pointerType==='mouse'){ SC.userScrolled=true; SC.gestureAt=performance.now(); R.anchor=null; } });
 scView.addEventListener('pointerup',e=>{
   const p=scPt; scPt=null; if(!p) return;
-  if(hasSelection()) return;
+  if(hasSelection() || performance.now()-(TS.clearedAt||0)<600) return;
   if(Math.abs(e.clientX-p.x)<12 && Math.abs(e.clientY-p.y)<12 && performance.now()-p.t<450) readerTap(e);
 });
 scView.addEventListener('touchstart',()=>{ SC.touching=true; },{passive:true});
@@ -1918,7 +1934,7 @@ $('#asDown').onclick=()=>{ S.scrollWpm=clamp(S.scrollWpm-10,60,700); saveSetting
 $('#asUp').onclick=()=>{ S.scrollWpm=clamp(S.scrollWpm+10,60,700); saveSettings(); asUI(); };
 
 /* ---------- taps on the page ---------- */
-function hasSelection(){ const s=getSelection(); return !!(s && !s.isCollapsed && s.toString().trim()); }
+function hasSelection(){ if(TS.on) return true; const s=getSelection(); return !!(s && !s.isCollapsed && s.toString().trim()); }
 function readerTap(e){
   const t=e.target;
   const fig=t.closest&&t.closest('figure');
@@ -2054,18 +2070,26 @@ try{ document.fonts.addEventListener('loadingdone', ()=>{ PC.fontGen++; if(R.mod
 function fontsReady(ms){ try{ return Promise.race([document.fonts.ready, sleep(ms||1500)]); }catch(e){ return Promise.resolve(); } }
 
 /* ---------- reading clock (time left, stats) ---------- */
-const CLK={pos:0,t:0,saveT:0};
-function resetClock(){ CLK.pos=R.pos; CLK.t=performance.now(); }
+const CLK={pos:0,t:0,saveT:0,lastAct:0,maxGap:0,touch:0};
+function resetClock(){ CLK.pos=R.pos; CLK.t=performance.now(); CLK.lastAct=CLK.t; CLK.maxGap=0; }
+/* any touch, key or scroll in a book is a sign you're reading; the longest quiet stretch decides how a page is counted */
+function markActivity(){ const now=performance.now(); if(CLK.lastAct) CLK.maxGap=Math.max(CLK.maxGap, now-CLK.lastAct); CLK.lastAct=now; CLK.touch=now; }
+const idleMs=()=>(S.idleMins||5)*60000;
+const usualWpm=()=>S.measuredWpm||230;
+/* Reading time for a stretch: never more than about twice what those words usually take you,
+   and if you went quiet for longer than the idle limit, only the time they usually take. */
+function creditFor(dt, dw, quiet){ const exp=dw/usualWpm()*60000; return quiet? Math.min(dt, exp) : Math.min(dt, exp*2); }
 function noteProgress(){
   if(!R.meta || R.mode==='speed') return;
   if(TTS.on){ resetClock(); return; } /* read-aloud time is counted as each sentence finishes */
   const now=performance.now(), dw=R.pos-CLK.pos, dt=now-CLK.t;
-  if(dw<=0){ if(dw<0 || dt>180000) resetClock(); return; }
+  if(dw<=0){ if(dw<0) resetClock(); return; }
   if(dt<1200) return;
-  if(dt>180000 || dt/dw<40){ resetClock(); return; } /* away from the book, or skimming */
-  recordStats(dt, dw);
+  if(dt>4*3600000 || dt/dw<40){ resetClock(); return; } /* left open for hours, or skimming */
+  const quiet=Math.max(CLK.maxGap, now-CLK.lastAct)>idleMs();
+  recordStats(creditFor(dt,dw,quiet), dw);
   const w=dw/(dt/60000);
-  if(!(R.mode==='scroll'&&SC.auto) && w>60 && w<1200){ S.measuredWpm=S.measuredWpm?Math.round(S.measuredWpm*0.85+w*0.15):Math.round(w); if(now-CLK.saveT>20000){ CLK.saveT=now; saveSettings(); } }
+  if(!quiet && !(R.mode==='scroll'&&SC.auto) && w>60 && w<1200){ S.measuredWpm=S.measuredWpm?Math.round(S.measuredWpm*0.85+w*0.15):Math.round(w); if(now-CLK.saveT>20000){ CLK.saveT=now; saveSettings(); } }
   resetClock();
 }
 function readWpm(){ return R.mode==='speed'?S.wpm : (R.mode==='scroll'&&S.autoScroll)?S.scrollWpm : (S.measuredWpm||230); }
@@ -2162,8 +2186,20 @@ async function openDoc(id){
   resetClock(); updateChrome();
   return true;
 }
+/* the page you were on when you closed the book: count it, up to the time it usually takes you */
+function lastVisibleWord(){
+  const box=(R.mode==='pages'?$('#pgClip'):scView).getBoundingClientRect();
+  for(let dy=6; dy<80; dy+=10) for(const dx of [8,40,box.width/2]){ const i=wordAtPoint(box.right-dx, box.bottom-dy); if(i!=null) return i; }
+  return null;
+}
+function creditLastPage(){
+  if(!R.meta || (R.mode!=='pages' && R.mode!=='scroll') || TTS.on || SC.auto) return;
+  const last=lastVisibleWord(); if(last==null) return;
+  const dw=last-CLK.pos+1, dt=performance.now()-CLK.t; if(dw<=0 || dt<2000) return;
+  recordStats(creditFor(dt,dw,true), dw); resetClock();
+}
 function closeReader(quiet){
-  stopActivity(); noteProgress(); saveProgress(true); selClear();
+  creditLastPage(); stopActivity(); noteProgress(); saveProgress(true); selClear();
   const m=R.meta;
   if(R.mode) MODES[R.mode].leave(); R.mode=null; R.meta=null; /* nothing may save a closed book's record again */
   const back=R.returnTo||'library'; R.returnTo=null;
@@ -2173,7 +2209,21 @@ function closeReader(quiet){
   if(m.kind==='sample'){ LS.set('tutOpen',false); if(!keepTutorial()) setTimeout(()=>tutorialPrompt(m.id), 300); return; }
   if(m.finished){ if(!m.finishedAt){ m.finishedAt=Date.now(); touch(m); } if(!m.keepFinished) setTimeout(()=>finishPrompt(m.id), 350); }
 }
-document.addEventListener('visibilitychange',()=>{ if(document.hidden && R.meta && R.mode){ stopActivity(); noteProgress(); saveProgress(true); } });
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden && R.meta && R.mode){ stopActivity(); noteProgress(); saveProgress(true); CLK.away=performance.now(); }
+  else if(!document.hidden && CLK.away){ CLK.away=0; if(R.meta && R.mode) resetClock(); }   /* time away from the app never counts */
+});
+const vr=document.getElementById('v-reader');
+for(const ev of ['pointerdown','keydown','wheel','touchstart']) vr.addEventListener(ev, markActivity, {capture:true, passive:true});
+/* Auto-scroll and Speed keep going by themselves: after 10 minutes with no touch, pause and ask */
+setInterval(()=>{
+  if(document.hidden || !R.meta || !(R.playing || SC.auto)) return;
+  if(performance.now()-(CLK.touch||0) < 10*60000) return;
+  const wasSpeed=R.playing; if(R.playing) pause(); if(SC.auto) asStop(true); setChrome(true);
+  openSheet('Still reading?', `<p class="note" style="margin-top:0">${wasSpeed?'Speed reading':'Auto-scroll'} paused after 10 minutes without a touch, so your reading time isn’t counted while you’re away.</p><button class="btn primary block" type="button" data-act="go">Keep reading</button>`, {
+    go:()=>{ closeSheet(); markActivity(); resetClock(); if(wasSpeed) play(); else asStart(); }
+  });
+}, 30000);
 const leaving=()=>{ if(R.meta && R.mode){ stopActivity(); saveProgress(true); } };
 window.addEventListener('pagehide',leaving); window.addEventListener('beforeunload',leaving); document.addEventListener('freeze',leaving);
 document.addEventListener('keydown',e=>{
@@ -2195,6 +2245,8 @@ function nodeIdx(node, off, isStart){
   if(!w) return null;
   let i=idxOf(w); if(i==null) return null;
   if(!isStart && node.nodeType===3 && off===0 && i>0 && !(node.previousSibling)) i--;
+  /* a selection that starts at the very end of a word really starts at the next one */
+  if(isStart && node.nodeType===3 && off>=node.length && node.parentElement && node.parentElement.closest('w')===w && !node.nextSibling) i++;
   return i;
 }
 function selCheck(){
@@ -2203,9 +2255,9 @@ function selCheck(){
   const rg=s.getRangeAt(0); const host=hostEl(); if(!host||!host.contains(rg.commonAncestorContainer)){ selHide(); return; }
   let a=nodeIdx(rg.startContainer, rg.startOffset, true), b=nodeIdx(rg.endContainer, rg.endOffset, false);
   if(a==null||b==null){ selHide(); return; } if(b<a) [a,b]=[b,a];
-  SEL={s:a,e:b}; $('#selBar').hidden=false; if(SC.auto) asStop();
+  SEL={s:a,e:b, text:s.toString()}; $('#selBar').hidden=false; if(SC.auto) asStop();
 }
-function selHide(){ $('#selBar').hidden=true; SEL=null; }
+function selHide(){ $('#selBar').hidden=true; SEL=null; if(TS.on){ TS.on=false; tsPaint(); } }
 function selClear(){ selHide(); try{ const s=getSelection(); if(s&&!s.isCollapsed) s.removeAllRanges(); }catch(e){} }
 $('#selBar').addEventListener('mousedown',e=>e.preventDefault());
 $('#selBar').addEventListener('click',e=>{
@@ -2214,11 +2266,85 @@ $('#selBar').addEventListener('click',e=>{
   const act=b.dataset.sel; selClear();
   if(act==='copy') copyQuote(s,en);
   else if(act==='note'){ const ex=(R.meta.highlights||[]).find(h=>h.e>=s && h.s<=en); const h=addHighlight(s,en,ex?ex.c:1); openHlMenu(h,true); }
-  else if(act==='define'){ let k=s; while(k<en && !clean(R.words[k])) k++; const w=clean(R.words[k]); if(w) defineWord(w,k); }
+  else if(act==='define'){ const k=defineIdx(s,en); const w=clean(R.words[k]); if(w) defineWord(w,k); }
+  else if(act==='share') quoteImage(s,en);
 });
+/* the word to define: the first real word in the selection (skipping note numbers and stray punctuation) */
+function defineIdx(s,e){ for(let k=s;k<=e;k++){ if(R.wf && (R.wf[k]&F_N)) continue; if(clean(R.words[k])) return k; } return s; }
+/* "quote" — Author, Title, chapter */
+function citation(s){ const ch=currentChapter(s); const t=R.meta.title, a=R.meta.author; return [a, t, ch&&ch.t&&ch.t!==t?ch.t:''].filter(Boolean).join(', '); }
 async function copyQuote(s,e){
-  const t='“'+textOf(s,e)+'” — '+R.meta.title;
+  const t='“'+textOf(s,e)+'” — '+citation(s);
   try{ await navigator.clipboard.writeText(t); toast('Copied'); }catch(err){ toast('Couldn’t copy. Select the text and use the iPhone’s Copy instead.'); }
+}
+
+/* ---------- touch selection: press and hold a word, drag the handles; no phone menu over the book ---------- */
+const TS={on:false, a:0, b:0, timer:0, start:null, drag:null, extending:false};
+const coarse=()=>{ try{ return matchMedia('(hover:none),(pointer:coarse)').matches; }catch(e){ return false; } };
+function tsPaint(){
+  document.querySelectorAll('w.tsel').forEach(w=>w.classList.remove('tsel'));
+  const A=$('#tsA'), B=$('#tsB');
+  if(!TS.on){ A.hidden=B.hidden=true; return; }
+  for(let k=TS.a;k<=TS.b;k++){ const w=wordEl(k); if(w) w.classList.add('tsel'); }
+  const wa=wordEl(TS.a), wb=wordEl(TS.b);
+  if(wa){ const r=wa.getClientRects()[0]||wa.getBoundingClientRect(); A.style.left=r.left+'px'; A.style.top=(r.top-4)+'px'; A.style.transform='scaleY(-1)'; A.style.transformOrigin='50% 18px'; A.hidden=false; } else A.hidden=true;
+  if(wb){ const rs=wb.getClientRects(); const r=rs[rs.length-1]||wb.getBoundingClientRect(); B.style.left=r.right+'px'; B.style.top=(r.bottom-18)+'px'; B.hidden=false; } else B.hidden=true;
+}
+function tsSet(a,b){ TS.on=true; TS.a=Math.min(a,b); TS.b=Math.max(a,b); SEL={s:TS.a, e:TS.b}; $('#selBar').hidden=false; if(SC.auto) asStop(); tsPaint(); }
+function wordAtPoint(x,y){ const el=document.elementFromPoint(x,y); const w=el&&el.closest?el.closest('w'):null; if(!w || !hostEl() || !hostEl().contains(w)) return null; return idxOf(w); }
+for(const host of [pgView, scView]){
+  host.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse' || !coarse()) return;
+    clearTimeout(TS.timer); const w=e.target.closest&&e.target.closest('w'); if(!w) return; const i=idxOf(w); if(i==null) return;
+    TS.start={x:e.clientX,y:e.clientY,i};
+    TS.timer=setTimeout(()=>{ if(!TS.start) return; tsSet(TS.start.i, TS.start.i); TS.extending=true; markActivity(); try{ navigator.vibrate&&navigator.vibrate(8); }catch(_){} }, 450);
+  });
+  host.addEventListener('pointermove',e=>{
+    if(TS.extending){ const i=wordAtPoint(e.clientX,e.clientY); if(i!=null) tsSet(TS.start.i, i); return; }
+    if(TS.start && Math.hypot(e.clientX-TS.start.x, e.clientY-TS.start.y)>9){ clearTimeout(TS.timer); TS.start=null; }
+  });
+  const end=()=>{ clearTimeout(TS.timer); if(TS.extending){ TS.extending=false; TS.justSelected=performance.now(); } TS.start=null; };
+  host.addEventListener('pointerup',end); host.addEventListener('pointercancel',end);
+  /* while a press-and-hold is extending the selection, the page mustn't scroll */
+  host.addEventListener('touchmove',e=>{ if(TS.extending||TS.drag) e.preventDefault(); },{passive:false});
+  host.addEventListener('contextmenu',e=>{ if(coarse()) e.preventDefault(); });
+}
+for(const id of ['tsA','tsB']){
+  const h=$('#'+id);
+  h.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); TS.drag=id; try{ h.setPointerCapture(e.pointerId); }catch(_){} });
+  h.addEventListener('pointermove',e=>{ if(TS.drag!==id) return; e.preventDefault(); const i=wordAtPoint(e.clientX, id==='tsA'? e.clientY+22 : e.clientY-22); if(i==null) return; if(id==='tsA') tsSet(Math.min(i,TS.b), TS.b); else tsSet(TS.a, Math.max(i,TS.a)); });
+  const up=()=>{ TS.drag=null; }; h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
+  h.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+}
+/* a tap anywhere else lets go of the selection */
+document.addEventListener('pointerdown',e=>{ if(!TS.on || TS.extending) return; if(e.target.closest('#selBar,.tsh,#sheet')) return; if(performance.now()-(TS.justSelected||0)<350) return; selClear(); TS.clearedAt=performance.now(); }, true);
+
+/* ---------- share a quote as an image ---------- */
+function quoteImage(s,e, style){
+  style=style||LS.get('qstyle','light');
+  const q=textOf(s,e); const quote=q.length>700? q.slice(0,700).replace(/\s+\S*$/,'')+'…' : q;
+  const by=[R.meta.author, R.meta.title].filter(Boolean);
+  const STY={light:{bg:'#f6f1e7',ink:'#2a241c',mute:'#7a6d5c',acc:'#a8743a'}, dark:{bg:'#1d1f24',ink:'#efe9de',mute:'#a59d90',acc:'#d7a45f'}, sepia:{bg:'#e9dcc3',ink:'#3a2c1a',mute:'#6f5b40',acc:'#8a5a2b'}};
+  const c=document.createElement('canvas'); c.width=c.height=1080; const x=c.getContext('2d'); const st=STY[style]||STY.light;
+  x.fillStyle=st.bg; x.fillRect(0,0,1080,1080);
+  const serif='Georgia, "Iowan Old Style", "Times New Roman", serif';
+  const wrap=(txt,size)=>{ x.font=`${size}px ${serif}`; const words=txt.split(/\s+/), lines=[]; let cur=''; for(const w of words){ const t=cur?cur+' '+w:w; if(x.measureText(t).width>840 && cur){ lines.push(cur); cur=w; } else cur=t; } if(cur) lines.push(cur); return lines; };
+  let size=64, lines=wrap('“'+quote+'”',size); while(lines.length*size*1.35>620 && size>26){ size-=2; lines=wrap('“'+quote+'”',size); }
+  const lh=size*1.35, total=lines.length*lh; let y=(1080-total-120)/2+size;
+  x.fillStyle=st.acc; x.fillRect(120, y-size-28, 72, 5);
+  x.fillStyle=st.ink; x.font=`${size}px ${serif}`; for(const l of lines){ x.fillText(l,120,y); y+=lh; }
+  x.fillStyle=st.mute; x.font=`italic 34px ${serif}`; y+=30;
+  if(by.length){ const t='— '+by.join(', '); const bl=wrap(t,34); x.font=`italic 34px ${serif}`; for(const l of bl.slice(0,2)){ x.fillText(l,120,y); y+=46; } }
+  x.fillStyle=st.mute; x.globalAlpha=.55; x.font='22px -apple-system, system-ui, sans-serif'; x.fillText('Tooz eReader', 120, 1020); x.globalAlpha=1;
+  const url=c.toDataURL('image/png');
+  openSheet('Share as image', `<img class="qcard-prev" src="${url}" alt="Quote card">
+    <div class="seg" style="margin-bottom:12px">${[['light','Light'],['sepia','Sepia'],['dark','Dark']].map(([k,l])=>`<button type="button" data-act="sty" data-s="${k}" aria-pressed="${k===style}">${l}</button>`).join('')}</div>
+    <div class="row"><button class="btn primary" type="button" data-act="share">Share or save</button></div>`, {
+    sty:(b)=>{ LS.set('qstyle',b.dataset.s); quoteImage(s,e,b.dataset.s); },
+    share:()=>{ c.toBlob(async blob=>{ const name=(R.meta.title||'Quote').replace(/[^\w\s-]/g,'').slice(0,40).trim()+' quote.png'; const file=new File([blob], name, {type:'image/png'});
+      try{ if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); return; } }catch(err){ if(err&&err.name==='AbortError') return; }
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('Image saved'); }, 'image/png'); }
+  });
 }
 
 /* ---------- highlights and notes ---------- */
@@ -2234,11 +2360,12 @@ function openHlMenu(h, focusNote){
     <div class="quote">${esc(textOf(h.s,Math.min(h.e,h.s+120)))}${h.e>h.s+120?'…':''}</div>
     <div class="chips" style="gap:12px">${[1,2,3,4].map(c=>`<button class="swatch" type="button" data-act="col" data-c="${c}" aria-label="Color ${c}" aria-pressed="${h.c===c}" style="background:var(--hl${c})"></button>`).join('')}</div>
     <div class="field"><label for="hlNote">Note</label><textarea class="short" id="hlNote" placeholder="Add a note">${esc(h.note||'')}</textarea></div>
-    <div class="row"><button class="btn primary" type="button" data-act="save">Save note</button><button class="btn" type="button" data-act="copy">Copy</button></div>
+    <div class="row"><button class="btn primary" type="button" data-act="save">Save note</button><button class="btn" type="button" data-act="copy">Copy</button><button class="btn" type="button" data-act="share">Share image</button></div>
     <button class="btn block danger" type="button" data-act="del">${ICON.trash} Remove highlight</button>`, {
     col:(b)=>{ h.c=+b.dataset.c; touch(R.meta); redecorate(); document.querySelectorAll('#sheet .swatch').forEach(x=>x.setAttribute('aria-pressed', x===b)); },
     save:()=>{ h.note=$('#hlNote').value.trim(); touch(R.meta); redecorate(); closeSheet(); toast(h.note?'Note saved':'Note cleared'); },
     copy:()=>{ copyQuote(h.s,h.e); },
+    share:()=>{ closeSheet(); quoteImage(h.s,h.e); },
     del:()=>{ const L=R.meta.highlights; const k=L.indexOf(h); if(k>=0) L.splice(k,1); touch(R.meta); redecorate(); closeSheet(); toast('Highlight removed'); }
   });
   if(focusNote) setTimeout(()=>{ const t=$('#hlNote'); t&&t.focus(); },120);
@@ -2333,6 +2460,9 @@ function flashFound(i,len){
 
 /* ---------- read aloud ---------- */
 const TTS={on:false, utt:null, cur:-1, voices:[], seq:0};
+function voiceTier(v){ const u=(v.voiceURI+' '+v.name).toLowerCase(); if(/premium|enhanced|neural|natural/.test(u)) return 0; if(/eloquence|speech\.synthesis\.voice|bells|bubbles|zarvox|whisper|trinoids|organ|cellos|bahh|boing|jester|superstar|wobble|albert|bad news|good news/.test(u)) return 2; return 1; }
+function voiceLabel(v){ let n=v.name.replace(/\s*\((Enhanced|Premium)\)/i,''); const u=(v.voiceURI+' '+v.name).toLowerCase(); const q=/premium/.test(u)?'Premium':/enhanced/.test(u)?'Enhanced':''; const reg=(v.lang||'').split(/[-_]/)[1]; return n+(q?' · '+q:'')+(reg?' ('+reg.toUpperCase()+')':'')+(v.localService===false?' · online':''); }
+function voicePreview(){ try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance('This is how your books will sound when Tooz reads them aloud.'); const v=TTS.voices.find(x=>x.voiceURI===S.ttsVoice); if(v){ u.voice=v; u.lang=v.lang; } u.rate=S.ttsRate||1; speechSynthesis.speak(u); }catch(e){ toast('Read aloud isn’t available here.'); } }
 function ttsVoices(){ try{ TTS.voices=speechSynthesis.getVoices()||[]; }catch(e){ TTS.voices=[]; } return TTS.voices; }
 if('speechSynthesis' in window){ ttsVoices(); try{ speechSynthesis.addEventListener('voiceschanged',ttsVoices); }catch(e){} }
 function ttsStart(){
@@ -2382,7 +2512,7 @@ const pSeg=(key,opts,label,desc)=>`<div class="set">${label?`<div class="hd"><la
 function fontGrid(key){
   key=key||'font'; const bookFont=R.text&&R.text.font?R.text.font.family:null;
   const same=key==='speedFont'?`<button class="chip" type="button" data-v="same" aria-pressed="${S.speedFont==='same'}" style="font-family:${esc(fontCSS())}">Same<small>as reading font</small></button>`:'';
-  return `<div class="fontgrid" data-set="${key}" data-type="seg">${same}${Object.entries(FONTS).map(([k,f])=>`<button class="chip" type="button" data-v="${k}" aria-pressed="${S[key]===k}" style="font-family:${esc(k==='original'?fontCSS():f.css)}">${k==='original'?'Original':f.label}<small>${k==='original'?(bookFont?esc(bookFont.slice(0,18)):'Literata'):f.note}</small></button>`).join('')}</div>`;
+  return `<div class="fontgrid" data-set="${key}" data-type="seg">${same}${Object.entries(FONTS).map(([k,f])=>`<button class="chip${k==='opendyslexic'?' wide':''}" type="button" data-v="${k}" aria-pressed="${S[key]===k}" style="font-family:${esc(k==='original'?fontCSS():f.css)}">${k==='original'?'Original':k==='opendyslexic'?'Open<wbr>Dyslexic':f.label}<small>${k==='original'?(bookFont?esc(bookFont.slice(0,18)):'Literata'):f.note}</small></button>`).join('')}</div>`;
 }
 function panelHTML(){
   const m=S.mode;
@@ -2451,9 +2581,15 @@ function panelHTML(){
   if(m!=='speed'){
     const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase();
     const vs=ttsVoices().filter(v=>(v.lang||'').toLowerCase().startsWith(lang));
+    const grp=[['Best quality',[]],['Standard',[]],['Novelty and older voices',[]]];
+    for(const v of vs) grp[voiceTier(v)][1].push(v);
+    for(const g of grp) g[1].sort((a,b)=>a.name.localeCompare(b.name));
+    const opt=v=>`<option value="${esc(v.voiceURI)}"${v.voiceURI===S.ttsVoice?' selected':''}>${esc(voiceLabel(v))}</option>`;
     h+=`<div class="panel-sec"><h3>Read aloud</h3><div class="group">
       ${pRange('ttsRate','Speaking speed',0.5,2,0.05)}
-      <div class="set"><div class="hd"><label for="o_voice">Voice</label></div><select class="input" id="o_voice" data-set="ttsVoice" data-type="text"><option value="">Default</option>${vs.map(v=>`<option value="${esc(v.voiceURI)}"${v.voiceURI===S.ttsVoice?' selected':''}>${esc(v.name)}${v.localService===false?' (online)':''}</option>`).join('')}</select><div class="desc">Tap the speaker at the bottom of the page to start. More voices can be downloaded in the iPhone’s Settings → Accessibility → Spoken Content.</div></div>
+      <div class="set"><div class="hd"><label for="o_voice">Voice</label></div><select class="input" id="o_voice" data-set="ttsVoice" data-type="text"><option value="">Default</option>${grp.filter(g=>g[1].length).map(([l,L])=>`<optgroup label="${l}">${L.map(opt).join('')}</optgroup>`).join('')}</select>
+      <button class="btn" type="button" data-act="vprev" style="margin-top:8px">${ICON.speaker} Hear this voice</button>
+      <div class="desc">Enhanced and Premium voices sound the most natural. To add them on iPhone, open <b>Settings → Accessibility → Spoken Content → Voices → English</b>, pick a voice and download its Enhanced or Premium version. Then close and reopen Tooz and it appears under Best quality. Tap the speaker at the bottom of the page to start.</div></div>
     </div></div>`;
   }
   h+=`<button class="btn block" type="button" data-act="resetlook">Reset reading options</button>`;
@@ -2462,7 +2598,7 @@ function panelHTML(){
 function openPanel(){
   if(R.mode==='speed' && R.playing) pause();
   if(SC.auto) asStop(true);
-  openSheet('Reading options', panelHTML(), { resetlook:()=>{ resetReading(); refreshPanel(); toast('Reading options reset'); } }, 'short');
+  openSheet('Reading options', panelHTML(), { vprev:()=>{ if(TTS.on&&typeof ttsStop==='function') ttsStop(); voicePreview(); }, resetlook:()=>{ resetReading(); refreshPanel(); toast('Reading options reset'); } }, 'short');
   bindPanel();
 }
 function refreshPanel(){ const body=$('#sheet .sheet-body'); if(!body) return; const st=body.scrollTop; body.innerHTML=panelHTML(); bindPanel(); body.scrollTop=st; }
@@ -2514,6 +2650,211 @@ $('#markBtn').onclick=()=>openToc('marks');
 /* night theme switch and phone light/dark changes */
 setInterval(()=>{ if(S.nightAuto) applyLook(); },60000);
 try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>applyLook()); }catch(e){}
+
+/* ---------- version and what's new ---------- */
+const APP_VERSION='2026.11.12';
+const WHATSNEW=[
+  ['Pick text your way','Press and hold a word to select it, then drag the round handles. The phone’s own menu stays out of the way; tap <b>Define</b> to look a word up.'],
+  ['Define finds the right word','Define now looks up the word you selected, not the one beside it.'],
+  ['Share a quote as a picture','Select text or tap a highlight, then <b>Share image</b> for a quote card in light, sepia or dark.'],
+  ['Copy with the source','<b>Copy</b> adds the author, book and chapter after the quote.'],
+  ['Search inside every book','Type three letters or more in the library search, then tap <b>Search inside books</b>.'],
+  ['Your year in books','Stats shows books finished each year, your longest streak and an optional yearly goal.'],
+  ['Better voices','Read aloud lists the most natural voices first, with a button to hear each one.'],
+  ['Export highlights and notes','Save every highlight, note and bookmark from a book as a document.'],
+  ['Fairer reading time','Time stops when you switch apps or lock the phone, idle stretches count only partly, and the last page counts when you close the book. Choose the idle limit in Settings.'],
+  ['Still reading?','Auto-scroll and Speed pause after 10 minutes with no touch and ask whether you’re still there.'],
+  ['Storage','Settings shows how much space Tooz uses, book by book.']
+];
+function whatsNewSheet(){
+  openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
+    <div class="wn">${WHATSNEW.map(([h,t])=>`<div class="wn-i"><b>${h}</b><div class="small">${t}</div></div>`).join('')}</div>
+    <button class="btn primary block" type="button" data-act="ok">Got it</button>`, { ok:closeSheet });
+}
+/* shown once after an update; never on the very first launch */
+function checkUpdated(hadData){
+  const seen=LS.get('seenVer','');
+  LS.set('seenVer',APP_VERSION);
+  if(hadData && seen!==APP_VERSION) setTimeout(()=>{ if($('#sheet').hidden && $('#v-reader').hidden) whatsNewSheet(); else toast('Tooz was updated', {label:'What’s new', fn:whatsNewSheet}, 8000); }, 900);
+}
+
+/* ---------- storage used ---------- */
+const fmtBytes=n=>n<1024?Math.round(n)+' B':n<1048576?Math.round(n/1024)+' KB':n<1073741824?(n/1048576).toFixed(n<10485760?1:0)+' MB':(n/1073741824).toFixed(1)+' GB';
+function sizeOf(x){
+  if(x==null) return 0;
+  if(x instanceof Blob) return x.size;
+  if(ArrayBuffer.isView(x)) return x.byteLength;
+  if(typeof x==='string') return x.length*2;
+  if(Array.isArray(x)){ let n=0; for(const v of x) n+= typeof v==='string'? v.length*2+8 : typeof v==='number'? 8 : sizeOf(v); return n; }
+  if(typeof x==='object'){ let n=0; for(const k in x) n+=sizeOf(x[k]); return n; }
+  return 8;
+}
+async function bookBytes(id){
+  const t=await Store.get('texts',id).catch(()=>null); if(!t) return 0;
+  let n=0; for(const k of ['words','ends','blocks','wf','notes','breaks','chapters']) n+=sizeOf(t[k]);
+  for(const f of (t.images&&t.images.files)||[]) n+= f.blob?f.blob.size:(f.data||'').length;
+  for(const f of (t.font&&t.font.faces)||[]) n+= f.blob?f.blob.size:(f.data||'').length;
+  return n;
+}
+async function storageSummary(){
+  const el=$('#storeUse'); if(!el) return;
+  try{
+    if(navigator.storage&&navigator.storage.estimate){ const e=await navigator.storage.estimate(); el.innerHTML=`Tooz is using <b>${fmtBytes(e.usage||0)}</b> on this device${e.quota?' (space allowed: about '+fmtBytes(e.quota)+')':''}.`; }
+    else el.textContent='This browser doesn’t report how much space Tooz uses. Tap below to add it up book by book.';
+  }catch(err){ el.textContent='Couldn’t read storage use.'; }
+}
+async function storageSheet(){
+  openSheet('Space used by each book','<p class="note">Adding it up…</p>');
+  const have=LIB.filter(d=>!d.pending), notDl=LIB.length-have.length;
+  const rows=[]; for(const d of have) rows.push({d, n:await bookBytes(d.id)});
+  rows.sort((a,b)=>b.n-a.n);
+  const total=rows.reduce((s,r)=>s+r.n,0);
+  let other=0; try{ for(let k=0;k<localStorage.length;k++){ const key=localStorage.key(k); if(key.startsWith('rf.')) other+=(key.length+(localStorage.getItem(key)||'').length)*2; } }catch(e){}
+  if($('#sheet').hidden) return;
+  openSheet('Space used by each book', `
+    <p class="note" style="margin-top:0">${rows.length} downloaded book${rows.length===1?'':'s'} use about <b>${fmtBytes(total)}</b>. Notes, highlights, settings, reading log and archive use about <b>${fmtBytes(other)}</b>.</p>
+    <div class="list">${rows.map(r=>`<div class="li" style="cursor:default"><span class="grow" style="min-width:0"><b>${esc(r.d.title)}</b>${r.d.author?`<span class="small" style="display:block">${esc(r.d.author)}</span>`:''}</span><span class="small" style="font-family:var(--f-mono);white-space:nowrap">${fmtBytes(r.n)}</span></div>`).join('')}</div>
+    ${notDl?`<p class="note">Not listed: ${notDl} book${notDl===1?'':'s'} on your shelf that ${notDl===1?'hasn’t':'haven’t'} been downloaded yet, so ${notDl===1?'it takes':'they take'} no space.</p>`:''}
+    <p class="note">Sizes are estimates of the stored text, pictures and fonts. The phone’s own total (above, in Settings) also counts the app itself and the browser’s overhead, so it is usually larger.</p>`);
+}
+
+/* ---------- search inside every book ---------- */
+const FTX=new Map(); /* id -> {s: lower-case text, o: word start offsets} */
+async function ftIndex(d){
+  if(FTX.has(d.id)) return FTX.get(d.id);
+  const t=(R.meta&&R.meta.id===d.id&&R.text)||await Store.get('texts',d.id).catch(()=>null)||fetchText(d); if(!t||!t.words) return null;
+  const o=new Int32Array(t.words.length); let s=''; const parts=[];
+  let len=0; for(let k=0;k<t.words.length;k++){ o[k]=len; const w=(t.words[k]||'').toLowerCase(); parts.push(w); len+=w.length+1; }
+  s=parts.join(' ');
+  const x={s,o,t}; FTX.set(d.id,x); return x;
+}
+const normQ=q=>q.toLowerCase().replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/\s+/g,' ').trim();
+function wordAt(o,pos){ let lo=0,hi=o.length-1; while(lo<hi){ const m=(lo+hi+1)>>1; if(o[m]<=pos) lo=m; else hi=m-1; } return lo; }
+const FT_PER_BOOK=25;
+async function searchAllBooks(q){
+  q=normQ(q); if(q.length<3) return;
+  const books=LIB.filter(d=>!d.pending), skipped=LIB.length-books.length;
+  openSheet('Search inside books', `<p class="note">Searching ${books.length} book${books.length===1?'':'s'} for “${esc(q)}”…</p>`);
+  const res=[]; let total=0;
+  for(const d of books){
+    const x=await ftIndex(d); if(!x) continue;
+    const s=x.s.replace(/[’‘]/g,"'").replace(/[“”]/g,'"'); /* same length as x.s */
+    const hits=[]; let p=s.indexOf(q), n=0;
+    while(p>=0){ n++; if(hits.length<FT_PER_BOOK) hits.push(wordAt(x.o,p)); p=s.indexOf(q,p+q.length); }
+    if(n){ total+=n; res.push({d,x,hits,n}); }
+    await new Promise(r=>setTimeout(r,0));
+  }
+  if($('#sheet').hidden) return;
+  res.sort((a,b)=>b.n-a.n);
+  const snipOf=(x,i)=>{ const a=Math.max(0,i-8), b=Math.min(x.t.words.length-1,i+14); return (a>0?'…':'')+esc(joinWords(x.t,a,b))+(b<x.t.words.length-1?'…':''); };
+  const reEsc=x=>esc(x).replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/ /g,'\\s+');
+  const rx=new RegExp(q.split("'").map(reEsc).join("(?:&#39;|[’‘])"),'gi');
+  const mark=h=>h.replace(rx,m=>'<mark>'+m+'</mark>');
+  openSheet('Search inside books', `
+    <p class="note" style="margin-top:0">${total?`“${esc(q)}” appears ${total.toLocaleString()} time${total===1?'':'s'} in ${res.length} book${res.length===1?'':'s'}.`:`“${esc(q)}” doesn’t appear in any downloaded book.`}</p>
+    ${res.map(r=>`<div class="nbook"><div class="nbook-h"><b>${esc(r.d.title)}</b><span class="small">${r.n.toLocaleString()} match${r.n===1?'':'es'}</span></div>${r.hits.map(i=>`<button class="hlrow ftrow" type="button" data-act="go" data-id="${r.d.id}" data-i="${i}"><span class="bar" style="background:var(--accent)"></span><div class="grow"><div class="t">${mark(snipOf(r.x,i))}</div><div class="where">${esc(chapterName(r.d,i))}${chapterName(r.d,i)?' · ':''}${pctOf(r.d,i)}%</div></div></button>`).join('')}${r.n>r.hits.length?`<p class="note" style="margin:4px 0 0">Showing the first ${r.hits.length} of ${r.n.toLocaleString()}. Open the book and use its search for the rest.</p>`:''}</div>`).join('')}
+    ${skipped?`<p class="note">Not searched: ${skipped} book${skipped===1?'':'s'} on your shelf that ${skipped===1?'hasn’t':'haven’t'} been downloaded yet.</p>`:''}`, {
+    go:async(b)=>{ closeSheet(); const id=b.dataset.id, i=+b.dataset.i; if(await openDoc(id)!==false){ R.returnTo='library'; goTo(i,true); } }
+  });
+}
+
+/* ---------- export highlights, notes and bookmarks ---------- */
+function exportSheet(src){
+  openSheet('Export highlights and notes', `
+    <p class="note" style="margin-top:0">Save every highlight, note and bookmark from “${esc(src.title)}” as a document.</p>
+    <button class="btn primary block" type="button" data-act="html">Document for reading or printing (.html)</button>
+    <button class="btn block" type="button" data-act="txt">Plain text (.txt)</button>
+    <p class="note">The .html file opens in Safari or Files and can be printed or saved as a PDF from the share button. Plain text pastes cleanly into Notes or an email.</p>`, {
+    html:()=>exportBook(src,'html'), txt:()=>exportBook(src,'txt')
+  });
+}
+/* src is a library book or an archived record */
+async function exportData(src){
+  const arch=!!src.kept; const items=[];
+  if(arch){
+    for(const h of src.kept.highlights||[]) items.push({kind:'h', i:h.s, q:h.noteOnly?'':h.q, note:h.note||'', c:h.c, at:h.at});
+    for(const b of src.kept.bookmarks||[]) items.push({kind:'b', i:b.i, q:b.q||'', name:b.name||'', at:b.at});
+  } else {
+    await bookSnips(src);
+    for(const h of src.highlights||[]) items.push({kind:'h', i:h.s, q:snip(src,h.s,h.e), note:h.note||'', c:h.c, at:h.at});
+    for(const b of src.bookmarks||[]) items.push({kind:'b', i:b.i, q:snip(src,b.i,b.i+11), name:b.name||'', at:b.at});
+  }
+  items.sort((a,b)=>a.i-b.i);
+  const ch=i=>arch?'':chapterName(src,i);
+  const groups=[]; for(const it of items){ const c=ch(it.i); if(!groups.length || groups[groups.length-1].c!==c) groups.push({c, L:[]}); groups[groups.length-1].L.push(it); }
+  return {items, groups, pct:i=>src.count?pctOf(src,i):null};
+}
+async function exportBook(src, fmt){
+  const {items, groups, pct}=await exportData(src);
+  const nH=items.filter(x=>x.kind==='h'&&x.q).length, nN=items.filter(x=>x.note).length, nB=items.filter(x=>x.kind==='b').length;
+  const day=new Date().toLocaleDateString([], {month:'long', day:'numeric', year:'numeric'});
+  const sum=`${nH} highlight${nH===1?'':'s'}, ${nN} note${nN===1?'':'s'}, ${nB} bookmark${nB===1?'':'s'}`;
+  const where=it=>{ const p=pct(it.i); return [p!=null?p+'%':'', it.at?fmtDay(it.at):''].filter(Boolean).join(' · '); };
+  let out, type, ext;
+  if(fmt==='txt'){
+    const L=[src.title, src.author?'by '+src.author:'', 'Exported from Tooz eReader on '+day+' · '+sum, ''];
+    for(const g of groups){ if(g.c) L.push('', '== '+g.c+' ==', '');
+      for(const it of g.L){
+        if(it.kind==='b') L.push('[Bookmark] '+(it.name||'Bookmark')+(it.q?' — '+it.q+'…':''));
+        else { if(it.q) L.push('“'+it.q+'”'); if(it.note) L.push('Note: '+it.note); }
+        const w=where(it); if(w) L.push('('+w+')'); L.push(''); } }
+    out=L.filter((x,k)=>x!==''||L[k-1]!=='').join('\n'); type='text/plain'; ext='txt';
+  } else {
+    const body=groups.map(g=>(g.c?`<h2>${esc(g.c)}</h2>`:'')+g.L.map(it=> it.kind==='b'
+      ? `<p class="bm">🔖 <b>${esc(it.name||'Bookmark')}</b>${it.q?' — '+esc(it.q)+'…':''}<span class="w">${esc(where(it))}</span></p>`
+      : `<div class="h c${it.c||1}">${it.q?`<blockquote>${esc(it.q)}</blockquote>`:''}${it.note?`<p class="n"><b>Note:</b> ${esc(it.note)}</p>`:''}<span class="w">${esc(where(it))}</span></div>`).join('')).join('');
+    out=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(src.title)} — highlights and notes</title><style>
+body{font:17px/1.55 Georgia,serif;max-width:680px;margin:0 auto;padding:28px 20px;color:#222;background:#fff}h1{font-size:1.6em;margin:0 0 4px}.by{color:#555;margin:0}.meta{color:#777;font:13px system-ui,sans-serif;margin:6px 0 26px}
+h2{font:600 15px system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#7a5a2f;margin:30px 0 10px;border-bottom:1px solid #e6dccb;padding-bottom:4px}
+.h{border-left:4px solid #f2d26b;padding:2px 0 2px 14px;margin:0 0 18px;break-inside:avoid}.c2{border-color:#9fd39a}.c3{border-color:#9cc3ef}.c4{border-color:#f1a7c0}
+blockquote{margin:0}.n{margin:6px 0 0;font-family:system-ui,sans-serif;font-size:15px}.w{display:block;color:#888;font:12px system-ui,sans-serif;margin-top:4px}.bm{font-family:system-ui,sans-serif;font-size:15px;margin:0 0 16px}
+@media (prefers-color-scheme:dark){body{background:#151515;color:#ddd}.by{color:#aaa}h2{color:#d8b77d;border-color:#333}}
+</style></head><body><h1>${esc(src.title)}</h1>${src.author?`<p class="by">${esc(src.author)}</p>`:''}<p class="meta">Exported from Tooz eReader on ${day} · ${sum}</p>${body||'<p>Nothing saved yet.</p>'}</body></html>`;
+    type='text/html'; ext='html';
+  }
+  const name=(src.title||'Book').replace(/[^\w\s-]/g,'').replace(/\s+/g,' ').trim().slice(0,50)+' - highlights.'+ext;
+  const file=new File([out], name, {type});
+  closeSheet();
+  try{ if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); return; } }catch(err){ if(err&&err.name==='AbortError') return; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast('Exported '+sum);
+}
+
+/* ---------- year in books ---------- */
+function finishedRecords(){
+  const seen=new Set(), out=[];
+  const add=(id,title,author,at,rating)=>{ const k=id+'|'+new Date(at).toDateString(); if(seen.has(k)) return; seen.add(k); out.push({id,title,author,at,rating:rating||0}); };
+  for(const a of ARCH.list()) if(a.status==='finished' && a.finishedAt) add(a.id,a.title,a.author,a.finishedAt,a.rating);
+  let undated=0;
+  for(const d of LIB){
+    for(const h of d.history||[]) if(h.status==='finished' && h.finishedAt) add(d.id,d.title,d.author,h.finishedAt,h.rating);
+    if(d.finished && d.kind!=='sample'){ if(d.finishedAt) add(d.id,d.title,d.author,d.finishedAt,0); else undated++; }
+  }
+  out.sort((a,b)=>b.at-a.at);
+  return {list:out, undated};
+}
+function longestStreak(st, met){
+  const keys=Object.keys(st).filter(met).sort(); let best=0, run=0, prev=null;
+  for(const k of keys){ const t=new Date(k+'T12:00:00').getTime(); run= prev!=null && Math.round((t-prev)/86400000)===1 ? run+1 : 1; prev=t; if(run>best) best=run; }
+  return best;
+}
+function yearHTML(st, met){
+  const {list, undated}=finishedRecords(); const yr=new Date().getFullYear();
+  const byYear=new Map(); for(const r of list){ const y=new Date(r.at).getFullYear(); if(!byYear.has(y)) byYear.set(y,[]); byYear.get(y).push(r); }
+  const thisYear=(byYear.get(yr)||[]).length, goal=S.yearGoal||0;
+  const start=new Date(yr,0,1), dayOfYear=Math.floor((Date.now()-start)/86400000)+1, daysIn=((yr%4===0&&yr%100!==0)||yr%400===0)?366:365;
+  const pace=goal?Math.round(goal*dayOfYear/daysIn*10)/10:0;
+  const best=longestStreak(st, met);
+  const years=[...byYear.keys()].sort((a,b)=>b-a);
+  return `<div class="chart" id="yearBox">
+      <div class="topbar" style="padding:0"><h2>${yr} in books</h2><span class="val" style="font-family:var(--f-mono);color:var(--accent)">${thisYear}${goal?' / '+goal:''}</span></div>
+      ${goal?`<p class="note" style="margin:6px 0 0">${thisYear} of ${goal} books finished${thisYear>=goal?' · goal reached':thisYear>=pace?' · on pace':' · '+Math.max(1,Math.ceil(pace-thisYear))+' behind pace'}</p><div class="goalbar"><i style="width:${Math.min(100,Math.round(100*thisYear/goal))}%"></i></div>`:'<p class="note" style="margin:6px 0 0">Set a goal for the number of books to finish this year.</p>'}
+      <div class="chips" id="yearChips" style="margin-top:10px">${[0,6,12,24,36,52].map(v=>`<button class="chip" type="button" data-ygoal="${v}" aria-pressed="${goal===v}">${v?v+' books':'Off'}</button>`).join('')}</div>
+      <div class="tiles" style="margin-top:12px"><div class="tile"><div class="v">${best}</div><div class="k">Longest streak (days)</div></div><div class="tile"><div class="v">${list.length}</div><div class="k">Books finished, all time</div></div></div>
+      ${years.length?years.map(y=>{ const L=byYear.get(y); return `<details class="tdet yr"${y===yr?' open':''}><summary>${y} <span>· ${L.length} book${L.length===1?'':'s'}</span></summary><div class="list">${L.map(r=>`<div class="li" style="cursor:default"><span class="grow" style="min-width:0"><b>${esc(r.title)}</b><span class="small" style="display:block">${r.author?esc(r.author)+' · ':''}${fmtDay(r.at)}${r.rating?' · <span style="color:var(--accent)">'+starsTxt(r.rating)+'</span>':''}</span></span></div>`).join('')}</div></details>`; }).join(''):'<p class="note">Books you finish, in your library or archive, are listed here by year.</p>'}
+      ${undated?`<p class="note">Not counted by year: ${undated} book${undated===1?'':'s'} marked finished before Tooz recorded finish dates.</p>`:''}
+    </div>`;
+}
 
 
 /* ---------- define + word list ---------- */
@@ -2607,11 +2948,13 @@ function renderStats(){
       <div class="tile"><div class="v">${fmtMins(tms/60000)}</div><div class="k">Time reading</div></div>
       <div class="tile"><div class="v">${fin}</div><div class="k">Books finished</div></div>
     </div>
+    ${yearHTML(st, met)}
     <div class="chart"><h2>Minutes per day</h2><p class="note" style="margin:2px 0 0">Last 7 days${goal?' · green bars met your goal':''}</p>
       <div class="bars">${week.map(w=>`<div class="b"><em>${w.m||''}</em><i class="${w.m?(w.met?'met':''):'zero'}" style="height:${Math.round(100*w.m/max)}%"></i></div>`).join('')}</div>
       <div class="bars-x">${week.map(w=>`<span>${w.lbl}</span>`).join('')}</div>
     </div>
-    <p class="note">Time counts while you turn pages, scroll, speed read or listen. Gaps of more than 3 minutes on one page aren’t counted.</p>`;
+    <p class="note">Time counts while you turn pages, scroll, speed read or listen. Time stops when you switch apps or lock the phone. If you don’t touch the screen for ${S.idleMins||5} minutes (change this in Settings), that stretch counts only as long as the text usually takes you.</p>`;
+  $('#yearChips').addEventListener('click',e=>{ const b=e.target.closest('[data-ygoal]'); if(!b) return; S.yearGoal=+b.dataset.ygoal; saveSettings(); renderStats(); });
   $('#goalChips').addEventListener('click',e=>{ const b=e.target.closest('[data-goal]'); if(!b) return; S.goalMins=+b.dataset.goal; saveSettings(); renderStats(); });
 }
 
@@ -2623,6 +2966,11 @@ function renderSettings(){
     <div class="group"><div class="set">
       <div class="desc" style="color:var(--ink)">Themes, fonts, layout, page turns, auto-scroll, speed reading and read aloud are in the <b>Aa</b> button inside any book. They apply to every book.</div>
       <button class="btn" type="button" id="resetBtn">Reset reading options</button>
+    </div>
+    <div class="set">
+      <div class="hd"><b>Stop counting reading time after</b></div>
+      <div class="seg" id="idleSeg">${[3,5,10].map(v=>`<button type="button" data-v="${v}" aria-pressed="${(S.idleMins||5)===v}">${v} min</button>`).join('')}</div>
+      <div class="desc">If you don’t turn a page, scroll or touch the screen for this long, Tooz assumes you stepped away and counts only the time that stretch of text usually takes you.</div>
     </div></div>
     <h2>Send text from other apps</h2>
     <div class="group"><div class="set">
@@ -2658,6 +3006,11 @@ function renderSettings(){
       <div class="seg" id="bkRemind">${[['0','Off'],['1','Daily'],['7','Weekly']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(S.bkRemind)===v}">${l}</button>`).join('')}</div>
       <div class="desc">On iPhone, Apple doesn’t let web apps pick a folder or save files without a tap, so automatic backups aren’t possible here. Instead, Tooz reminds you when your library has changed and it’s been a while. When you tap <b>Save backup</b>, choose <b>Save to Files</b>; iPhone opens the folder you used last time.</div>
     </div>`}</div>
+    <h2>Storage</h2>
+    <div class="group"><div class="set">
+      <div class="desc" id="storeUse" style="color:var(--ink)">Checking…</div>
+      <button class="btn" type="button" id="storeBooks">Show space used by each book</button>
+    </div></div>
     <h2>Tags</h2>
     <div class="group"><div class="set" id="tagSet">${(()=>{ const n=tagCounts().length; return n? `<details class="tdet" id="tagDet"${TAGS_OPEN?' open':''}><summary>${n} tag${n===1?'':'s'} <span>· tap to ${TAGS_OPEN?'hide':'show'}</span></summary>${tagsSettingsHTML()}</details>` : tagsSettingsHTML(); })()}</div></div>
     <h2>Archived books${ARCH.list().length?' <span class="muted" style="font-weight:400">('+ARCH.list().length+')</span>':''}</h2>
@@ -2666,6 +3019,11 @@ function renderSettings(){
     <div class="group"><div class="set">
       <div class="desc">${LIB.some(m=>m.kind==='sample')?'The tutorial is in your library. When you close it, Tooz asks whether to keep it there or tuck it away here.':'The tutorial walks you through every feature. It’s tucked away here until you want it.'}</div>
       <div class="row">${LIB.some(m=>m.kind==='sample')?'':'<button class="btn" type="button" id="tutRestore">Restore tutorial to library</button>'}<button class="btn" type="button" id="tutOpen">Open the tutorial</button></div>
+    </div></div>
+    <h2>About</h2>
+    <div class="group"><div class="set">
+      <div class="hd"><b>Tooz eReader</b><span class="val" style="font-family:var(--f-mono)">Version ${APP_VERSION}</span></div>
+      <button class="btn" type="button" id="wnBtn">What’s new</button>
     </div></div>
     <h2>Erase all data</h2>
     <div class="group"><div class="set">
@@ -2681,6 +3039,8 @@ function renderSettings(){
   $('#storeNote').textContent=Store.db?'':'Storage is unavailable in this view, so documents will disappear when you close the app.';
   $('#sLinkSvc').addEventListener('change',e=>{ S.linkService=e.target.value.trim(); saveSettings(); toast(S.linkService?'Reader service saved':'Reader service cleared'); });
   $('#backupBtn').onclick=backup;
+  $('#storeBooks').onclick=storageSheet; $('#wnBtn').onclick=whatsNewSheet; storageSummary();
+  $('#idleSeg').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.idleMins=+b.dataset.v; saveSettings(); $('#idleSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); };
   bkSettingsUI();
   if($('#bkPick')) $('#bkPick').onclick=pickBackupFolder;
   if($('#bkOff')) $('#bkOff').onclick=async()=>{ BK.dir=null; await kvSet('backupDir',null); bkSettingsUI(); toast('Automatic backups turned off'); };
@@ -2908,6 +3268,7 @@ function renderSuggest(){
   if(!q){ box.hidden=true; box.innerHTML=''; return; }
   const hits=[];
   for(const [sec] of [['tg'],['au'],['ti']]){ let n=0; for(const o of secOptions(sec)){ if(F[sec].has(o.key) || !o.label.toLowerCase().includes(q)) continue; hits.push(`<button class="pill ${SECCLS[sec]}" type="button" data-sug="${sec}" data-k="${esc(o.key)}"><span class="x">+</span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(o.label)}</span></button>`); if(++n>=6) break; } }
+  if(q.length>=3 && LIB.some(d=>!d.pending)) hits.push(`<button class="pill ftpill" type="button" data-fts="1"><span class="x">⌕</span><span class="v">Search inside books for “${esc(LIBV.q.trim())}”</span></button>`);
   box.hidden=!hits.length; box.innerHTML=hits.join('');
 }
 function renderLibrary(){
@@ -2968,6 +3329,7 @@ $('#sortBtn').onclick=openSort;
 $('#filterBtn').onclick=openFilter;
 $('#v-library').addEventListener('click',e=>{
   const u=e.target.closest('[data-unf]'); if(u){ if(u.dataset.unf==='all') clearFilters(); else toggleFilter(u.dataset.unf,u.dataset.k,false); renderLibrary(); return; }
+  if(e.target.closest('[data-fts]')){ searchAllBooks(LIBV.q); return; }
   const g=e.target.closest('[data-sug]'); if(g){ toggleFilter(g.dataset.sug,g.dataset.k,true); LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
 });
 $('#libFind').addEventListener('input',e=>{ LIBV.q=e.target.value; renderLibrary(); });
@@ -3001,7 +3363,7 @@ function docOptions(id, keep){
       ${known.length?`<details class="tdet" id="knownDet"><summary id="knownHd">Your other tags <span>(${known.length})</span></summary><div class="tagchips" id="knownTags">${known.map(t=>`<button class="chip" type="button" data-act="usetag" data-v="${esc(t)}">+ ${esc(t)}</button>`).join('')}</div></details>`:''}
     </div>
     <button class="btn primary block" type="button" data-act="save">Save</button>
-    ${nNotes?`<button class="btn block" type="button" data-act="notes">${ICON.note} Highlights &amp; bookmarks (${nNotes})</button>`:''}
+    ${nNotes?`<button class="btn block" type="button" data-act="notes">${ICON.note} Highlights &amp; bookmarks (${nNotes})</button><button class="btn block" type="button" data-act="export">Export highlights and notes</button>`:''}
     <button class="btn block" type="button" data-act="restart">Start over from the beginning</button>
     <button class="btn block" type="button" data-act="archive">${ICON.archive} Archive</button>
     <div id="delZone"><button class="btn block danger" type="button" data-act="askdel">${ICON.trash} Delete from library</button></div>`, {
@@ -3014,6 +3376,7 @@ function docOptions(id, keep){
       d.title=t; d.author=draft.author.replace(/\s+/g,' ').trim(); d.tags=draft.tags.map(normTag).filter(Boolean);
       touch(d); renderLibrary(); closeSheet(); toast('Saved'); },
     notes:async()=>{ closeSheet(); if(await openDoc(id)!==false){ R.returnTo='library'; openToc((d.highlights||[]).length?'hls':'marks'); } },
+    export:()=>exportSheet(d),
     restart:async()=>{ if(R.meta&&R.meta.id===id&&R.mode) closeReader(); startOver(d); renderLibrary(); closeSheet(); toast('Back to the beginning'); },
     archive:()=>archiveFlow(id),
     askdel:()=>{ revealEnd('#delZone'); $('#delZone').innerHTML=`<p class="note">Delete “${esc(d.title)}” and its highlights and bookmarks? Your saved words stay in Notes.</p><div class="row"><button class="btn" type="button" data-act="nodel">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" type="button" data-act="del">Delete</button></div>`; },
@@ -3266,11 +3629,12 @@ function openArchived(k, confirmDel){
     ${(a.tags||[]).length?`<div class="tagchips" style="margin-bottom:8px">${a.tags.map(t=>`<span class="chip" style="cursor:default">${esc(t)}</span>`).join('')}</div>`:''}
     ${hl.length?`<h3 class="grp">Highlights and notes <span>${hl.length}</span></h3>${hl.map(h=>`<div class="hlrow"><span class="bar" style="background:var(--hl${h.c||1})"></span><div class="grow"><div class="t">${h.noteOnly?'':esc(h.q.length>400?h.q.slice(0,400)+'…':h.q)}</div>${h.note?`<div class="nt">${esc(h.note)}</div>`:''}</div></div>`).join('')}`:''}
     ${bm.length?`<h3 class="grp">Bookmarks <span>${bm.length}</span></h3>${bm.map(b=>`<div class="hlrow"><span class="bar" style="background:var(--accent)"></span><div class="grow"><div class="t"><b>${esc(b.name||'Bookmark')}</b></div><div class="where">${esc(b.q||'')}…</div></div></div>`).join('')}`:''}
-    ${hl.length?'<button class="btn block" type="button" data-act="copy">Copy highlights and notes</button>':''}
+    ${hl.length?'<button class="btn block" type="button" data-act="copy">Copy highlights and notes</button>':''}${hl.length||bm.length?'<button class="btn block" type="button" data-act="export">Export highlights and notes</button>':''}
     <button class="btn primary block" type="button" data-act="back">Add back to the library</button>
     ${canAuto?'':'<p class="note" style="margin:0">The book file was deleted when it was archived, so you’ll open or paste it again and your saved data is added to it.</p>'}
     <div id="arcDel">${confirmDel?`<p class="note">Delete “${esc(a.title)}” from the archive for good, with its rating, review and everything kept with it?</p><div class="row"><button class="btn" type="button" data-act="keep">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" type="button" data-act="del">Delete for good</button></div>`:`<button class="btn block danger" type="button" data-act="ask">${ICON.trash} Delete permanently</button>`}</div>`, {
     copy:async()=>{ const txt=a.title+(a.author?' — '+a.author:'')+'\n\n'+hl.map(h=>(h.noteOnly?'':'“'+h.q+'”')+(h.note?(h.noteOnly?'':'\n')+'Note: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied'); }catch(e){ toast('Couldn’t copy on this device.'); } },
+    export:()=>exportSheet(a),
     back:()=>restoreArchived(k),
     ask:()=>{ openArchived(k,true); revealEnd('#arcDel'); }, keep:()=>openArchived(k,false),
     del:()=>{ ARCH.list().splice(k,1); ARCH.save(); closeSheet(); renderSettings(); toast('Deleted for good'); }
@@ -3505,11 +3869,12 @@ async function renderNotes(){
     const L=d[key]; const n=L.length;
     const rows=hl? L.map((h,k)=>{ const t=snip(d,h.s,h.e); return `<div class="hlrow"><span class="bar" style="background:var(--hl${h.c||1})"></span><div class="grow" data-nb="${d.id}" data-ni="${h.s}"><div class="t">${esc(t.length>320?t.slice(0,320)+'…':t)}</div>${h.note?`<div class="nt">${esc(h.note)}</div>`:''}<div class="where">${esc(chapterName(d,h.s))}${chapterName(d,h.s)?' · ':''}${pctOf(d,h.s)}%</div></div></div>`; }).join('')
       : L.map(b=>`<div class="hlrow"><span class="bar" style="background:var(--accent)"></span><div class="grow" data-nb="${d.id}" data-ni="${b.i}"><div class="t"><b>${esc(b.name||'Bookmark')}</b></div><div class="where">${pctOf(d,b.i)}% · ${esc(snip(d,b.i,b.i+11))}…</div></div></div>`).join('');
-    return `<div class="nbook"><div class="nbook-h"><b>${esc(d.title)}</b><span class="small">${n} ${hl?'highlight':'bookmark'}${n===1?'':'s'}</span>${hl?`<button class="btn" type="button" data-copy="${d.id}" style="padding:6px 10px;font-size:.8rem">Copy</button>`:''}</div>${rows}</div>`;
+    return `<div class="nbook"><div class="nbook-h"><b>${esc(d.title)}</b><span class="small">${n} ${hl?'highlight':'bookmark'}${n===1?'':'s'}</span>${hl?`<button class="btn" type="button" data-copy="${d.id}" style="padding:6px 10px;font-size:.8rem">Copy</button>`:''}<button class="btn" type="button" data-exp="${d.id}" style="padding:6px 10px;font-size:.8rem">Export</button></div>${rows}</div>`;
   }).join('');
 }
 $('#notesSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; NOTESEG=b.dataset.n; LS.set('notesSeg',NOTESEG); renderNotes(); });
 for(const id of ['#notesHl','#notesBm']) $(id).addEventListener('click',async e=>{
+  const x=e.target.closest('[data-exp]'); if(x){ const d=LIB.find(y=>y.id===x.dataset.exp); if(d) exportSheet(d); return; }
   const c=e.target.closest('[data-copy]');
   if(c){ const d=LIB.find(x=>x.id===c.dataset.copy); if(!d) return; await bookSnips(d); const txt=d.title+'\n\n'+d.highlights.map(h=>'“'+snip(d,h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+d.highlights.length+' highlight'+(d.highlights.length===1?'':'s')); }catch(err){ toast('Couldn’t copy on this device.'); } return; }
   const g=e.target.closest('[data-nb]'); if(!g) return;
@@ -3551,7 +3916,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=6;
+const SAMPLE_V=7;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -3574,9 +3939,12 @@ const SAMPLE_HTML=`
 <p>Change any of these, or turn your phone sideways, and the page keeps the word you were reading in view.</p>
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>
-<p>Press and hold a word, then drag to select more. A small bar appears with four highlight colours, plus <strong>Note</strong>, <strong>Copy</strong> and <strong>Define</strong>. Tap a highlight later to change its colour, add a note or remove it.</p>
+<p>Press and hold a word until it is marked. Keep holding and drag to select more, or drag the round handles at either end afterwards. A small bar appears with four highlight colours, plus <strong>Note</strong>, <strong>Copy</strong>, <strong>Share</strong> and <strong>Define</strong>. Tap anywhere else to clear the selection. Tap a highlight later to change its colour, add a note or remove it.</p>
+<p><strong>Copy</strong> adds where the words came from: the author, the book and the chapter. <strong>Share</strong> turns the words into a picture, in light, sepia or dark, ready to send or save to Photos.</p>
+<p>The phone’s own menu stays hidden while you select. <strong>Define</strong> looks up the word you selected, and from there you can still reach the phone’s dictionary.</p>
 <blockquote><p>Try it on this sentence: highlight it, then add a note saying what you think of it.</p></blockquote>
 <p>Every word you define is saved in the <strong>Notes</strong> tab under Words, along with the sentence you found it in. The Notes tab also gathers the highlights, notes and bookmarks from every book, so you can find them without opening each one.</p>
+<p>To keep them somewhere else, tap <strong>Export</strong> beside a book in the Notes tab, or <strong>Export highlights and notes</strong> in the book’s three dots. You get one document with every highlight, note and bookmark, grouped by chapter, to print, save as a PDF or paste into another app.</p>
 <h2>Footnotes</h2>
 <p>Books often tuck extra detail into footnotes.<a href="#note1"><sup>1</sup></a> Tap the small number and the note opens without losing your place.</p>
 <hr>
@@ -3585,13 +3953,18 @@ const SAMPLE_HTML=`
 <p>The list icon at the top opens the contents. The note icon beside it opens this book’s highlights, notes and bookmarks. In very long books, like the Bible, the contents show the books first; tap one to see its chapters. The magnifying glass searches the whole book. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book.</p>
 <p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
 <h2>Read aloud</h2>
-<p>Tap the speaker at the bottom and the book is read to you, with each word marked as it is spoken. The page turns by itself. Choose the voice and its speed in Aa.</p>
+<p>Tap the speaker at the bottom and the book is read to you, with each word marked as it is spoken. The page turns by itself. Choose the voice and its speed in Aa, and tap <strong>Hear this voice</strong> to try one.</p>
+<p>The most natural voices are listed first, under <em>Best quality</em>. To add more, open the iPhone’s <strong>Settings → Accessibility → Spoken Content → Voices</strong> and download an Enhanced or Premium voice.</p>
 <h2>Helpful extras</h2>
-<ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li></ul>
+<ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li><li><strong>Your year in books</strong>, also on Stats, lists the books you finished each year, your longest streak, and a goal for how many books to finish this year.</li></ul>
+<h2>How reading time is counted</h2>
+<p>Tooz counts time while you turn pages, scroll, speed read or listen. Touching the page, highlighting, defining a word and writing a note all count as reading too.</p>
+<ul><li>The clock stops when you switch to another app, lock the phone or close the book, and the page you were on when you closed it still counts.</li><li>If you don’t touch the screen for 5 minutes, Tooz assumes you may have stepped away and counts only as long as that stretch usually takes you. Change the limit to 3 or 10 minutes in Settings.</li><li>Auto-scroll and Speed pause after 10 minutes without a touch and ask <em>Still reading?</em></li></ul>
 <h2>Your library</h2>
 <p>Tap <strong>Add to library</strong> to open a file, paste a link or some text, or find free books. Twenty-eight classics and two Bibles are already waiting on your shelf; each downloads the first time you open it.</p>
 <p>Books you have started sit at the top under <strong>Continue reading</strong>, and each tile fills with colour from left to right as you read.</p>
 <p>The <strong>sort</strong> button beside the search bar orders the library by recently read, title or author. The <strong>filter</strong> button opens four sections: reading status, title, author and tags. Pick as many as you like: books matching any choice in a section are shown, and every section you use must match. Once you pick something, the other sections only offer choices that still have books.</p>
+<p>To find words inside your books, type three letters or more and tap <strong>Search inside books</strong>. You see every book that has them, with each passage; tap one to open the book right there.</p>
 <p>Start typing in the search bar and matching titles, authors and tags appear underneath; tap one to filter by it. Each filter shows as a coloured pill under the search bar; tap its ✕ to remove it. Filters clear when you close the app.</p>
 <p>If a book is 98% read but not marked finished, Tooz asks whether you finished it when you come back to the library.</p>
 <h2>Tags</h2>
@@ -3602,7 +3975,8 @@ const SAMPLE_HTML=`
 <p>You can also archive a book from its three dots at any time. Unless you have reached the very end, Tooz asks whether you finished it; if not, it is kept as <em>Did not finish</em>. Archived books live in <strong>Settings → Archived books</strong>, where you can read your notes, add a book back to your library with everything you kept, or delete it for good.</p>
 <p><strong>Start over from the beginning</strong>, also in the three dots, puts a book back to <em>Not started</em>.</p>
 <h2>Keeping your library safe</h2>
-<p>In Settings, <strong>Save backup</strong> keeps everything in one file, including your archive. If you ever want a clean slate, <strong>Erase all data</strong> removes every book, note and setting from this device.</p>
+<p>In Settings, <strong>Save backup</strong> keeps everything in one file, including your archive. <strong>Storage</strong> shows how much space Tooz uses and which books take the most. If you ever want a clean slate, <strong>Erase all data</strong> removes every book, note and setting from this device.</p>
+<p>When Tooz is updated, a short <em>What’s new</em> note appears the next time you open it. You can read it again, and see the version number, in <strong>Settings → About</strong>.</p>
 <p>That’s the tour. Close this book with the back arrow whenever you’re ready.</p>
 <h2>Notes</h2>
 <p id="note1">1. This is the footnote. Tap “Go to this note in the book” to jump here. In a list of notes like this one, tap the number at the start of a note to go back to where it was mentioned.</p>`;
@@ -3623,6 +3997,7 @@ async function boot(){
   await Store.open();
   try{ LIB=await Store.all('meta'); }catch(e){ LIB=[]; }
   LIB=LIB.filter(m=>m.id!=='__probe');
+  const hadData=LIB.length>0 || LS.get('seeded',false);
   /* an older sample book is replaced by the current tour */
   for(const m of LIB){ if(m.kind==='sample' && m.sv!==SAMPLE_V){ try{ const d=sampleDoc(); await Store.put('texts',sampleText(m.id,d)); Object.assign(m,{title:d.title, count:d.words.length, chapters:d.chapters, pos:0, finished:false, bookmarks:[], highlights:[], sv:SAMPLE_V}); try{ localStorage.removeItem('rf.pos.'+m.id); }catch(e){} touch(m); }catch(e){} } }
   for(const m of LIB){ if(applySavedPos(m)) Store.put('meta',m).catch(()=>{}); }
@@ -3638,6 +4013,7 @@ async function boot(){
   if(document.fonts) document.fonts.ready.then(()=>{ if(R.mode==='speed'&&!$('#v-reader').hidden) showChunk(R.pos); });
   showView('library');
   /* the first time Tooz opens, the tutorial opens with it */
+  checkUpdated(hadData && !firstRun);
   if(firstRun && !keepTutorial()) openDoc(firstRun);
   else if(LS.get('tutOpen',false) && !keepTutorial()){ LS.set('tutOpen',false); const sm=LIB.find(m=>m.kind==='sample'); if(sm) setTimeout(()=>tutorialPrompt(sm.id), 700); }
 }

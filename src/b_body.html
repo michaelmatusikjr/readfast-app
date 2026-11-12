@@ -1,0 +1,137 @@
+<body>
+<div id="app">
+  <section id="v-library" class="view" aria-label="Library">
+    <div class="wrap">
+      <div class="topbar">
+        <div><div class="eyebrow">Your library</div><h1>Tooz eReader</h1></div>
+      </div>
+      <button class="btn primary block" id="addBtn" type="button"></button>
+      <div id="libTools">
+        <div class="libbar"><input class="input" id="libFind" type="search" placeholder="Search titles, authors and tags" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" aria-label="Search your library"><button class="icon-btn tbtn" id="sortBtn" type="button" aria-label="Sort"></button><button class="icon-btn tbtn" id="filterBtn" type="button" aria-label="Filter"></button></div>
+        <div class="chips" id="libSug" hidden></div>
+        <div class="chips" id="libPills" hidden></div>
+      </div>
+      <div id="docList" class="wrap" style="gap:10px"></div>
+      <p class="note" id="fileNote">Opens EPUB, PDF, TXT, Markdown and HTML files. Books bought in Apple Books are copy-protected and can't be opened here.</p>
+    </div>
+  </section>
+
+  <section id="v-words" class="view" aria-label="Notes" hidden>
+    <div class="wrap">
+      <div class="topbar"><div><div class="eyebrow">From every book</div><h1>Notes</h1></div></div>
+      <div class="seg" id="notesSeg"><button type="button" data-n="hl">Highlights</button><button type="button" data-n="bm">Bookmarks</button><button type="button" data-n="w">Words</button></div>
+      <div id="notesHl" class="wrap" style="gap:14px"></div>
+      <div id="notesBm" class="wrap" style="gap:14px" hidden></div>
+      <div id="wordsPane" class="wrap" style="gap:10px" hidden>
+        <p class="note">Tap a word to look it up again or jump back to where you found it. <span class="hint-touch">Swipe a word left, or tap its trash can, to remove it.</span><span class="hint-mouse">Click the trash can to remove a word.</span></p>
+        <div id="wordList" class="wrap" style="gap:10px"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-stats" class="view" aria-label="Stats" hidden>
+    <div class="wrap">
+      <div class="topbar"><div><div class="eyebrow">Reading log</div><h1>Stats</h1></div></div>
+      <div id="statsBody" class="wrap"></div>
+    </div>
+  </section>
+
+  <section id="v-settings" class="view" aria-label="Settings" hidden>
+    <div class="wrap" id="settingsBody"></div>
+  </section>
+
+  <nav id="tabs" aria-label="Sections">
+    <button type="button" data-tab="library" aria-current="page"></button>
+    <button type="button" data-tab="words"></button>
+    <button type="button" data-tab="stats"></button>
+    <button type="button" data-tab="settings"></button>
+  </nav>
+
+  <section id="v-reader" aria-label="Reader" data-mode="pages" hidden>
+    <header class="rchrome" id="rTop">
+      <button class="icon-btn" id="rBack" type="button" aria-label="Back to library"></button>
+      <div class="title"><span id="rTitle"></span><span class="sub" id="rSub"></span></div>
+      <button class="icon-btn" id="rSearch" type="button" aria-label="Search in this book"></button>
+      <button class="icon-btn" id="rNotes" type="button" aria-label="Highlights, notes and bookmarks"></button>
+      <button class="icon-btn" id="rToc" type="button" aria-label="Contents, bookmarks and highlights"></button>
+      <button class="icon-btn" id="rAa" type="button" aria-label="Reading options">Aa</button>
+    </header>
+    <div id="rBody">
+      <div id="pagesView" hidden><div id="pgClip"><div class="book" id="pgFlow"></div><div class="book" id="pgMeasure" aria-hidden="true"></div></div></div>
+      <div id="scrollView" hidden><div class="book" id="scFlow"></div></div>
+      <div id="speedView" hidden>
+        <div id="stage" role="button" tabindex="0" aria-label="Tap to play or pause">
+          <div id="scrollBg" aria-hidden="true">
+            <div id="scrollLine"></div>
+            <div id="scrollText"></div>
+          </div>
+          <div class="reticle">
+            <i class="tick t"></i><i class="tick b"></i>
+            <div class="word" id="word" aria-live="off"><span class="l"><span id="wl"></span></span><span class="p" id="wp"></span><span class="r"><span id="wr"></span></span></div>
+          </div>
+          <div class="stage-hint" id="stageHint">Tap to play or pause</div>
+        </div>
+        <div id="context" aria-label="Sentence in context"></div>
+        <div class="pause-tools" id="pauseTools">
+          <button class="pill" id="defineBtn" type="button"></button>
+          <button class="pill" id="markBtn" type="button"></button>
+        </div>
+        <div class="scrub">
+          <input type="range" id="scrub" min="0" max="1" value="0" step="1" aria-label="Position in document">
+          <div class="scrub-meta"><span id="posLabel">0%</span><span id="leftLabel"></span></div>
+        </div>
+        <div class="controls">
+          <div class="ctl"><button class="icon-btn" id="bSent" type="button" aria-label="Back one sentence"></button><span class="ctl-label">SENT</span></div>
+          <div class="ctl"><button class="icon-btn" id="bWord" type="button" aria-label="Back one word"></button><span class="ctl-label">WORD</span></div>
+          <button class="icon-btn" id="playBtn" type="button" aria-label="Play"></button>
+          <div class="ctl"><button class="icon-btn" id="fWord" type="button" aria-label="Forward one word"></button><span class="ctl-label">WORD</span></div>
+          <div class="ctl"><button class="icon-btn" id="fSent" type="button" aria-label="Forward one sentence"></button><span class="ctl-label">SENT</span></div>
+        </div>
+        <div class="speed">
+          <button class="icon-btn" id="wpmDown" type="button" aria-label="Slower"></button>
+          <input type="range" id="wpm" min="100" max="1000" step="10" aria-label="Words per minute">
+          <button class="icon-btn" id="wpmUp" type="button" aria-label="Faster"></button>
+          <span class="wpm" id="wpmLabel"></span>
+        </div>
+      </div>
+    </div>
+    <footer class="rchrome" id="rFoot">
+      <div id="backPill" hidden><button type="button" id="backGo">Back to where you were</button><button type="button" id="backX" aria-label="Dismiss">✕</button></div>
+      <div id="asBar" hidden>
+        <button class="icon-btn" id="asPlay" type="button" aria-label="Start auto-scroll"></button>
+        <button class="icon-btn" id="asDown" type="button" aria-label="Slower"></button>
+        <input type="range" id="asWpm" min="60" max="700" step="10" aria-label="Auto-scroll speed in words per minute">
+        <button class="icon-btn" id="asUp" type="button" aria-label="Faster"></button>
+        <span id="asLabel"></span>
+      </div>
+      <input type="range" id="rScrub" min="0" max="1" value="0" step="1" aria-label="Position in book">
+      <div class="rfoot-row">
+        <button class="icon-btn" id="rMark" type="button" aria-label="Bookmark this page"></button>
+        <button class="info" id="rInfo" type="button" aria-label="Reading progress. Tap to change what is shown."></button>
+        <button class="icon-btn" id="rTts" type="button" aria-label="Read aloud"></button>
+      </div>
+    </footer>
+    <div class="run" id="runHead"></div>
+    <div class="run" id="runFoot"></div>
+  </section>
+</div>
+
+<div id="tsA" class="tsh" hidden></div><div id="tsB" class="tsh" hidden></div>
+<div id="selBar" hidden role="toolbar" aria-label="Selected text">
+  <button class="dot" type="button" data-hl="1" aria-label="Yellow highlight"></button>
+  <button class="dot" type="button" data-hl="2" aria-label="Green highlight"></button>
+  <button class="dot" type="button" data-hl="3" aria-label="Blue highlight"></button>
+  <button class="dot" type="button" data-hl="4" aria-label="Pink highlight"></button>
+  <span class="sep"></span>
+  <button class="tb" type="button" data-sel="note">Note</button>
+  <button class="tb" type="button" data-sel="copy">Copy</button>
+  <button class="tb" type="button" data-sel="define">Define</button>
+  <button class="tb" type="button" data-sel="share">Share</button>
+</div>
+<div id="shade" aria-hidden="true"></div>
+<div id="backdrop" hidden></div>
+<div id="sheet" role="dialog" aria-modal="true" hidden></div>
+
+<div id="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button><div id="toastProg" hidden style="height:4px;background:var(--line);border-radius:2px;overflow:hidden"><div id="toastBar" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div></div></div>
+<input type="file" id="fileIn" accept=".epub,.pdf,.txt,.md,.markdown,.html,.htm,.xhtml,application/epub+zip,application/pdf,text/plain,text/markdown,text/html" hidden>
+<input type="file" id="restoreIn" accept=".json,application/json" hidden>

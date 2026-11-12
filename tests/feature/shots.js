@@ -1,0 +1,27 @@
+const { chromium } = require('playwright-core');
+const EP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-epub/';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{
+  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const ctx=await b.newContext({viewport:{width:390,height:780}, deviceScaleFactor:2, serviceWorkers:'block'}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
+  await ctx.route(/cdnjs/,r=>r.fulfill({path:EP+'node_modules/jszip/dist/jszip.min.js',contentType:'application/javascript'}));
+  await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
+  const pg=await ctx.newPage(); pg.on('pageerror',e=>console.log('ERR',e.message));
+  await pg.goto('http://localhost:8750/'); await sleep(600);
+  await pg.setInputFiles('#fileIn', __dirname+'/rich.epub');
+  await pg.waitForFunction(()=>LIB.some(m=>m.title==='Rich Test Book'),null,{timeout:20000}); await sleep(3500);
+  await pg.evaluate(()=>{ S.mode='pages'; S.font='original'; saveSettings(); });
+  await pg.evaluate(()=>openDoc(LIB.find(m=>m.title==='Rich Test Book').id)); await sleep(900);
+  await pg.evaluate(()=>addHighlight(20,30,1,'')); await sleep(100);
+  await pg.screenshot({path:'s1_pages.png'});
+  await pg.evaluate(()=>pgTurn(1)); await sleep(500); await pg.evaluate(()=>pgTurn(1)); await sleep(500);
+  await pg.screenshot({path:'s2_pages2.png'});
+  await pg.evaluate(()=>setChrome(true)); await pg.click('#rAa'); await sleep(300); await pg.screenshot({path:'s3_panel.png'});
+  await pg.evaluate(()=>closeSheet()); await pg.evaluate(()=>{ S.theme='sepia'; S.autoScroll=true; applyLook(); }); await pg.evaluate(()=>switchMode('scroll')); await sleep(700);
+  await pg.screenshot({path:'s4_scroll_sepia.png'});
+  await pg.evaluate(()=>{ S.theme='dark'; applyLook(); }); await pg.evaluate(()=>switchMode('speed')); await sleep(800);
+  await pg.screenshot({path:'s5_speed_dark.png'});
+  await pg.evaluate(()=>switchMode('pages')); await sleep(600); await pg.evaluate(()=>setChrome(false)); await sleep(300);
+  await pg.screenshot({path:'s6_pages_dark_focus.png'});
+  await b.close();
+})();

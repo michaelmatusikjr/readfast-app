@@ -1,0 +1,22 @@
+const { chromium } = require('playwright-core'); const fs=require('fs');
+const EP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-epub/';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{
+  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:true, isMobile:true}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
+  await ctx.route(/cdnjs/,r=>r.fulfill({path:EP+'node_modules/jszip/dist/jszip.min.js',contentType:'application/javascript'}));
+  const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
+  await pg.goto('http://localhost:8750/'); await sleep(1200);
+  await pg.evaluate(async(b64)=>{ const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const d=await parseFile(new File([bin],'fn.epub')); const m=await addDoc(d); S.mode='pages'; saveSettings(); await openDoc(m.id); }, fs.readFileSync('fn.epub').toString('base64'));
+  await sleep(800);
+  console.log('maps', await pg.evaluate(()=>[[...R.notes].map(([a,t])=>`${a}:${R.words[a]}->${t}:${R.words[t]}`), [...R.backTo], [...R.back]]));
+  const ref=await pg.evaluate(()=>[...R.notes.keys()].find(a=>R.words[a]==='4' && a<20));
+  await pg.evaluate(i=>openFootnote(i), ref); await sleep(500);
+  console.log('in-text ref opens note popup', await pg.evaluate(()=>[$('#sheet').hidden, ($('#sheet .quote')||{}).textContent]));
+  await pg.evaluate(()=>closeSheet()); await sleep(450);
+  const bl=await pg.evaluate(()=>[...R.backTo.keys(),...R.back.keys()][0]);
+  await pg.evaluate(i=>goTo(i,true), bl); await sleep(500);
+  await pg.evaluate(i=>{ const w=wordEl(i); if(R.backTo.has(i)) openFootnote(i); else { const r=w.getBoundingClientRect(); readerTap({clientX:r.left+2,clientY:r.top+2,target:w}); } }, bl); await sleep(600);
+  console.log('note number jumps back', await pg.evaluate(()=>[R.pos, R.words[R.pos], $('#sheet').hidden]));
+  console.log(errs); await b.close();
+})();
