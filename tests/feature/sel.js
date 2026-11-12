@@ -11,7 +11,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await pg.evaluate(()=>{ S.mode='pages'; S.focus=true; S.tapZones='edges'; saveSettings(); });
   await pg.evaluate(()=>openDoc(LIB[0].id)); await sleep(600);
   // select words 3..6 programmatically
-  await pg.evaluate(()=>{ const ws=document.querySelectorAll('#pgFlow w'); const r=document.createRange(); r.setStart(ws[3].firstChild,0); r.setEnd(ws[6].firstChild, ws[6].firstChild.length-1); const s=getSelection(); s.removeAllRanges(); s.addRange(r); });
+  await pg.evaluate(()=>tsSet(3,6)); // phones use Tooz's own selection
   await sleep(500);
   console.log('selbar shown', await pg.evaluate(()=>[!$('#selBar').hidden, JSON.stringify(SEL)]));
   await pg.click('#selBar [data-hl="3"]'); await sleep(200);
