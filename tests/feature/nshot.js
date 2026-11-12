@@ -1,0 +1,21 @@
+const { chromium } = require('playwright-core');
+const EP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-epub/';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{
+  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:true, isMobile:true}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
+  await ctx.route(/cdnjs/,r=>r.fulfill({path:EP+'node_modules/jszip/dist/jszip.min.js',contentType:'application/javascript'}));
+  await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
+  const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
+  await pg.goto('http://localhost:8750/'); await sleep(1500);
+  console.log('toast', await pg.evaluate(()=>$('#toast').hidden));
+  await pg.evaluate(()=>openDoc(LIB[0].id)); await sleep(700);
+  await pg.evaluate(()=>{ addHighlight(20,28,2); addHighlight(60,75,4); R.meta.highlights[0].note='Remember this for later.'; R.meta.bookmarks.push({i:300,name:'Pages section',at:1}); touch(R.meta); setChrome(true); });
+  await sleep(300); await pg.screenshot({path:'nn_reader.png'});
+  await pg.evaluate(()=>closeReader()); await pg.click('#tabs [data-tab=words]'); await sleep(500);
+  await pg.screenshot({path:'nn_notes.png'});
+  await pg.click('#tabs [data-tab=settings]'); await sleep(300);
+  await pg.evaluate(()=>$('#bkLast').scrollIntoView({block:'center'})); await sleep(200);
+  await pg.screenshot({path:'nn_settings.png'});
+  console.log(errs); await b.close();
+})();
