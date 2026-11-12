@@ -736,16 +736,31 @@ function tsPaint(){
   if(!TS.on){ A.hidden=B.hidden=true; return; }
   for(let k=TS.a;k<=TS.b;k++){ const w=wordEl(k); if(w) w.classList.add('tsel'); }
   const wa=wordEl(TS.a), wb=wordEl(TS.b);
-  if(wa){ const r=wa.getClientRects()[0]||wa.getBoundingClientRect(); A.style.left=r.left+'px'; A.style.top=(r.top-4)+'px'; A.style.transform='scaleY(-1)'; A.style.transformOrigin='50% 18px'; A.hidden=false; } else A.hidden=true;
-  if(wb){ const rs=wb.getClientRects(); const r=rs[rs.length-1]||wb.getBoundingClientRect(); B.style.left=r.right+'px'; B.style.top=(r.bottom-18)+'px'; B.hidden=false; } else B.hidden=true;
+  if(wa){ const b=bandOf(wa, wa.getClientRects()[0]||wa.getBoundingClientRect()); A.style.setProperty('--stem',b.h+'px'); A.style.left=b.l+'px'; A.style.top=(b.top-13)+'px'; A.hidden=false; } else A.hidden=true;
+  if(wb){ const rs=wb.getClientRects(); const b=bandOf(wb, rs[rs.length-1]||wb.getBoundingClientRect()); B.style.setProperty('--stem',b.h+'px'); B.style.left=b.r+'px'; B.style.top=b.top+'px'; B.hidden=false; } else B.hidden=true;
+  TS.bh=wb?bandOf(wb, wb.getBoundingClientRect()).h:22;
 }
 function tsSet(a,b){ TS.on=true; TS.a=Math.min(a,b); TS.b=Math.max(a,b); SEL={s:TS.a, e:TS.b}; $('#selBar').hidden=false; if(SC.auto) asStop(); tsPaint(); }
 function wordAtPoint(x,y){ const el=document.elementFromPoint(x,y); const w=el&&el.closest?el.closest('w'):null; if(!w || !hostEl() || !hostEl().contains(w)) return null; return idxOf(w); }
-/* the word under the finger, or the nearest one above/below it (between lines, in the margins, past the last line) */
+/* the coloured band of a word: no taller than its line (tall fonts have boxes that reach into the next line) */
+function bandOf(w, r){
+  const cs=getComputedStyle(w), fs=parseFloat(cs.fontSize)||16; let lh=parseFloat(cs.lineHeight); if(!lh) lh=(S.lineH||1.5)*fs;
+  const h=Math.max(8, Math.min(r.height, lh-0.14*fs)); return {l:r.left, r:r.right, top:r.top+(r.height-h)/2, h, mid:r.top+r.height/2};
+}
+/* the word nearest the finger: first the nearest line (by line centre), then the nearest word on it.
+   Past the end of a short last line picks that line's last word. */
+function tsRects(){
+  if(TS.rects) return TS.rects;
+  const h=hostEl(), out=[]; if(!h) return out; const H=innerHeight, W=innerWidth;
+  for(const w of h.querySelectorAll('w')){ const rs=w.getClientRects(); for(const r of rs){ if(r.width<1 || r.bottom<0 || r.top>H || r.right<0 || r.left>W) continue; const i=idxOf(w); if(i!=null) out.push({i, l:r.left, r:r.right, mid:r.top+r.height/2}); } }
+  TS.rects=out; return out;
+}
 function wordNear(x,y){
-  const W=innerWidth; x=Math.max(24,Math.min(W-24,x));
-  for(let d=0; d<=160; d+=6){ for(const yy of d?[y-d,y+d]:[y]){ if(yy<0||yy>innerHeight) continue; const i=wordAtPoint(x,yy); if(i!=null) return i; } }
-  return null;
+  const L=tsRects(); if(!L.length) return null;
+  let best=Infinity; for(const q of L){ const d=Math.abs(q.mid-y); if(d<best) best=d; }
+  const line=L.filter(q=>Math.abs(Math.abs(q.mid-y)-best)<3);
+  let pick=null, bd=Infinity; for(const q of line){ const d= x<q.l ? q.l-x : x>q.r ? x-q.r : 0; if(d<bd || (d===bd && pick && q.i>pick.i && x>q.r)){ bd=d; pick=q; } }
+  return pick?pick.i:null;
 }
 function tsExtendTo(i){
   if(i==null) return;
@@ -755,7 +770,7 @@ function tsExtendTo(i){
 }
 /* dragging a selection to the top or bottom edge scrolls (Scroll) or turns the page (Pages) so it can keep going */
 const EDGE={top:100, bottom:70, dwell:650};
-function tsEdgeStart(){ document.body.classList.add('tsdrag'); if(TS.loop) return; TS.dwellAt=0; TS.loop=setInterval(tsEdgeTick,40); }
+function tsEdgeStart(){ TS.rects=null; document.body.classList.add('tsdrag'); if(TS.loop) return; TS.dwellAt=0; TS.loop=setInterval(tsEdgeTick,40); }
 function tsEdgeStop(){ document.body.classList.remove('tsdrag'); clearInterval(TS.loop); TS.loop=0; TS.dwellAt=0; }
 async function tsEdgeTick(){
   if(!(TS.extending||TS.drag) || !TS.pt){ if(!(TS.extending||TS.drag)) tsEdgeStop(); return; }
@@ -764,7 +779,7 @@ async function tsEdgeTick(){
   if(!zone){ TS.dwellAt=0; return; }
   if(R.mode==='scroll'){
     const depth= zone>0 ? (y-(H-EDGE.bottom))/EDGE.bottom : (EDGE.top-y)/EDGE.top;
-    scView.scrollTop += zone*Math.round(4+Math.min(1,Math.max(0,depth))*16);
+    scView.scrollTop += zone*Math.round(4+Math.min(1,Math.max(0,depth))*16); TS.rects=null;
     SC.gestureAt=Date.now();
     tsExtendTo(wordNear(x, zone>0? H-EDGE.bottom-6 : EDGE.top+6));
   } else if(R.mode==='pages'){
@@ -772,7 +787,7 @@ async function tsEdgeTick(){
     if(!TS.dwellAt){ TS.dwellAt=now; return; }
     if(now-TS.dwellAt<EDGE.dwell || P.busy || TS.turning) return;
     TS.turning=true; TS.edge=true;
-    try{ await pgTurn(zone); } finally{ TS.edge=false; TS.turning=false; TS.dwellAt=performance.now(); }
+    try{ await pgTurn(zone); } finally{ TS.edge=false; TS.turning=false; TS.dwellAt=performance.now(); TS.rects=null; }
     if(TS.extending||TS.drag) tsExtendTo(wordNear(x, zone>0? H-EDGE.bottom-6 : EDGE.top+6));
     tsPaint();
   }
@@ -797,7 +812,7 @@ for(const host of [pgView, scView]){
 for(const id of ['tsA','tsB']){
   const h=$('#'+id);
   h.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); TS.drag=id; TS.pt={x:e.clientX,y:e.clientY}; tsEdgeStart(); try{ h.setPointerCapture(e.pointerId); }catch(_){} });
-  h.addEventListener('pointermove',e=>{ if(TS.drag!==id) return; e.preventDefault(); TS.pt={x:e.clientX,y:e.clientY}; tsExtendTo(wordNear(e.clientX, id==='tsA'? e.clientY+22 : e.clientY-22)); });
+  h.addEventListener('pointermove',e=>{ if(TS.drag!==id) return; e.preventDefault(); TS.pt={x:e.clientX,y:e.clientY}; tsExtendTo(wordNear(e.clientX, id==='tsA'? e.clientY+13+(TS.bh||22)/2 : e.clientY-(TS.bh||22)/2-6)); });
   const up=()=>{ TS.drag=null; TS.justSelected=performance.now(); tsEdgeStop(); }; h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
   h.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 }

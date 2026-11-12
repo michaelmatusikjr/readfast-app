@@ -121,9 +121,11 @@ details.yr{margin-top:10px}
 @media (hover:none),(pointer:coarse){ #pagesView,#scFlow{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none} }
 .book w.tsel{--hc:color-mix(in srgb,var(--accent) 32%,transparent)}
 .tsdrag #selBar{opacity:0;pointer-events:none}
-.tsh{position:fixed;z-index:13;width:28px;height:36px;margin-left:-14px;touch-action:none;cursor:grab}
-.tsh::before{content:"";position:absolute;left:13px;top:0;width:2px;height:22px;background:var(--accent)}
-.tsh::after{content:"";position:absolute;left:7px;top:20px;width:14px;height:14px;border-radius:50%;background:var(--accent)}
+.tsh{position:fixed;z-index:13;width:32px;height:calc(var(--stem,22px) + 16px);margin-left:-16px;touch-action:none;cursor:grab}
+.tsh::before{content:"";position:absolute;left:15px;width:2px;height:var(--stem,22px);background:var(--accent)}
+.tsh::after{content:"";position:absolute;left:9px;width:14px;height:14px;border-radius:50%;background:var(--accent)}
+#tsA::after{top:0} #tsA::before{top:13px}
+#tsB::before{top:0} #tsB::after{top:calc(var(--stem,22px) - 1px)}
 .qcard-prev{width:100%;max-width:360px;aspect-ratio:1;display:block;margin:0 auto 12px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.2)}
 .tdet{margin-top:12px}
 .tdet summary{cursor:pointer;color:var(--muted);font-size:.85rem;list-style:none;display:flex;align-items:center;gap:6px}
