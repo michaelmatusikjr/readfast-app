@@ -682,7 +682,10 @@ document.addEventListener('keydown',e=>{
 
 /* ---------- text selection: highlight, note, copy, define ---------- */
 let SEL=null, selT=null;
-document.addEventListener('selectionchange',()=>{ clearTimeout(selT); selT=setTimeout(selCheck,220); });
+/* on phones, any native selection inside the book is dropped at once; Tooz's own selection is used instead */
+function dropNativeSel(){ try{ const s=getSelection(); const h=hostEl(); if(s&&s.rangeCount&&!s.isCollapsed&&h&&h.contains(s.getRangeAt(0).commonAncestorContainer)){ s.removeAllRanges(); return true; } }catch(e){} return false; }
+document.addEventListener('selectionchange',()=>{ if(coarse()){ dropNativeSel(); return; } clearTimeout(selT); selT=setTimeout(selCheck,220); });
+for(const el of [pgView, scView]) el.addEventListener('selectstart',e=>{ if(coarse()) e.preventDefault(); });
 function nodeIdx(node, off, isStart){
   let base=node.nodeType===3?node.parentElement:node;
   let w=base&&base.closest?base.closest('w'):null;
