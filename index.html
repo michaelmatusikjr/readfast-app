@@ -42,7 +42,8 @@ body{background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-size:
 button{font:inherit;color:inherit}
 input,textarea,select{font:inherit;color:var(--ink)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-#app{height:100%;display:flex;flex-direction:column}
+html{overflow:hidden}
+#app{position:fixed;inset:0;height:auto;display:flex;flex-direction:column}
 .view{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 24px}
 .wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
@@ -1755,6 +1756,7 @@ function pgSet(page, anim){
   const slide = anim && S.turn==='slide';
   pgFlow.classList.toggle('anim-slide', slide);
   pgFlow.style.transform=`translateX(${-P.page*P.g.stride+pgShift()}px)`;
+  P.topWord = P.page>0 ? pgFirstWord(P.page) : (pgFlow.firstElementChild ? pgFlow.firstElementChild._a : R.pos);
   P.rangeEnd = P.page<P.pages-1 ? pgFirstWord(P.page+1) : (pgFlow.firstElementChild?pgFlow.firstElementChild._b:R.n);
 }
 async function pgShow(i){
@@ -1840,7 +1842,8 @@ scView.addEventListener('scroll',()=>{
   requestAnimationFrame(async()=>{
     SC.ticking=false; if(R.mode!=='scroll') return;
     if(!SC.busy) await scEnsure();
-    if(SC.userScrolled || SC.auto) R.pos=scPos();
+    /* only the reader's own scrolling (or auto-scroll) moves the place; text reflowing after a rotation or a settings change doesn't */
+    if(SC.auto || (R.anchor==null && SC.userScrolled && (SC.touching || performance.now()-(SC.gestureAt||0)<2500))) R.pos=scPos();
     updateChrome();
     const now=performance.now();
     if(now-SC.lastSave>2500){ SC.lastSave=now; saveProgress(); }
@@ -1849,21 +1852,24 @@ scView.addEventListener('scroll',()=>{
   });
 },{passive:true});
 let scPt=null;
-scView.addEventListener('pointerdown',e=>{ SC.wasAuto=SC.auto; if(SC.auto) asStop(); scPt={x:e.clientX,y:e.clientY,t:performance.now()}; SC.userScrolled=true; });
+scView.addEventListener('pointerdown',e=>{ SC.wasAuto=SC.auto; if(SC.auto) asStop(); scPt={x:e.clientX,y:e.clientY,t:performance.now()}; if(e.pointerType==='mouse'){ SC.userScrolled=true; SC.gestureAt=performance.now(); R.anchor=null; } });
 scView.addEventListener('pointerup',e=>{
   const p=scPt; scPt=null; if(!p) return;
   if(hasSelection()) return;
   if(Math.abs(e.clientX-p.x)<12 && Math.abs(e.clientY-p.y)<12 && performance.now()-p.t<450) readerTap(e);
 });
-scView.addEventListener('touchstart',()=>{ SC.userScrolled=true; R.anchor=null; },{passive:true});
-scView.addEventListener('wheel',()=>{ SC.userScrolled=true; R.anchor=null; },{passive:true});
-scView.addEventListener('keydown',()=>{ SC.userScrolled=true; R.anchor=null; });
+scView.addEventListener('touchstart',()=>{ SC.touching=true; },{passive:true});
+scView.addEventListener('touchmove',()=>{ SC.userScrolled=true; SC.gestureAt=performance.now(); R.anchor=null; },{passive:true});
+scView.addEventListener('touchend',()=>{ SC.touching=false; if(SC.userScrolled) SC.gestureAt=performance.now(); },{passive:true});
+scView.addEventListener('touchcancel',()=>{ SC.touching=false; },{passive:true});
+scView.addEventListener('wheel',()=>{ SC.userScrolled=true; SC.gestureAt=performance.now(); R.anchor=null; },{passive:true});
+scView.addEventListener('keydown',()=>{ SC.userScrolled=true; SC.gestureAt=performance.now(); R.anchor=null; });
 function asUI(){
   const bar=$('#asBar'); bar.hidden=!(R.mode==='scroll' && S.autoScroll);
   $('#asPlay').innerHTML=SC.auto?ICON.pause:ICON.play; $('#asPlay').setAttribute('aria-label',SC.auto?'Pause auto-scroll':'Start auto-scroll');
   $('#asWpm').value=S.scrollWpm; $('#asLabel').innerHTML=`${S.scrollWpm} <small>wpm</small>`;
 }
-function asStart(){
+function asStart(){ R.anchor=null;
   if(R.mode!=='scroll') return;
   selClear(); SC.auto=true; SC.t0=performance.now(); SC.last=SC.t0; SC.acc=0; SC.mT=0; SC.pauseUntil=0; SC.passed=new WeakSet();
   const lineY=asLineY(); scFlow.querySelectorAll('figure,h1,h2,h3,h4').forEach(x=>{ if(x.getBoundingClientRect().top<lineY+4) SC.passed.add(x); });
@@ -2007,7 +2013,7 @@ const MODES={
     async enter(){ pgView.hidden=false; pgApplyGeom(); P.k=-1; await pgShow(R.pos); },
     leave(){ PC.token++; $('#pgMeasure').innerHTML=''; pgView.hidden=true; pgFlow.replaceChildren(); P.k=-1; },
     show:(i)=>pgShow(i),
-    async relayout(){ /* keep the top-left word until a page is turned, so repeated changes never drift */ if(R.anchor==null) R.anchor=(P.k>=0 && pgFlow.firstElementChild && R.SEC[P.k] && R.pos>=R.SEC[P.k].s)? Math.min(R.pos, pgFirstWord(P.page)) : R.pos; const i=R.anchor; pgApplyGeom(); P.k=-1; await pgShow(i); }
+    async relayout(){ /* keep the top-left word until a page is turned, so repeated changes never drift */ if(R.anchor==null) R.anchor=(P.topWord!=null && P.k>=0)? P.topWord : R.pos; const i=R.anchor; pgApplyGeom(); P.k=-1; await pgShow(i); }
   },
   scroll:{
     async enter(){ scView.hidden=false; SC.userScrolled=false; asUI(); await scShow(R.pos); },
@@ -2032,12 +2038,16 @@ async function switchMode(m){
   await MODES[m].enter(); updateChrome(); resetClock();
 }
 let relayT=null;
-function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
+function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; pinApp(); applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
 /* after a rotation the page area can settle a moment later (the notch insets): if the anchor word isn't on screen, lay out once more */
 function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor==null || $('#v-reader').hidden) return; const w=wordEl(R.anchor); if(!w) return; const c=$('#pgClip').getBoundingClientRect(), r=w.getBoundingClientRect(); if(r.left<c.left-2 || r.right>c.right+2){ pgApplyGeom(); P.k=-1; await pgShow(R.anchor); } }, 400); }
-window.addEventListener('resize', relayoutSoon);
-window.addEventListener('orientationchange', ()=>{ relayoutSoon(); setTimeout(relayoutSoon, 500); });
-try{ let rbSize=''; new ResizeObserver(()=>{ const rb=document.getElementById('rBody'); if(!rb) return; const k=rb.clientWidth+'x'+rb.clientHeight; if(k!==rbSize){ const prev=rbSize; rbSize=k; if(prev && !/^0x|x0$/.test(prev) && !/^0x|x0$/.test(k)) relayoutSoon(); } }).observe(document.getElementById('rBody')); }catch(e){}
+function holdPlace(){ if(R.mode && R.meta && R.anchor==null && R.mode!=='speed') R.anchor = R.mode==='pages' && P.topWord!=null && P.k>=0 ? P.topWord : R.pos; }
+/* iPhone can leave the whole app scrolled up after a rotation, hiding the top bar */
+function pinApp(){ if(window.scrollY || document.documentElement.scrollTop || document.body.scrollTop){ window.scrollTo(0,0); document.documentElement.scrollTop=0; document.body.scrollTop=0; } }
+window.addEventListener('resize', ()=>{ holdPlace(); pinApp(); relayoutSoon(); });
+window.addEventListener('orientationchange', ()=>{ holdPlace(); relayoutSoon(); setTimeout(()=>{ pinApp(); relayoutSoon(); }, 500); });
+window.addEventListener('scroll', pinApp, {passive:true});
+try{ let rbSize=''; new ResizeObserver(()=>{ const rb=document.getElementById('rBody'); if(!rb) return; const k=rb.clientWidth+'x'+rb.clientHeight; if(k!==rbSize){ const prev=rbSize; rbSize=k; if(prev && !/^0x|x0$/.test(prev) && !/^0x|x0$/.test(k)){ holdPlace(); relayoutSoon(); } } }).observe(document.getElementById('rBody')); }catch(e){}
 /* a font that finishes downloading changes line breaks, so lay the pages out again */
 try{ document.fonts.addEventListener('loadingdone', ()=>{ PC.fontGen++; if(R.mode) relayoutSoon(); }); }catch(e){}
 function fontsReady(ms){ try{ return Promise.race([document.fonts.ready, sleep(ms||1500)]); }catch(e){ return Promise.resolve(); } }
@@ -2714,7 +2724,7 @@ async function backup(){
     $('#toast').hidden=true;
     if(navigator.share && navigator.canShare){
       const file=new File([blob], filename, {type:'application/json'});
-      if(navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Tooz backup'}); backupDone(); toast('Backup saved'); return; }
+      if(navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); backupDone(); toast('Backup saved'); return; }
     }
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
