@@ -34,22 +34,51 @@ async function writeStored(name, chunks) {
   const h = await fh.createSyncAccessHandle(); h.truncate(0); let at = 0; for (const c of chunks) { h.write(c, { at }); at += c.byteLength; } h.flush(); h.close();
 }
 /* fetch every missing file, reporting progress per file */
+/* exact sizes, so progress covers the whole download from the start and a half-saved file is never mistaken for a whole one
+   (GitHub Pages compresses some files, so the server's own length can't be trusted) */
+const SIZES = { 'onnx/tts.json': 8253, 'onnx/unicode_indexer.json': 277676, 'onnx/duration_predictor.onnx': 1202876, 'onnx/text_encoder.onnx': 9695953,
+  'onnx/vector_estimator.onnx': 65655054, 'onnx/vocoder.onnx': 25820142 };
+const VOICE_SIZE = 292500;
+async function have(p) { const f = await readStored(fname(p)); return !!f && (!SIZES[p] || f.size === SIZES[p]); }
+/* fetch every missing file straight into storage (nothing large is held in memory), reporting overall progress */
 async function ensureFiles(paths) {
   const need = [];
-  for (const p of paths) if (!(await readStored(fname(p)))) need.push(p);
+  for (const p of paths) if (!(await have(p))) need.push(p);
   if (!need.length) return;
+  const total = need.reduce((a, p) => a + (SIZES[p] || VOICE_SIZE), 0); let done = 0;
+  const report = n => post({ type: 'progress', p: { file: BASE, loaded: Math.min(done + n, total), total } });
   for (const p of need) {
-    const url = BASE + p, r = await fetch(url);
-    if (!r.ok) throw new Error('Download failed (' + r.status + ')');
-    const total = +r.headers.get('content-length') || 0; let loaded = 0; const chunks = [];
-    const rd = r.body.getReader();
-    for (;;) { const { done, value } = await rd.read(); if (done) break; chunks.push(value); loaded += value.byteLength; post({ type: 'progress', p: { file: url, loaded, total: total || loaded } }); }
-    await writeStored(fname(p), chunks);
+    let tries = 0;
+    for (;;) {
+      try { await fetchTo(p, report); break; }
+      catch (e) { if (++tries >= 3) throw e; }
+    }
+    done += SIZES[p] || VOICE_SIZE; report(0);
   }
 }
-async function loadModel() {
+async function fetchTo(p, report) {
+  const ac = new AbortController(); let timer = 0;
+  const kick = () => { clearTimeout(timer); timer = setTimeout(() => ac.abort(), 30000); };   /* give up on a stalled download after 30 s and retry */
+  kick();
+  try {
+    const r = await fetch(BASE + p, { signal: ac.signal, cache: 'no-store' });
+    if (!r.ok) throw new Error('Download failed (' + r.status + ')');
+    const d = await dir(); const fh = await d.getFileHandle(fname(p), { create: true });
+    const rd = r.body.getReader(); let loaded = 0;
+    if (fh.createWritable) {
+      const w = await fh.createWritable();
+      try { for (;;) { kick(); const { done, value } = await rd.read(); if (done) break; await w.write(value); loaded += value.byteLength; report(loaded); } await w.close(); }
+      catch (e) { try { await w.abort(); } catch (e2) {} throw e; }
+    } else {
+      const h = await fh.createSyncAccessHandle(); h.truncate(0);
+      try { for (;;) { kick(); const { done, value } = await rd.read(); if (done) break; h.write(value, { at: loaded }); loaded += value.byteLength; report(loaded); } h.flush(); } finally { h.close(); }
+    }
+    if (SIZES[p] && loaded !== SIZES[p]) throw new Error('Download incomplete');
+  } finally { clearTimeout(timer); }
+}
+async function loadModel(extra) {
   if (M) return;
-  await ensureFiles(MODEL_FILES);
+  await ensureFiles(MODEL_FILES.concat(extra || []));   /* the first voice comes in the same download, so progress runs once to 100% */
   const txt = async p => JSON.parse(await (await readStored(fname(p))).text());
   const bin = async p => new Uint8Array(await (await readStored(fname(p))).arrayBuffer());
   const opt = { executionProviders: ['wasm'], graphOptimizationLevel: 'all' };
@@ -62,7 +91,7 @@ async function loadModel() {
 }
 const flat = a => Array.isArray(a) ? a.flat(Infinity) : a;
 async function load(v) {
-  await loadModel();
+  await loadModel(['voice_styles/' + v + '.json']);
   if (style && voice === v) return;
   const p = 'voice_styles/' + v + '.json';
   await ensureFiles([p]);
