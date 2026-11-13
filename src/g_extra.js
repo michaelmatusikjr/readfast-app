@@ -1,12 +1,9 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.4';
+const APP_VERSION='2026.11.13.6';
 const WHATSNEW=[
-  ['A simpler Aa menu','Aa now has just the mode, theme and text. Everything else is in Settings; tap <b>More settings</b> at the bottom of Aa to get there and back.'],
-  ['Read aloud reads better','Bible references are read in full (“Matthew chapter 5 verse 6”), abbreviations like e.g. are read as words, colons aren’t spoken, footnotes are skipped, and there’s a longer pause before headings.'],
-  ['Easier to follow along','The audio controls stay on screen while read aloud is on. In Scroll, the spoken word stays near the middle of the screen.'],
-  ['Book’s font','If a book comes with its own font, you can choose it in Aa as <b>Book’s font</b>.'],
-  ['Backups include settings','Backups now save your reading and app settings too, and restoring can bring them back.'],
-  ['Fixes','The time left in a chapter is right while listening, and removing a voice download updates straight away.']
+  ['Settings, simplified','Aa now shows just the mode, text size, theme and a few fonts. Tap a heading underneath for more text options, light and page settings.'],
+  ['Options where you use them','Choose a voice with the new voice button on the audio controls. In Scroll, auto-scroll has its own button at the bottom, with its options under ⋯. In Speed, the gear next to the speed slider holds the speed-reading options.'],
+  ['App settings in one place','Settings now holds only app-wide things: reading stats, what the bottom line shows, backups, storage, tags and help.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

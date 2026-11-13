@@ -181,11 +181,11 @@ function voiceSectionHTML(lang){
   const e=S.ttsEngine==='system'?'system':'natural';
   const DESC={natural:'Natural-sounding voices that run on this phone. Each voice downloads once (about 60 MB), then works offline.',
     system:'The voices your iPhone lets web apps use. They start instantly but sound more robotic.'};
-  let h=`<div class="panel-sec"><h3>Read aloud</h3><div class="group">
+  let h=`<div class="panel-sec"><div class="group">
     <div class="set"><div class="hd"><label>Voice type</label></div><div class="seg" data-set="ttsEngine" data-type="seg">
       <button type="button" data-v="natural" aria-pressed="${e==='natural'}">Natural</button><button type="button" data-v="system" aria-pressed="${e==='system'}">iPhone</button></div>
       <div class="desc">${DESC[e]}</div></div>
-    ${pRange('ttsRate','Speaking speed',0.5,2,0.05)}`;
+`;
   const prev=`<button class="btn" type="button" data-act="vprev" style="margin-top:8px">${ICON.speaker} Hear this voice</button>`;
   if(e==='natural'){
     h+=`<div class="set"><div class="hd"><label for="o_pvoice">Voice</label></div><select class="input" id="o_pvoice" data-set="pipVoice" data-type="text">${PIP_VOICES.map(([g,L])=>`<optgroup label="${g}">${L.map(([id,n,d])=>`<option value="${id}"${pipVoice()===id?' selected':''}>${n} — ${d}</option>`).join('')}</optgroup>`).join('')}</select>
@@ -200,7 +200,7 @@ function voiceSectionHTML(lang){
     h+=`<div class="set"><div class="hd"><label for="o_voice">Voice</label></div><select class="input" id="o_voice" data-set="ttsVoice" data-type="text"><option value="">Default</option>${grp.filter(g=>g[1].length).map(([l,L])=>`<optgroup label="${l}">${L.map(opt).join('')}</optgroup>`).join('')}</select>
       ${prev}<div class="desc">iPhone only shares some of its voices with web apps, so voices you download in iPhone Settings may not appear here. For a more natural voice, choose <b>Natural</b> above.</div></div>`;
   }
-  h+=`<div class="desc" style="padding:0 2px 6px">Tap the speaker at the bottom of the page for the audio controls.</div></div></div>`;
+  h+=`</div></div>`;
   return h;
 }
 async function natStateUI(){

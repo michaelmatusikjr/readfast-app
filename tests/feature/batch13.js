@@ -90,7 +90,7 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   let t3=''; if(dl3) t3=require('fs').readFileSync(await dl3.path(),'utf8');
   ok('archived export', t3.includes('quoted words') && t3.includes('Note: n1'), t3.slice(0,200));
   // voice panel
-  await pg.evaluate(async()=>{ await openDoc(LIB.find(m=>m.kind==='sample').id); S.mode='pages'; openPanel(); }); await sleep(600);
+  await pg.evaluate(async()=>{ await openDoc(LIB.find(m=>m.kind==='sample').id); S.mode='pages'; openVoiceSheet(); }); await sleep(600);
   ok('voice preview btn', await pg.evaluate(()=>!!document.querySelector('[data-act="vprev"]')));
   ok('voice tiers', await pg.evaluate(()=>[voiceTier({voiceURI:'com.apple.voice.enhanced.en-US.Ava',name:'Ava (Enhanced)'}), voiceTier({voiceURI:'com.apple.voice.compact.en-US.Samantha',name:'Samantha'}), voiceTier({voiceURI:'com.apple.speech.synthesis.voice.Bells',name:'Bells'}), voiceLabel({voiceURI:'com.apple.voice.premium.en-GB.Jamie',name:'Jamie (Premium)',lang:'en-GB'})]).then(v=>v[0]===0&&v[1]===1&&v[2]===2&&v[3]==='Jamie · Premium (GB)'));
   // idle setting
