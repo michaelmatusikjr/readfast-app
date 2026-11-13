@@ -61,16 +61,18 @@ function pipCall(msg){ const M=VM(msg.voice); return new Promise((res,rej)=>{ co
 async function pipDownloaded(voice){
   if(LS.get('pipReady.'+voice,false)) return true;
   try{ const root=await navigator.storage.getDirectory();
-    if(isST(voice)){ const dir=await root.getDirectoryHandle('supertonic'); await dir.getFileHandle('onnx__vocoder.onnx'); await dir.getFileHandle('voice_styles__'+engVoice(voice)+'.json'); return true; }
+    if(isST(voice)){ const dir=await root.getDirectoryHandle('supertonic-w8'); await dir.getFileHandle('onnx__vocoder.onnx'); await dir.getFileHandle('voice_styles__'+engVoice(voice)+'.json'); return true; }
     const dir=await root.getDirectoryHandle('piper'); await dir.getFileHandle(voice+'.onnx'); return true; }catch(e){ return false; }
 }
 function stClearReady(){ try{ for(let k=localStorage.length-1;k>=0;k--){ const key=localStorage.key(k); if(key && key.startsWith('rf.pipReady.st-')) localStorage.removeItem(key); } }catch(e){} }
+/* the first Supertonic copy (Nov 13) came out garbled; forget it once so the new one downloads with progress showing */
+if(!LS.get('stW8',false)){ stClearReady(); LS.set('stW8',true); }
 async function pipRemove(voice){
   /* close the voice first so its file isn't in use, then delete it here (Safari doesn't support the library's own delete) */
   if(isST(voice)){
     /* Supertonic voices share one model, so removing the download removes the model and every Supertonic voice */
     pipReset(STV);
-    try{ const root=await navigator.storage.getDirectory(); await root.removeEntry('supertonic',{recursive:true}); }catch(e){}
+    try{ const root=await navigator.storage.getDirectory(); for(const d of ['supertonic','supertonic-w8']) try{ await root.removeEntry(d,{recursive:true}); }catch(e){} }catch(e){}
     stClearReady(); return;
   }
   if(PIP.ready===voice || PIP.lvoice===voice) pipReset(PIP);
@@ -94,10 +96,10 @@ async function natRemove(){ await pipRemove(pipVoice()); }
 /* removes every downloaded voice; returns how many */
 async function natRemoveAll(){
   let n=0; try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper'); for await (const [name] of dir.entries()) if(name.endsWith('.onnx')) n++; }catch(e){}
-  try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('supertonic'); for await (const [name] of dir.entries()) if(name.startsWith('voice_styles__')) n++; }catch(e){}
+  try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('supertonic-w8'); for await (const [name] of dir.entries()) if(name.startsWith('voice_styles__')) n++; }catch(e){}
   pipReset(PIP); pipReset(STV);
   try{ const root=await navigator.storage.getDirectory(); await root.removeEntry('piper',{recursive:true}); }catch(e){}
-  try{ const root=await navigator.storage.getDirectory(); await root.removeEntry('supertonic',{recursive:true}); }catch(e){}
+  try{ const root=await navigator.storage.getDirectory(); for(const d of ['supertonic','supertonic-w8']) try{ await root.removeEntry(d,{recursive:true}); }catch(e){} }catch(e){}
   try{ for(let k=localStorage.length-1;k>=0;k--){ const key=localStorage.key(k); if(key && key.startsWith('rf.pipReady.')) localStorage.removeItem(key); } }catch(e){}
   return n;
 }

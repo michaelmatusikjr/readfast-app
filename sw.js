@@ -2,7 +2,7 @@
    - The app's own files: network first, so updates arrive right away; cached copy when offline.
    - The EPUB/PDF readers, fonts and the natural-voice engine: cached after first download, so they work offline.
    - Everything else (articles you load by link) is left alone. */
-const CACHE = 'tooz-v6';
+const CACHE = 'tooz-v7';
 const CORE = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-512.png', 'piper-worker.js', 'supertonic-worker.js'];
 const LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
@@ -33,6 +33,8 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   /* starter-shelf books are saved inside the app once downloaded, so they aren't kept twice */
   if (url.origin === self.location.origin && url.pathname.includes('/books/')) return;
+  /* voice model files are saved by the voice itself (in the phone's file storage), so they aren't kept twice either */
+  if (url.origin === self.location.origin && url.pathname.includes('/voices/')) return;
   if (url.origin === self.location.origin) {
     /* Network first so updates show up, but on a weak signal fall back to the saved copy after 3 seconds
        (the network answer still refreshes the cache for next time). */

@@ -1,19 +1,18 @@
 /* Tooz Supertonic voice worker (test). Bundled by src/supertonic/build.sh into ../../supertonic-worker.js.
-   Supertonic 3 (Supertone Inc.; model under the OpenRAIL-M license, sample code MIT) run with onnxruntime-web 1.18.0.
-   The model (about 100 MB, int8) and the small voice files download from Hugging Face once and are kept in the
-   phone's private file storage (OPFS, folder "supertonic"), so it works offline afterwards. */
+   Supertonic 3 (Supertone Inc.; model under the OpenRAIL-M license, sample code MIT) run with onnxruntime-web 1.31.1.
+   The model is our own weight-only 8-bit copy (about 101 MB, see voices/supertonic/README.md), served from this site.
+   (A third-party int8 copy was tried first; its integer math came out garbled in the browser engine.)
+   It downloads once and is kept in the phone's private file storage (OPFS, folder "supertonic-w8"), so it works offline. */
 import * as ort from 'onnxruntime-web/wasm';
 
 ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/';
 ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
 
-/* the compressed (int8) copy first; the original full-size model only if that copy is gone */
-const SOURCES = [
-  'https://huggingface.co/soniqo/Supertonic-3-ONNX-INT8/resolve/main/',
-  'https://huggingface.co/supertone-oss-archive/supertonic-3/resolve/aafc6e32416a594460b32413efc49d7fe4ce6d46/'
-];
+const BASE = new URL('voices/supertonic/', self.location.href).href;
+const DIR = 'supertonic-w8';
 const MODEL_FILES = ['onnx/tts.json', 'onnx/unicode_indexer.json', 'onnx/duration_predictor.onnx', 'onnx/text_encoder.onnx', 'onnx/vector_estimator.onnx', 'onnx/vocoder.onnx'];
-const STEPS = 5;          /* denoising steps: fewer is faster; the makers use 5 to 8 */
+/* denoising steps: fewer is faster. Starts at 5 and drops (to 3 at least) if this phone can't keep up; 2 steps garbles words */
+let STEPS = 5;
 const SPEED = 1.05;       /* the makers' default pace; the app's speed control is applied on playback */
 
 let M = null;             /* loaded model: {cfg, indexer, dp, te, ve, voc} */
@@ -22,28 +21,25 @@ const jobs = [];
 const post = (m, t) => self.postMessage(m, t || []);
 const fname = p => p.replace(/\//g, '__');
 
-async function dir() { const root = await navigator.storage.getDirectory(); return root.getDirectoryHandle('supertonic', { create: true }); }
+let cleaned = false;
+async function dir() {
+  const root = await navigator.storage.getDirectory();
+  if (!cleaned) { cleaned = true; try { await root.removeEntry('supertonic', { recursive: true }); } catch (e) {} }   /* the old, garbled copy */
+  return root.getDirectoryHandle(DIR, { create: true });
+}
 async function readStored(name) { try { const d = await dir(); const f = await (await d.getFileHandle(name)).getFile(); return f.size ? f : null; } catch (e) { return null; } }
 async function writeStored(name, chunks) {
   const d = await dir(); const fh = await d.getFileHandle(name, { create: true });
   if (fh.createWritable) { const w = await fh.createWritable(); for (const c of chunks) await w.write(c); await w.close(); return; }
   const h = await fh.createSyncAccessHandle(); h.truncate(0); let at = 0; for (const c of chunks) { h.write(c, { at }); at += c.byteLength; } h.flush(); h.close();
 }
-async function source() {
-  const f = await readStored('source.txt'); if (f) return await f.text();
-  for (const s of SOURCES) { try { const r = await fetch(s + 'onnx/tts.json', { method: 'HEAD' }); if (r.ok) { await writeStored('source.txt', [new TextEncoder().encode(s)]); return s; } } catch (e) {} }
-  throw new Error('Couldn’t reach the voice download');
-}
 /* fetch every missing file, reporting progress per file */
 async function ensureFiles(paths) {
   const need = [];
   for (const p of paths) if (!(await readStored(fname(p)))) need.push(p);
   if (!need.length) return;
-  const base = await source();
   for (const p of need) {
-    let url = base + p, r = await fetch(url);
-    /* a small voice file missing from the compressed copy can come from the original (same format) */
-    if (!r.ok && p.startsWith('voice_styles/')) for (const s2 of SOURCES) { if (s2 === base) continue; url = s2 + p; r = await fetch(url); if (r.ok) break; }
+    const url = BASE + p, r = await fetch(url);
     if (!r.ok) throw new Error('Download failed (' + r.status + ')');
     const total = +r.headers.get('content-length') || 0; let loaded = 0; const chunks = [];
     const rd = r.body.getReader();
@@ -133,6 +129,9 @@ async function run() {
       const t0 = performance.now(); const parts = []; let sr = 44100;
       for (const p of pieces(j.text)) { const r = await synth(p); parts.push(r.wav); sr = r.sr; }
       const buf = toWav(parts, sr, 0.15);
+      /* keep up with playback: fewer steps when making speech takes more than ~80% of its length */
+      let n = 0; for (const p of parts) n += p.length; const rtf = (performance.now() - t0) / 1000 / Math.max(0.5, n / sr);
+      if (rtf > 0.8 && STEPS > 3) STEPS--; else if (rtf < 0.45 && STEPS < 5) STEPS++;
       post({ type: 'audio', id: j.id, wav: buf, ms: performance.now() - t0 }, [buf]);
     } catch (err) { post({ type: 'error', id: j.id, msg: String((err && err.message) || err) }); }
   }
