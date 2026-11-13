@@ -712,7 +712,7 @@ async function archiveBook(d, finished, st){
   const rec={id:d.id, title:d.title, author:d.author||'', tags:[...tagsOf(d)], kind:d.kind, source:d.source||null, count:d.count||0,
     status:finished?'finished':'dnf', finishedAt:finished?(d.finishedAt||Date.now()):null, archivedAt:Date.now(),
     rating:finished?(st.rating||0):0, review:finished?(st.review||'').trim():'',
-    kept:{ dashSplit: !!d.dashSplit, progress: k.progress? {pos:finished?Math.max(0,(d.count||1)-1):(d.pos||0), pct:pctRead(d)} : null,
+    kept:{ dashSplit: !!d.dashSplit, rangeJoin: !!d.rangeJoin, progress: k.progress? {pos:finished?Math.max(0,(d.count||1)-1):(d.pos||0), pct:pctRead(d)} : null,
       bookmarks: k.bookmarks? (d.bookmarks||[]).map(b=>({i:b.i, name:b.name||'', at:b.at, q:snip(d,b.i,b.i+11)})) : [],
       highlights: (d.highlights||[]).filter(h=>k.highlights || (k.notes && h.note)).map(h=>({s:h.s, e:h.e, c:h.c, at:h.at, note:k.notes?(h.note||''):'', q:full(h.s,h.e), noteOnly:!k.highlights})) } };
   ARCH.list().unshift(rec); ARCH.save();
@@ -752,7 +752,8 @@ function applyKept(m, a){
   const kp=a.kept||{};
   if(kp.progress){ m.pos=a.status==='finished'?0:kp.progress.pos; m.lastRead=a.status==='finished'?0:Date.now(); LS.set('pos.'+m.id,{pos:m.pos,t:m.lastRead,fin:false}); }
   m.bookmarks=(kp.bookmarks||[]).map(b=>({i:b.i, name:b.name, at:b.at}));
-  if(kp.dashSplit) m.dashSplit=1;   /* saved word numbers already use the split-dash words */
+  if(kp.dashSplit) m.dashSplit=1;
+  if(kp.rangeJoin) m.rangeJoin=1;   /* saved word numbers already use the split-dash words */
   m.highlights=(kp.highlights||[]).map(h=>({s:h.s, e:h.e, c:h.c||1, at:h.at, ...(h.note?{note:h.note}:{})}));
   const tg=tagsOf(m).slice(); for(const t of a.tags||[]) if(!tg.some(x=>x.toLowerCase()===t.toLowerCase())) tg.push(t); m.tags=tg;
   if(a.author && !m.author) m.author=a.author;
