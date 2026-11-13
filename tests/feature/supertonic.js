@@ -10,6 +10,7 @@ const fs=require('fs');
   await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
   const hf=[]; const cors={'access-control-allow-origin':'*','access-control-expose-headers':'content-length'};
   await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/onnxruntime-web\/1\.18\.0\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:P+'build/node_modules/onnxruntime-web/dist/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/javascript'},cors)}); });
+  await ctx.route(/cdn\.jsdelivr\.net\/npm\/onnxruntime-web@1\.31\.1\/dist\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:S+'st/ci/latest/node_modules/onnxruntime-web/dist/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/javascript'},cors)}); });
   await ctx.route(/huggingface\.co\/soniqo\/Supertonic-3-ONNX-INT8\/resolve\/main\/(.*)/, r=>{ const p=r.request().url().replace(/^.*resolve\/main\//,''); hf.push(r.request().method()+' '+p); const body=fs.readFileSync(F+p); r.fulfill({body, headers:Object.assign({'content-length':String(body.length)},cors)}); });
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); pg.on('console',m=>{ if(m.type()==='error' && !/ERR_TUNNEL|ERR_FAILED|ERR_CONNECTION/.test(m.text())) errs.push('console '+m.text()); });
   await pg.goto('http://localhost:8750/'); await sleep(1500);

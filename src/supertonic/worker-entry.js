@@ -4,7 +4,7 @@
    phone's private file storage (OPFS, folder "supertonic"), so it works offline afterwards. */
 import * as ort from 'onnxruntime-web/wasm';
 
-ort.env.wasm.wasmPaths = 'https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/';
+ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/';
 ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
 
 /* the compressed (int8) copy first; the original full-size model only if that copy is gone */
