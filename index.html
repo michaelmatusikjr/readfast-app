@@ -156,8 +156,8 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}
 
 /* Tabs */
-#tabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--surface);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
-#tabs button{border:0;background:none;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;min-height:52px}
+#tabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--surface);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);padding-bottom:max(6px,env(safe-area-inset-bottom,0px))}
+#tabs button{border:0;background:none;padding:10px 0 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;min-height:56px}
 #tabs button svg{width:22px;height:22px}
 #tabs button[aria-current="page"]{color:var(--accent)}
 
@@ -170,7 +170,7 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #rTop .sub{display:block;font-weight:400;font-size:.75rem;color:var(--page-muted);overflow:hidden;text-overflow:ellipsis}
 #rAa{font-family:Georgia,serif;font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
 #rBody{flex:1;min-height:0;position:relative;overflow:hidden}
-#rFoot{display:flex;flex-direction:column;gap:2px;padding:4px max(8px,env(safe-area-inset-right,0px)) 4px max(8px,env(safe-area-inset-left,0px));border-top:1px solid var(--page-line)}
+#rFoot{display:flex;flex-direction:column;gap:4px;padding:8px max(8px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));border-top:1px solid var(--page-line)}
 #v-reader[data-mode="speed"] #rFoot{display:none}
 .rfoot-row{display:flex;align-items:center;gap:4px}
 .rfoot-row .info{flex:1;min-width:0;border:0;background:none;color:var(--page-muted);font-size:.8rem;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;padding:6px 2px}
@@ -180,7 +180,7 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #rTts.on{color:var(--page-link)}
 .run{position:absolute;left:0;right:0;z-index:4;text-align:center;font-size:.72rem;color:var(--page-muted);opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 56px;font-variant-numeric:tabular-nums}
 #runHead{top:16px}
-#runFoot{bottom:24px}
+#runFoot{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
 #v-reader input[type=range]{accent-color:var(--page-link)}
 #v-reader.chrome-off .run{opacity:1}
 #v-reader[data-mode="speed"] .run{display:none}
@@ -253,7 +253,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 #scrollView.auto-on{scroll-behavior:auto}
 
 /* Speed */
-#speedView{position:absolute;inset:0;display:flex;flex-direction:column;gap:6px;padding:4px max(8px,env(safe-area-inset-right,0px)) 10px max(8px,env(safe-area-inset-left,0px));background:var(--page-bg)}
+#speedView{position:absolute;inset:0;display:flex;flex-direction:column;gap:6px;padding:4px max(8px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));background:var(--page-bg)}
 #stage{flex:1;min-height:180px;position:relative;display:flex;flex-direction:column;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 #scrollBg{position:absolute;inset:0;overflow:hidden;z-index:0;touch-action:none}
 #scrollText{position:absolute;left:12px;right:12px;top:0;font-family:var(--bfont);font-size:1.05rem;line-height:1.55;color:var(--page-muted);color:color-mix(in srgb,var(--page-ink) 30%,transparent);white-space:pre-wrap;word-wrap:break-word;transition:transform .35s linear;will-change:transform}
@@ -296,7 +296,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 
 #speedView{overflow-y:auto}
 @media (orientation:landscape) and (max-height:500px){
-  #speedView{gap:2px;padding-bottom:4px}
+  #speedView{gap:2px;padding-bottom:max(4px,env(safe-area-inset-bottom,0px))}
   #stage{min-height:96px}
   #stage .reticle{padding:8px}
   #context,.ctl-label,.pause-tools{display:none}
@@ -2742,11 +2742,6 @@ function panelHTML(){
       </div>
       <p class="note" style="margin:6px 0 0">Speed, pauses and the speed ramp are under ${ICON.gear} on the Speed controls.</p>`);
   }
-  h+=fold('light','Light',`<div class="group">
-      ${pRange('dim','Dim',0,80,5,'Darkens the page beyond the phone’s lowest brightness.')}${pRange('warmth','Warmth',0,100,5,'Adds a warm tint for night reading.')}
-      ${pToggle('nightAuto','Switch theme at night')}
-      ${S.nightAuto?`<div class="set"><div class="timerow">From <input class="input" type="time" data-set="nightFrom" data-type="text" value="${esc(S.nightFrom)}"> to <input class="input" type="time" data-set="nightTo" data-type="text" value="${esc(S.nightTo)}"></div>${pSeg('nightTheme',[['sepia','Sepia'],['gray','Gray'],['dark','Dark'],['black','Black']],'Night theme')}</div>`:''}
-    </div>`);
   if(m==='pages') h+=fold('pages','Pages',`<div class="group">
       ${pSeg('turn',[['slide','Slide'],['fade','Fade'],['none','None']],'Page turn')}
       ${pSeg('tapZones',[['edges','Edges'],['anywhere','Anywhere']],'Tap to turn', S.tapZones==='edges'?'Tap the left or right edge to turn. Tap the middle to show or hide controls.':'Tap the left third to go back, anywhere else to go forward. Tap the top to show or hide controls.')}
@@ -2759,6 +2754,12 @@ function panelHTML(){
     <p class="note" style="margin:6px 0 0">Auto-scroll has its own button at the bottom of the page.</p>`);
   return h;
 }
+/* light settings live on the Settings page (they apply everywhere) */
+function lightHTML(){ return `<div class="group">
+      ${pRange('dim','Dim',0,80,5,'Darkens the page beyond the phone’s lowest brightness.')}${pRange('warmth','Warmth',0,100,5,'Adds a warm tint for night reading.')}
+      ${pToggle('nightAuto','Switch theme at night')}
+      ${S.nightAuto?`<div class="set"><div class="timerow">From <input class="input" type="time" data-set="nightFrom" data-type="text" value="${esc(S.nightFrom)}"> to <input class="input" type="time" data-set="nightTo" data-type="text" value="${esc(S.nightTo)}"></div>${pSeg('nightTheme',[['sepia','Sepia'],['gray','Gray'],['dark','Dark'],['black','Black']],'Night theme')}</div>`:''}
+    </div>`; }
 /* Speed controls → ⚙︎ */
 function speedOptsHTML(){
   return `<div class="group">
@@ -2804,6 +2805,7 @@ function openPanel(){
 }
 /* re-draw whichever reading controls are on screen (the Aa menu, the Settings page section) */
 function refreshPanel(){
+  const ls=$('#lightSet'); if(ls && ls.offsetParent!==null) ls.innerHTML=lightHTML();
   const body=$('#sheet .sheet-body'); if(!body || $('#sheet').hidden) return;
   const html= body.dataset.aa? panelHTML() : body.dataset.sheet==='speed'? speedOptsHTML() : body.dataset.sheet==='as'? asOptsHTML() : body.dataset.sheet==='voice'? voiceSheetHTML() : null;
   if(html==null) return;
@@ -2969,6 +2971,10 @@ function speechChunk(i, max, min){
     let w=sp[k-i]; if(w===''){ wt.push(0); continue; }
     if(w==null) w=R.words[k];
     w=w.replace(/:(?=\s|$)/g,',').replace(/:/g,' ');
+    /* a short pause before "(" and after ")" */
+    const raw=R.words[k]||'';
+    if(/^[(\[]/.test(raw) && text && !/[,;:.!?—–]$/.test(text)) text+=',';
+    if(/[)\]]["”’]*$/.test(raw) && !/[,;:.!?]$/.test(w)) w+=',';
     if(k>i && !glued(k) && text) text+=' ';
     map[map.length-1]=text.length; text+=w;
     wt.push(w.replace(/[^\p{L}\p{N} ]/gu,'').length+1 + (/[,;—–]$/.test(w)?3:0) + (/[.!?]["”’)]*$/.test(w)?6:0));
@@ -3197,11 +3203,12 @@ async function natStateUI(){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.6';
+const APP_VERSION='2026.11.13.7';
 const WHATSNEW=[
-  ['Settings, simplified','Aa now shows just the mode, text size, theme and a few fonts. Tap a heading underneath for more text options, light and page settings.'],
+  ['Settings, simplified','Aa now shows just the mode, text size, theme and a few fonts. Tap a heading underneath for more text options and page settings.'],
   ['Options where you use them','Choose a voice with the new voice button on the audio controls. In Scroll, auto-scroll has its own button at the bottom, with its options under ⋯. In Speed, the gear next to the speed slider holds the speed-reading options.'],
-  ['App settings in one place','Settings now holds only app-wide things: reading stats, what the bottom line shows, backups, storage, tags and help.']
+  ['App settings in one place','Settings now holds only app-wide things: light (dim, warmth and the night theme), reading stats, what the bottom line shows, backups, storage, tags and help.'],
+  ['Taller bottom bars','The bars at the bottom of the screen are taller and reach the bottom edge, like other iPhone apps.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -3500,7 +3507,7 @@ function renderSettings(){
   $('#settingsBody').innerHTML=`
     ${R.inSet?`<button class="btn" type="button" id="backToBook" style="margin-bottom:10px">‹ Back to the book</button>`:''}
     <div class="topbar"><div><div class="eyebrow">Tooz eReader</div><h1>Settings</h1></div></div>
-    <p class="note" style="margin:-6px 0 14px">How the page looks is in <b>Aa</b> inside any book. Read-aloud, auto-scroll and speed-reading options are on their own controls.</p>
+    <p class="note" style="margin:-6px 0 14px">Text size, theme and fonts are in <b>Aa</b> inside any book. Read-aloud, auto-scroll and speed-reading options are on their own controls.</p>
     <h2>Reading</h2>
     <div class="group"><div class="set">
       <div class="hd"><b>Count idle time for up to</b></div>
@@ -3514,6 +3521,8 @@ function renderSettings(){
     </div>
     <div class="set"><button class="btn" type="button" id="resetBtn">Reset reading options</button>
       <div class="desc">Puts the look, page, auto-scroll, speed and voice options back to how they started.</div></div></div>
+    <h2>Light</h2>
+    <div id="lightSet">${lightHTML()}</div>
     <h2>Backup and restore</h2>
     <div class="group"><div class="set">
       <div class="desc">Your library lives only on this device. A backup saves your books, notes, highlights, archive, reading log and settings in one file.</div>
@@ -3596,6 +3605,7 @@ function renderSettings(){
   if($('#bkRemind')) $('#bkRemind').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.bkRemind=+b.dataset.v; saveSettings(); $('#bkRemind').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); };
   $('#restoreBtn').onclick=()=>{ $('#restoreIn').value=''; $('#restoreIn').click(); };
   $('#resetBtn').onclick=()=>{ resetReading(); toast('Reading options reset'); };
+  bindPanel($('#lightSet'));
   $('#infoSeg').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.info=+b.dataset.v; saveSettings(); $('#infoSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); if(R.meta) updateChrome(); };
   if($('#backToBook')) $('#backToBook').onclick=backToBook;
 }
@@ -4470,7 +4480,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=13;
+const SAMPLE_V=14;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -4490,8 +4500,8 @@ const SAMPLE_HTML=`
 <h2>Make it yours</h2>
 <p>Tap <strong>Aa</strong> to change how the page looks. At the top are the things you change most: the mode (Pages, Scroll or Speed), text size, theme and a few fonts.</p>
 <p>Underneath, tap a heading to open more:</p>
-<ul><li><strong>More text options</strong>: every font (including the dyslexia-friendly Lexend and OpenDyslexic), line spacing, margins, paragraphs, justified text and more. If a book comes with its own font, a <strong>Book’s font</strong> choice appears too.</li><li><strong>Light</strong>: dim and warmth for reading in the dark, and a night theme that can switch on by itself.</li><li><strong>Pages</strong> or <strong>Scrolling</strong>: how pages turn, where you tap, and whether the controls hide while you read.</li></ul>
-<p>Options for read aloud, auto-scroll and speed reading are on their own controls, right where you use them. <strong>Settings</strong> holds the things for the whole app: reading stats, backups, storage, tags and help.</p>
+<ul><li><strong>More text options</strong>: every font (including the dyslexia-friendly Lexend and OpenDyslexic), line spacing, margins, paragraphs, justified text and more. If a book comes with its own font, a <strong>Book’s font</strong> choice appears too.</li><li><strong>Pages</strong> or <strong>Scrolling</strong>: how pages turn, where you tap, and whether the controls hide while you read.</li></ul>
+<p>Options for read aloud, auto-scroll and speed reading are on their own controls, right where you use them. <strong>Settings</strong> holds the things for the whole app: <strong>Light</strong> (dim and warmth for reading in the dark, and a night theme that can switch on by itself), reading stats, backups, storage, tags and help.</p>
 <p>Change any of these, or turn your phone sideways, and the page keeps the word you were reading in view.</p>
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>

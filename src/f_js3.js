@@ -51,7 +51,7 @@ function renderSettings(){
   $('#settingsBody').innerHTML=`
     ${R.inSet?`<button class="btn" type="button" id="backToBook" style="margin-bottom:10px">‹ Back to the book</button>`:''}
     <div class="topbar"><div><div class="eyebrow">Tooz eReader</div><h1>Settings</h1></div></div>
-    <p class="note" style="margin:-6px 0 14px">How the page looks is in <b>Aa</b> inside any book. Read-aloud, auto-scroll and speed-reading options are on their own controls.</p>
+    <p class="note" style="margin:-6px 0 14px">Text size, theme and fonts are in <b>Aa</b> inside any book. Read-aloud, auto-scroll and speed-reading options are on their own controls.</p>
     <h2>Reading</h2>
     <div class="group"><div class="set">
       <div class="hd"><b>Count idle time for up to</b></div>
@@ -65,6 +65,8 @@ function renderSettings(){
     </div>
     <div class="set"><button class="btn" type="button" id="resetBtn">Reset reading options</button>
       <div class="desc">Puts the look, page, auto-scroll, speed and voice options back to how they started.</div></div></div>
+    <h2>Light</h2>
+    <div id="lightSet">${lightHTML()}</div>
     <h2>Backup and restore</h2>
     <div class="group"><div class="set">
       <div class="desc">Your library lives only on this device. A backup saves your books, notes, highlights, archive, reading log and settings in one file.</div>
@@ -147,6 +149,7 @@ function renderSettings(){
   if($('#bkRemind')) $('#bkRemind').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.bkRemind=+b.dataset.v; saveSettings(); $('#bkRemind').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); };
   $('#restoreBtn').onclick=()=>{ $('#restoreIn').value=''; $('#restoreIn').click(); };
   $('#resetBtn').onclick=()=>{ resetReading(); toast('Reading options reset'); };
+  bindPanel($('#lightSet'));
   $('#infoSeg').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.info=+b.dataset.v; saveSettings(); $('#infoSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); if(R.meta) updateChrome(); };
   if($('#backToBook')) $('#backToBook').onclick=backToBook;
 }
@@ -1021,7 +1024,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=13;
+const SAMPLE_V=14;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1041,8 +1044,8 @@ const SAMPLE_HTML=`
 <h2>Make it yours</h2>
 <p>Tap <strong>Aa</strong> to change how the page looks. At the top are the things you change most: the mode (Pages, Scroll or Speed), text size, theme and a few fonts.</p>
 <p>Underneath, tap a heading to open more:</p>
-<ul><li><strong>More text options</strong>: every font (including the dyslexia-friendly Lexend and OpenDyslexic), line spacing, margins, paragraphs, justified text and more. If a book comes with its own font, a <strong>Book’s font</strong> choice appears too.</li><li><strong>Light</strong>: dim and warmth for reading in the dark, and a night theme that can switch on by itself.</li><li><strong>Pages</strong> or <strong>Scrolling</strong>: how pages turn, where you tap, and whether the controls hide while you read.</li></ul>
-<p>Options for read aloud, auto-scroll and speed reading are on their own controls, right where you use them. <strong>Settings</strong> holds the things for the whole app: reading stats, backups, storage, tags and help.</p>
+<ul><li><strong>More text options</strong>: every font (including the dyslexia-friendly Lexend and OpenDyslexic), line spacing, margins, paragraphs, justified text and more. If a book comes with its own font, a <strong>Book’s font</strong> choice appears too.</li><li><strong>Pages</strong> or <strong>Scrolling</strong>: how pages turn, where you tap, and whether the controls hide while you read.</li></ul>
+<p>Options for read aloud, auto-scroll and speed reading are on their own controls, right where you use them. <strong>Settings</strong> holds the things for the whole app: <strong>Light</strong> (dim and warmth for reading in the dark, and a night theme that can switch on by itself), reading stats, backups, storage, tags and help.</p>
 <p>Change any of these, or turn your phone sideways, and the page keeps the word you were reading in view.</p>
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>

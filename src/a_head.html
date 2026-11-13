@@ -156,8 +156,8 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}
 
 /* Tabs */
-#tabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--surface);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
-#tabs button{border:0;background:none;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;min-height:52px}
+#tabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--surface);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);padding-bottom:max(6px,env(safe-area-inset-bottom,0px))}
+#tabs button{border:0;background:none;padding:10px 0 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;min-height:56px}
 #tabs button svg{width:22px;height:22px}
 #tabs button[aria-current="page"]{color:var(--accent)}
 
@@ -170,7 +170,7 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #rTop .sub{display:block;font-weight:400;font-size:.75rem;color:var(--page-muted);overflow:hidden;text-overflow:ellipsis}
 #rAa{font-family:Georgia,serif;font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
 #rBody{flex:1;min-height:0;position:relative;overflow:hidden}
-#rFoot{display:flex;flex-direction:column;gap:2px;padding:4px max(8px,env(safe-area-inset-right,0px)) 4px max(8px,env(safe-area-inset-left,0px));border-top:1px solid var(--page-line)}
+#rFoot{display:flex;flex-direction:column;gap:4px;padding:8px max(8px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));border-top:1px solid var(--page-line)}
 #v-reader[data-mode="speed"] #rFoot{display:none}
 .rfoot-row{display:flex;align-items:center;gap:4px}
 .rfoot-row .info{flex:1;min-width:0;border:0;background:none;color:var(--page-muted);font-size:.8rem;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;padding:6px 2px}
@@ -180,7 +180,7 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #rTts.on{color:var(--page-link)}
 .run{position:absolute;left:0;right:0;z-index:4;text-align:center;font-size:.72rem;color:var(--page-muted);opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 56px;font-variant-numeric:tabular-nums}
 #runHead{top:16px}
-#runFoot{bottom:24px}
+#runFoot{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
 #v-reader input[type=range]{accent-color:var(--page-link)}
 #v-reader.chrome-off .run{opacity:1}
 #v-reader[data-mode="speed"] .run{display:none}
@@ -253,7 +253,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 #scrollView.auto-on{scroll-behavior:auto}
 
 /* Speed */
-#speedView{position:absolute;inset:0;display:flex;flex-direction:column;gap:6px;padding:4px max(8px,env(safe-area-inset-right,0px)) 10px max(8px,env(safe-area-inset-left,0px));background:var(--page-bg)}
+#speedView{position:absolute;inset:0;display:flex;flex-direction:column;gap:6px;padding:4px max(8px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));background:var(--page-bg)}
 #stage{flex:1;min-height:180px;position:relative;display:flex;flex-direction:column;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 #scrollBg{position:absolute;inset:0;overflow:hidden;z-index:0;touch-action:none}
 #scrollText{position:absolute;left:12px;right:12px;top:0;font-family:var(--bfont);font-size:1.05rem;line-height:1.55;color:var(--page-muted);color:color-mix(in srgb,var(--page-ink) 30%,transparent);white-space:pre-wrap;word-wrap:break-word;transition:transform .35s linear;will-change:transform}
@@ -296,7 +296,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 
 #speedView{overflow-y:auto}
 @media (orientation:landscape) and (max-height:500px){
-  #speedView{gap:2px;padding-bottom:4px}
+  #speedView{gap:2px;padding-bottom:max(4px,env(safe-area-inset-bottom,0px))}
   #stage{min-height:96px}
   #stage .reticle{padding:8px}
   #context,.ctl-label,.pause-tools{display:none}
