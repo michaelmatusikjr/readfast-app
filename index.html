@@ -2847,24 +2847,42 @@ function refPhrase(m, book){
   if(x) return `${ch} verses ${v} through ${x}`;
   return `${ch} verse ${v}`;
 }
-/* spoken form of each word from i to j (exclusive); '' means silent */
+const coreOf=w=>String(w||'').replace(/^[(\[“"‘']+/,'').replace(/[.,;:!?)\]”"’']+$/,'');
+const isRef=w=>REF_RE.test(coreOf(w));
+/* a book name (or abbreviation) that is followed by chapter:verse */
+const bookAtWord=k=>{ const b=BIBLE_BOOKS[bookKey(R.words[k]||'')]; return b && isRef(R.words[k+1]) ? b : null; };
+/* the period after these isn't the end of a sentence, so speech isn't split there */
+function noBreakAfter(k){
+  const w=R.words[k]||''; const bare=w.replace(/[)\]”"’']+$/,'');
+  if(bookAtWord(k)) return true;
+  if(ABBR[bare] && bare.endsWith('.')) return true;
+  if(/^(St|Mt|Rev|No|no|p|pp|v|vv|ch|cf|vs|ca|c|vol|Gen|Ex|Lev|Num|Deut|Isa|Jer|Ezek|Dan|Matt|Rom|Cor|Gal|Eph|Phil|Col|Heb|Jas|Pet|Ps|Prov|Eccl|Gal|Thess|Tim)\.$/.test(bare)) return true;
+  if(/^[A-Z]\.$/.test(bare)) return true; /* initials: C. S. Lewis */
+  return false;
+}
+/* spoken form of each word from i to j (exclusive); '' means silent, null means unchanged.
+   Looks at the words just before i and just after j too, so a reference split across two stretches still reads in full. */
 function spokenWords(i, j){
   const out=new Array(j-i).fill(null);
+  /* a reference list that started before this stretch ("Rom. 8:28; 12:1") */
   let book=null, bookAt=-99;
+  for(let k=Math.max(0,i-8);k<i;k++){ if(isRef(R.words[k])){ const b=BIBLE_BOOKS[bookKey(R.words[k-1]||'')]; if(b){ book=b; bookAt=k; } else if(book && k-bookAt<=6) bookAt=k; } }
   for(let k=i;k<j;k++){
-    const raw=R.words[k]||''; const lead=(raw.match(/^[(\[“"‘']+/)||[''])[0], trail=(raw.match(/[.,;:!?)\]”"’']+$/)||[''])[0];
-    const core=raw.slice(lead.length, raw.length-trail.length||undefined);
+    const raw=R.words[k]||''; const trail=(raw.match(/[.,;:!?)\]”"’']+$/)||[''])[0];
+    const core=coreOf(raw);
     const pausePunct=trail.replace(/[)\]”"’']/g,'').replace(/:/g,',');
+    /* book name before chapter:verse ("Isa.", "1 Cor.") */
+    const bk=bookAtWord(k);
+    if(bk){
+      const ord=BOOK_ORD[bookKey(R.words[k-1]||'')];
+      out[k-i]=(ord?ord+' ':'')+bk; if(ord && k-1>=i) out[k-1-i]='';
+      continue;
+    }
     /* chapter:verse */
     const m=REF_RE.exec(core);
     if(m){
-      const bk=BIBLE_BOOKS[bookKey(R.words[k-1]||'')];
-      if(k-1>=i && bk){
-        book=bk; bookAt=k;
-        const n=bookKey(R.words[k-2]||''); const ord=k-2>=i? BOOK_ORD[n] : null;
-        out[k-1-i]=(ord?ord+' ':'')+bk; if(ord) out[k-2-i]='';
-        out[k-i]=refPhrase(m,bk)+pausePunct; continue;
-      }
+      const b=BIBLE_BOOKS[bookKey(R.words[k-1]||'')];
+      if(b && isRef(raw)){ book=b; bookAt=k; out[k-i]=refPhrase(m,b)+pausePunct; continue; }
       if(book && k-bookAt<=6){ bookAt=k; out[k-i]=refPhrase(m,book)+pausePunct; continue; }
       out[k-i]=`${m[1]} ${m[2]}`+(m[3]?` to ${m[3]}`:'')+pausePunct; continue;
     }
@@ -2873,10 +2891,9 @@ function spokenWords(i, j){
     const ab=ABBR[core+trail.slice(0,1)]||ABBR[raw.replace(/[,;)]+$/,'')]||ABBR[core];
     if(ab){ out[k-i]=ab+(trail.length>1?trail.slice(1).replace(/[)\]”"’':]/g,''):''); continue; }
     if(/^(St|Mt)\.$/.test(raw)){ const nx=R.words[k+1]||''; out[k-i]= /^[A-Z]/.test(nx)? (raw[0]==='S'?'Saint':'Mount') : (raw[0]==='S'?'Street':'Mount'); continue; }
-    if(raw==='Rev.' && !REF_RE.test(bookKey(R.words[k+1]||''))){ out[k-i]='Reverend'; continue; }
+    if(raw==='Rev.'){ out[k-i]='Reverend'; continue; }
     if(/^(no|No)\.$/.test(raw) && /^\d/.test(R.words[k+1]||'')){ out[k-i]='number'; continue; }
     if(/^p\.$/.test(raw) && /^\d/.test(R.words[k+1]||'')){ out[k-i]='page'; continue; }
-    out[k-i]=null; /* unchanged */
   }
   return out;
 }
@@ -2895,7 +2912,9 @@ function speechChunk(i, max, min){
   while(i<R.n && NB.has(bi)){ i=R.blocks[bi].e; bi=blockAt(i); }
   if(i>=R.n) return {i, j:R.n, text:'', cum:[], map:[], pauseAfter:0};
   const bEnd=R.blocks[bi]? R.blocks[bi].e : R.n;
-  let j=i, len=0; while(j<R.n && j<bEnd && len<max){ j++; len++; if(len>=min && isSentEnd(j-1) && j<bEnd) break; }
+  let j=i, len=0; while(j<R.n && j<bEnd && len<max){ j++; len++; if(len>=min && isSentEnd(j-1) && !noBreakAfter(j-1) && j<bEnd) break; }
+  /* never end a stretch on a book name or abbreviation that belongs with the next word */
+  while(j<bEnd && j<R.n && noBreakAfter(j-1) && j-i<max+8) j++;
   const sp=spokenWords(i,j);
   let text=''; const wt=[], map=[];
   for(let k=i;k<j;k++){
