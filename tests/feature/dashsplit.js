@@ -24,8 +24,9 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   ok('position, highlight, bookmark kept on the same words', res.before.pos===res.after.pos && res.after.hl[0]==='me—' && res.after.hl[1]==='live' && res.before.bm===res.after.bm, res);
   ok('display joins split words without a space', await pg.evaluate(()=>/Isaiah 26:8—“Yes,/.test((document.querySelector('#pagesView')||document.body).textContent.replace(/\s+/g,' '))));
   const sp=await pg.evaluate(()=>{ const k=R.words.indexOf('Isaiah'); return speechChunk(Math.max(0,k-3),40,60).text; });
-  ok('reads Isaiah chapter 26 verse 8 with a pause', /Isaiah chapter 26 verse 8\.\.\. “Yes/.test(sp), sp);
-  ok('space after the dash pause', /me\.\.\. and you\.\.\. to live/.test(sp), sp);
+  ok('reads Isaiah chapter 26 verse 8 with a pause', /Isaiah chapter 26 verse 8\.\.\.$/.test(sp), sp);
+  const ch=await pg.evaluate(()=>{ const out=[]; let i=R.words.indexOf('created'); for(let n=0;n<3;n++){ const c=speechChunk(i,55,6); out.push([c.text,c.pauseAfter]); i=c.j; } return out; });
+  ok('dash ends a stretch with a pause', ch[0][0].endsWith('me...') && ch[0][1]===450 && ch[1][0]==='and you...' && ch[1][1]===450, ch);
   ok('can select up to the dash', await pg.evaluate(()=>{ const a=R.words.indexOf('Isaiah'), b=a+1; tsSet(a,b); return textOf(TS.a,TS.b); })==='Isaiah 26:8—');
   ok('second open does not convert again', await pg.evaluate(async()=>{ const n=R.n; await openDoc('dashtest'); return R.n===n; }));
   ok('no page errors', errs.length===0, errs);
