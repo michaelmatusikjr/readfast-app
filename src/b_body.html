@@ -92,6 +92,7 @@
           <input type="range" id="wpm" min="100" max="1000" step="10" aria-label="Words per minute">
           <button class="icon-btn" id="wpmUp" type="button" aria-label="Faster"></button>
           <span class="wpm" id="wpmLabel"></span>
+          <button class="icon-btn" id="spOpts" type="button" aria-label="Speed reading options"></button>
         </div>
       </div>
     </div>
@@ -103,21 +104,22 @@
         <input type="range" id="asWpm" min="60" max="700" step="10" aria-label="Auto-scroll speed in words per minute">
         <button class="icon-btn" id="asUp" type="button" aria-label="Faster"></button>
         <span id="asLabel"></span>
+        <button class="icon-btn" id="asMore" type="button" aria-label="Auto-scroll options"></button>
       </div>
       <div id="ttsHint" hidden>Tap a word to start there, then press play.</div>
       <div id="ttsBar" hidden>
+        <button class="icon-btn" id="ttsVoice" type="button" aria-label="Voice"></button>
         <button class="icon-btn" id="ttsPrev" type="button" aria-label="Previous sentence"></button>
         <button class="icon-btn play" id="ttsPlay" type="button" aria-label="Play"></button>
         <button class="icon-btn" id="ttsNext" type="button" aria-label="Next sentence"></button>
-        <button class="icon-btn" id="ttsSlow" type="button" aria-label="Slower"></button>
         <input type="range" id="ttsSpeed" min="0.5" max="2" step="0.05" aria-label="Speaking speed">
-        <button class="icon-btn" id="ttsFast" type="button" aria-label="Faster"></button>
         <span id="ttsLabel"></span>
       </div>
       <input type="range" id="rScrub" min="0" max="1" value="0" step="1" aria-label="Position in book">
       <div class="rfoot-row">
         <button class="icon-btn" id="rMark" type="button" aria-label="Bookmark this page"></button>
         <button class="info" id="rInfo" type="button" aria-label="Reading progress. Tap to change what is shown."></button>
+        <button class="icon-btn" id="rAs" type="button" aria-label="Auto-scroll" hidden></button>
         <button class="icon-btn" id="rTts" type="button" aria-label="Read aloud"></button>
       </div>
     </footer>

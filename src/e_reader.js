@@ -328,7 +328,7 @@ scView.addEventListener('touchcancel',()=>{ SC.touching=false; },{passive:true})
 scView.addEventListener('wheel',()=>{ SC.userScrolled=true; SC.gestureAt=performance.now(); R.anchor=null; },{passive:true});
 scView.addEventListener('keydown',()=>{ SC.userScrolled=true; SC.gestureAt=performance.now(); R.anchor=null; });
 function asUI(){
-  const bar=$('#asBar'); bar.hidden=!(R.mode==='scroll' && S.autoScroll && !TTS.mode);
+  const bar=$('#asBar'); bar.hidden=!(R.mode==='scroll' && S.autoScroll && !TTS.mode); $('#rAs').hidden=R.mode!=='scroll';
   $('#asPlay').innerHTML=SC.auto?ICON.pause:ICON.play; $('#asPlay').setAttribute('aria-label',SC.auto?'Pause auto-scroll':'Start auto-scroll');
   $('#asWpm').value=S.scrollWpm; $('#asLabel').innerHTML=`${S.scrollWpm} <small>wpm</small>`;
 }
@@ -499,7 +499,7 @@ async function switchMode(m){
   if(TTS.mode) ttsModeOff(true);
   stopActivity(); selClear();
   if(R.mode) MODES[R.mode].leave();
-  R.mode=m; S.mode=m; saveSettings();
+  R.mode=m; S.mode=m; saveSettings(); $('#rAs').hidden=m!=='scroll';
   $('#v-reader').dataset.mode=m; $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode); setChrome(true);
   await MODES[m].enter(); updateChrome(); resetClock();
 }
@@ -565,6 +565,7 @@ function updateChrome(){
   const sc=$('#rScrub'); sc.max=Math.max(1,R.n-1); if(!scrubbing) sc.value=R.pos;
   const info=infoText(); $('#rInfo').textContent=info; $('#runFoot').textContent=info; $('#runHead').textContent=ch?ch.t:R.meta.title;
   $('#rMark').classList.toggle('on', !!bookmarkHere());
+  $('#rAs').hidden=R.mode!=='scroll'; $('#rAs').classList.toggle('on', !!S.autoScroll && !TTS.mode); $('#rAs').setAttribute('aria-label',S.autoScroll?'Close auto-scroll controls':'Auto-scroll');
   $('#rTts').classList.toggle('on', !!TTS.mode); $('#rTts').innerHTML=ICON.speaker; $('#rTts').setAttribute('aria-label',TTS.mode?'Close read-aloud controls':'Read aloud'); ttsBarUI();
 }
 $('#rInfo').onclick=()=>{ S.info=(S.info+1)%3; saveSettings(); updateChrome(); };
@@ -1066,10 +1067,18 @@ $('#rTts').onclick=()=>{ TTS.mode?ttsModeOff():ttsModeOn(); };
 $('#ttsPlay').onclick=ttsPlayPause;
 $('#ttsPrev').onclick=()=>ttsSkip(-1);
 $('#ttsNext').onclick=()=>ttsSkip(1);
-$('#ttsSlow').onclick=()=>ttsSetRate((S.ttsRate||1)-0.1);
-$('#ttsFast').onclick=()=>ttsSetRate((S.ttsRate||1)+0.1);
+$('#ttsVoice').onclick=openVoiceSheet;
 $('#ttsSpeed').addEventListener('input',e=>ttsSetRate(+e.target.value));
-$('#ttsPrev').innerHTML=ICON.bsent; $('#ttsNext').innerHTML=ICON.fsent; $('#ttsSlow').innerHTML=ICON.minus; $('#ttsFast').innerHTML=ICON.plus;
+$('#ttsPrev').innerHTML=ICON.bsent; $('#ttsNext').innerHTML=ICON.fsent; $('#ttsVoice').innerHTML=ICON.voice;
+/* Scroll: the auto-scroll button shows or hides the auto-scroll controls (like the speaker does for read aloud) */
+$('#rAs').innerHTML=ICON.autoscroll; $('#asMore').innerHTML=ICON.more; $('#spOpts').innerHTML=ICON.gear;
+$('#rAs').onclick=()=>{
+  if(S.autoScroll){ if(SC.auto) asStop(true); S.autoScroll=false; }
+  else { if(TTS.mode) ttsModeOff(); S.autoScroll=true; }
+  saveSettings(); asUI(); updateChrome();
+};
+$('#asMore').onclick=()=>{ if(SC.auto) asStop(true); openAsOpts(); };
+$('#spOpts').onclick=openSpeedOpts;
 
 /* ---------- reading options panel (Aa) ---------- */
 const FMT={ lineH:v=>(+v).toFixed(2), dim:v=>v+'%', warmth:v=>v+'%', scrollWpm:v=>v+' wpm', wpm:v=>v+' wpm', rampSecs:v=>v+' sec', charBudget:v=>v+' letters',
@@ -1093,22 +1102,31 @@ function fontGrid(key){
   });
   return `<div class="fontgrid" data-set="${key}" data-type="seg">${same}${tiles.join('')}</div>`;
 }
-function panelHTML(){ /* the Aa menu: mode, theme and text; everything else is in Settings */
+/* the Aa sheet: the few things you change most, with the rest folded away underneath */
+const AAOPEN=new Set();
+const fold=(k,title,body)=>`<details class="aadet" data-k="${k}"${AAOPEN.has(k)?' open':''}><summary>${title}</summary><div class="aadet-b">${body}</div></details>`;
+function quickFonts(key){
+  const cur=(S[key]==='original' && !R.bookFamily)?'literata':S[key];
+  const pick=[cur]; for(const k of ['literata','newyork','georgia','lexend','atkinson']){ if(pick.length>=4) break; if(k!==cur && FONTS[k]) pick.push(k); }
+  if(key==='speedFont' && !pick.includes('same')) pick[pick.length-1]='same';
+  return `<div class="fontrow" data-set="${key}" data-type="seg">${pick.map(k=>{ const f=k==='same'?{label:'Same',css:fontCSS()}:k==='original'?{label:'Book’s',css:`"${R.bookFamily}",Georgia,serif`}:FONTS[k]; return `<button type="button" data-v="${k}" aria-pressed="${(key==='speedFont'?S.speedFont:cur)===k}" style="font-family:${esc(f.css)}">${k==='opendyslexic'?'Dyslexic':f.label}</button>`; }).join('')}</div>`;
+}
+function panelHTML(){
   const m=S.mode;
-  const modeNote={pages:'Turn pages like a printed book: swipe or tap the edges.', scroll:'One long column you scroll through, with optional auto-scroll.', speed:'Words flash one at a time in the same spot.'}[m];
   const themeKeys=['auto',...Object.keys(THEMES)];
   const swatch=(k)=>{ const T=THEMES[k]; return T?`background:${T.bg};color:${T.ink}`:'background:linear-gradient(135deg,#fff 50%,#16181C 50%);color:#888'; };
-  let h=`<div class="panel-sec">${pSeg('mode',[['pages','Pages'],['scroll','Scroll'],['speed','Speed']])}<p class="note" style="margin:0">${modeNote}</p></div>
-  <div class="panel-sec"><h3>Theme</h3>
+  const sizeKey=m==='speed'?'speedSize':'size';
+  const sizeRow=`<div class="aarow"><span class="aalbl">${m==='speed'?'Word size':'Text size'}</span><div class="stepper"><button type="button" data-step="${sizeKey}" data-d="${m==='speed'?-2:-1}" data-min="${m==='speed'?24:12}" data-max="${m==='speed'?72:40}" aria-label="Smaller" style="font-size:.85rem">A</button><span class="v" data-val="${sizeKey}">${S[sizeKey]} px</span><button type="button" data-step="${sizeKey}" data-d="${m==='speed'?2:1}" data-min="${m==='speed'?24:12}" data-max="${m==='speed'?72:40}" aria-label="Larger" style="font-size:1.25rem">A</button></div></div>`;
+  let h=`<div class="panel-sec">${pSeg('mode',[['pages','Pages'],['scroll','Scroll'],['speed','Speed']])}</div>
+  <div class="panel-sec aaquick">
+    ${sizeRow}
     <div class="themes" data-set="theme" data-type="seg">${themeKeys.map(k=>`<button type="button" data-v="${k}" aria-pressed="${S.theme===k}" style="${swatch(k)}" aria-label="${k==='auto'?'Match phone':THEMES[k].label}">Aa</button>`).join('')}
       <div class="lbl">${themeKeys.map(k=>`<span>${k==='auto'?'Phone':THEMES[k].label}</span>`).join('')}</div></div>
-    <div class="group">${pToggle('nightAuto','Switch theme at night')}
-    ${S.nightAuto?`<div class="set"><div class="timerow">From <input class="input" type="time" data-set="nightFrom" data-type="text" value="${esc(S.nightFrom)}"> to <input class="input" type="time" data-set="nightTo" data-type="text" value="${esc(S.nightTo)}"></div>${pSeg('nightTheme',[['sepia','Sepia'],['gray','Gray'],['dark','Dark'],['black','Black']],'Night theme')}</div>`:''}</div>
+    ${quickFonts(m==='speed'?'speedFont':'font')}
   </div>`;
   if(m!=='speed'){
-    h+=`<div class="panel-sec"><h3>Text</h3>${fontGrid()}
-    <div class="group">
-      <div class="set"><div class="hd"><label>Text size</label></div><div class="stepper"><button type="button" data-step="size" data-d="-1" aria-label="Smaller text" style="font-size:.85rem">A</button><span class="v" data-val="size">${S.size} px</span><button type="button" data-step="size" data-d="1" aria-label="Larger text" style="font-size:1.25rem">A</button></div></div>
+    h+=fold('text','More text options',`${fontGrid()}
+      <div class="group">
       ${pRange('lineH','Line spacing',1.2,2.2,0.05)}
       ${pSeg('margin',[['narrow','Narrow'],['normal','Normal'],['wide','Wide']],'Margins')}
       ${pSeg('para',[['indent','Indented'],['spaced','Spaced'],['both','Spaced and indented']],'Paragraphs')}
@@ -1116,52 +1134,61 @@ function panelHTML(){ /* the Aa menu: mode, theme and text; everything else is i
       ${pToggle('hyphen','Hyphenation','Breaks long words at line ends for even spacing.')}
       ${pToggle('boldText','Bold text')}
       ${pToggle('wordStart','Word-start emphasis','Bolds the first part of each word to guide your eyes.')}
-    </div></div>`;
-  }
-  if(m==='speed'){
-    h+=`<div class="panel-sec"><h3>Word display</h3>${fontGrid('speedFont')}<div class="group">
-      ${pRange('speedSize','Word size',24,72,2)}
+      </div>`);
+  } else {
+    h+=fold('word','Word display',`${fontGrid('speedFont')}<div class="group">
       <div class="set"><div class="hd"><label>Focus letter color</label></div><div class="chips" data-set="focusColor" data-type="seg" style="align-items:center">${COLORS.map(([n,c])=>`<button class="swatch" type="button" data-v="${c}" aria-label="${n}" aria-pressed="${S.focusColor.toLowerCase()===c.toLowerCase()}" style="background:${c}"></button>`).join('')}<label class="note" style="display:flex;align-items:center;gap:8px">Custom <input type="color" data-set="focusColor" data-type="text" value="${esc(S.focusColor)}"></label></div></div>
       ${pToggle('context','Show the sentence when paused')}
       ${pToggle('boldText','Bold text')}
-    </div></div>`;
+      </div>
+      <p class="note" style="margin:6px 0 0">Speed, pauses and the speed ramp are under ${ICON.gear} on the Speed controls.</p>`);
   }
-  h+=`<button class="btn block" type="button" data-act="more">More settings</button>`;
-  return h;
-}
-/* reading settings shown on the Settings page (and reached from Aa → More settings) */
-function readingSettingsHTML(){
-  let h=`<div class="panel-sec"><h3>Brightness</h3><div class="group">${pRange('dim','Dim',0,80,5,'Darkens the page beyond the phone’s lowest brightness.')}${pRange('warmth','Warmth',0,100,5,'Adds a warm tint for night reading.')}</div></div>`;
-    h+=`<div class="panel-sec"><h3>Pages mode</h3><div class="group">
+  h+=fold('light','Light',`<div class="group">
+      ${pRange('dim','Dim',0,80,5,'Darkens the page beyond the phone’s lowest brightness.')}${pRange('warmth','Warmth',0,100,5,'Adds a warm tint for night reading.')}
+      ${pToggle('nightAuto','Switch theme at night')}
+      ${S.nightAuto?`<div class="set"><div class="timerow">From <input class="input" type="time" data-set="nightFrom" data-type="text" value="${esc(S.nightFrom)}"> to <input class="input" type="time" data-set="nightTo" data-type="text" value="${esc(S.nightTo)}"></div>${pSeg('nightTheme',[['sepia','Sepia'],['gray','Gray'],['dark','Dark'],['black','Black']],'Night theme')}</div>`:''}
+    </div>`);
+  if(m==='pages') h+=fold('pages','Pages',`<div class="group">
       ${pSeg('turn',[['slide','Slide'],['fade','Fade'],['none','None']],'Page turn')}
       ${pSeg('tapZones',[['edges','Edges'],['anywhere','Anywhere']],'Tap to turn', S.tapZones==='edges'?'Tap the left or right edge to turn. Tap the middle to show or hide controls.':'Tap the left third to go back, anywhere else to go forward. Tap the top to show or hide controls.')}
       ${pToggle('twoCol','Two pages side by side when wide','On an iPad or a phone turned sideways.')}
-      ${pToggle('focus','Hide controls while reading','In Pages and Scroll. Tap the middle of the page to bring them back.')}
-    </div></div>`;
-    h+=`<div class="panel-sec"><h3>Scroll mode</h3><div class="group">
-      ${pToggle('autoScroll','Auto-scroll','Scrolls the text for you at a reading speed you set. Tap the page to pause or resume.')}
-      ${S.autoScroll?pRange('scrollWpm','Speed',60,700,10)+pToggle('asRamp','Ease into speed','Starts slower and builds to full speed over a few seconds.')+pToggle('asPauses','Pause at pictures and headings','Holds for a moment so you can take them in.')+pToggle('adaptive','Adaptive pacing','Slows a little on long sentences and long words, speeds up on easy stretches.'):''}
-    </div></div>`;
-    h+=`<div class="panel-sec"><h3>Speed mode</h3><div class="group">
+      ${pToggle('focus','Hide controls while reading','Tap the middle of the page to bring them back.')}
+    </div>`);
+  if(m==='scroll') h+=fold('scroll','Scrolling',`<div class="group">
+      ${pToggle('focus','Hide controls while reading','Tap the page to bring them back.')}
+    </div>
+    <p class="note" style="margin:6px 0 0">Auto-scroll has its own button at the bottom of the page.</p>`);
+  return h;
+}
+/* Speed controls → ⚙︎ */
+function speedOptsHTML(){
+  return `<div class="group">
       ${pRange('wpm','Reading speed',100,1000,10)}
       ${pToggle('ramp','Speed ramp','Starts at 60% of your speed each time you press play and eases up.')}
       ${S.ramp?pRange('rampSecs','Ramp length',2,20,1):''}
       ${pToggle('multi','Show 2–3 words at once','Groups short words. A long word always gets its own flash.')}
       ${S.multi?pRange('charBudget','Group width',8,24,1,'Most letters (with spaces) shown in one flash.'):''}
       ${pToggle('adaptive','Adaptive pacing','Slows a little on long sentences and long words, speeds up on easy stretches.')}
-    </div></div>
-    <div class="panel-sec"><h3>Speed mode pauses</h3><div class="group">
+    </div>
+    <h3 class="subh">Pauses</h3><div class="group">
       ${pRange('commaPause','After commas and dashes',1,4,0.1)}
       ${pRange('sentPause','At the end of a sentence',1,4,0.1)}
       ${pRange('paraPause','At the end of a paragraph',1,5,0.1)}
       ${pToggle('longWord','Extra time on long words','Words over 7 letters stay on screen a little longer.')}
       ${pRange('autoRewind','Rewind when resuming',0,10,1,'After a pause, play backs up this many words. Jumps never rewind.')}
-    </div></div>`;
-  const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase();
-  h+=voiceSectionHTML(lang);
-  h+=`<button class="btn block" type="button" data-act="resetlook">Reset reading options</button>`;
-  return h;
+    </div>`;
 }
+function openSpeedOpts(){ if(R.playing) pause(); openSheet('Speed reading options', speedOptsHTML(), {}); $('#sheet .sheet-body').dataset.sheet='speed'; bindPanel(); }
+/* auto-scroll bar → ⋯ */
+function asOptsHTML(){ return `<div class="group">
+    ${pToggle('asRamp','Ease into speed','Starts slower and builds to full speed over a few seconds.')}
+    ${pToggle('asPauses','Pause at pictures and headings','Holds for a moment so you can take them in.')}
+    ${pToggle('adaptive','Adaptive pacing','Slows a little on long sentences and long words, speeds up on easy stretches.')}
+  </div>`; }
+function openAsOpts(){ openSheet('Auto-scroll options', asOptsHTML(), {}); $('#sheet .sheet-body').dataset.sheet='as'; bindPanel(); }
+/* audio controls → voice button */
+function voiceSheetHTML(){ const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase(); return voiceSectionHTML(lang); }
+function openVoiceSheet(){ openSheet('Voice', voiceSheetHTML(), READ_ACTS); $('#sheet .sheet-body').dataset.sheet='voice'; bindPanel(); setTimeout(natStateUI,0); }
 /* actions shared by the Aa menu and the reading section of Settings */
 const READ_ACTS={
   vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') natPreview(); else voicePreview(); },
@@ -1172,15 +1199,16 @@ const READ_ACTS={
 function openPanel(){
   if(R.mode==='speed' && R.playing) pause();
   if(SC.auto) asStop(true);
-  openSheet('Reading options', panelHTML(), Object.assign({ more:openSettingsFromReader }, READ_ACTS), 'short');
+  openSheet('Reading options', panelHTML(), READ_ACTS, 'short');
   $('#sheet .sheet-body').dataset.aa='1';
   bindPanel();
 }
 /* re-draw whichever reading controls are on screen (the Aa menu, the Settings page section) */
 function refreshPanel(){
-  const body=$('#sheet .sheet-body');
-  if(body && !$('#sheet').hidden && body.dataset.aa){ const st=body.scrollTop; body.innerHTML=panelHTML(); bindPanel(); body.scrollTop=st; }
-  const rs=$('#readSet'); if(rs && rs.offsetParent!==null){ rs.innerHTML=readingSettingsHTML(); natStateUI(); }
+  const body=$('#sheet .sheet-body'); if(!body || $('#sheet').hidden) return;
+  const html= body.dataset.aa? panelHTML() : body.dataset.sheet==='speed'? speedOptsHTML() : body.dataset.sheet==='as'? asOptsHTML() : body.dataset.sheet==='voice'? voiceSheetHTML() : null;
+  if(html==null) return;
+  const st=body.scrollTop; body.innerHTML=html; body.scrollTop=st; if(body.dataset.sheet==='voice') natStateUI();
 }
 /* Aa → More settings: the Settings page over the book, with a way back */
 function openSettingsFromReader(){
@@ -1218,6 +1246,7 @@ function afterSet(key){
 }
 function bindPanel(root){
   const body=root||$('#sheet .sheet-body'); if(!body || body.dataset.bound) return; body.dataset.bound='1';
+  body.addEventListener('toggle',e=>{ const d=e.target; if(d.matches && d.matches('details[data-k]')){ if(d.open) AAOPEN.add(d.dataset.k); else AAOPEN.delete(d.dataset.k); } },true);
   body.addEventListener('input',e=>{
     const t=e.target; const key=t.dataset.set; if(!key) return;
     if(t.dataset.type==='range'){ S[key]=+t.value; const v=body.querySelector(`[data-val="${key}"]`); if(v) v.textContent=FMT[key]?FMT[key](S[key]):S[key]; afterSet(key); }
@@ -1230,7 +1259,7 @@ function bindPanel(root){
   });
   body.addEventListener('click',e=>{
     const st=e.target.closest('[data-step]');
-    if(st){ const key=st.dataset.step; S[key]=clamp(S[key]+(+st.dataset.d),12,40); const v=body.querySelector(`[data-val="${key}"]`); if(v) v.textContent=FMT[key](S[key]); afterSet(key); return; }
+    if(st){ const key=st.dataset.step; S[key]=clamp(S[key]+(+st.dataset.d),+(st.dataset.min||12),+(st.dataset.max||40)); const v=body.querySelector(`[data-val="${key}"]`); if(v) v.textContent=FMT[key](S[key]); afterSet(key); return; }
     const b=e.target.closest('button[data-v]'); if(!b) return; const grp=b.closest('[data-set]'); if(!grp||grp.dataset.type!=='seg') return;
     const key=grp.dataset.set; let v=b.dataset.v; if(typeof DEFAULTS[key]==='number') v=+v;
     S[key]=v; grp.querySelectorAll('button[data-v]').forEach(x=>x.setAttribute('aria-pressed', x===b)); afterSet(key);

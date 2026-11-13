@@ -6,6 +6,8 @@
   search: I('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
   toc: I('<path d="M4 6h16M4 12h10M4 18h13"/>'),
   speaker: I('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>'),
+  voice: I('<circle cx="9" cy="8" r="3.5"/><path d="M3 20c.6-3.6 3-5.5 6-5.5s5.4 1.9 6 5.5"/><path d="M17 6.5a4 4 0 0 1 0 5M19.5 4.5a7 7 0 0 1 0 9"/>'),
+  autoscroll: I('<path d="M12 4v13"/><path d="M7 12l5 5 5-5"/><path d="M6 20h12"/>'),
   stop: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect fill="currentColor" x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>`,
   note: I('<path d="M5 4h14v12l-5 4H5z"/><path d="M14 20v-4h5"/>'),
   hl: I('<path d="M4 20h7"/><path d="M14.5 4.5l5 5L10 19l-5 1 1-5z"/>'),

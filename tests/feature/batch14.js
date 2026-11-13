@@ -10,31 +10,12 @@ const fs=require('fs');
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(1500);
   await pg.evaluate(async()=>{ closeSheet(); S.mode='pages'; S.font='original'; saveSettings(); await openDoc(LIB.find(x=>x.kind==='sample').id); }); await sleep(900);
-  // 1. Aa contents
-  await pg.evaluate(()=>openPanel()); await sleep(600);
-  const aa=await pg.evaluate(()=>{ const t=$('#sheet').textContent; return {mode:!!document.querySelector('#sheet [data-set="mode"]'), theme:/Theme/.test(t), text:/Text size/.test(t), more:!!document.querySelector('#sheet [data-act="more"]'), bright:/Brightness/.test(t), pages:/Page turn/.test(t), voice:/Read aloud/.test(t), tiles:[...document.querySelectorAll('#sheet .fontgrid .chip')].map(c=>c.dataset.v), lit:document.querySelector('#sheet .fontgrid [data-v="literata"]').getAttribute('aria-pressed')}; });
-  ok('Aa has mode, theme, text, More settings only', aa.mode&&aa.theme&&aa.text&&aa.more&&!aa.bright&&!aa.pages&&!aa.voice, aa);
-  ok('no Book’s font tile without a book font; Original shows as Literata', !aa.tiles.includes('original') && aa.lit==='true', aa.tiles);
-  await pg.evaluate(()=>{ R.bookFamily='TestBookFont'; R.text.font={family:'Test-Book_Font'}; refreshPanel(); }); await sleep(200);
-  const bf=await pg.evaluate(()=>{ const c=document.querySelector('#sheet .fontgrid [data-v="original"]'); return c&&[c.textContent, c.style.fontFamily, c.getAttribute('aria-pressed')]; });
-  ok('Book’s font tile when the book has a font', bf && /Book’s font/.test(bf[0]) && /Test Book Font/.test(bf[0]) && /TestBookFont/.test(bf[1]) && bf[2]==='true', bf);
-  await pg.evaluate(()=>{ R.bookFamily=null; R.text.font=null; });
-  // 2. More settings and back
-  const pos0=await pg.evaluate(()=>R.pos);
-  await sleep(500); await pg.evaluate(()=>document.querySelector('#sheet [data-act="more"]').click()); await sleep(700);
-  const st=await pg.evaluate(()=>({reader:$('#v-reader').hidden, set:!$('#v-settings').hidden, tabs:$('#tabs').hidden, back:!!$('#backToBook'), sections:[...document.querySelectorAll('#readSet .panel-sec>h3')].map(h=>h.textContent)}));
-  ok('More settings opens Settings over the book with Back', st.reader&&st.set&&st.tabs&&st.back && ['Brightness','Pages mode','Scroll mode','Speed mode','Speed mode pauses','Read aloud'].every(x=>st.sections.includes(x)), st);
-  // change settings on the page
-  await pg.evaluate(()=>{ const t=document.querySelector('#readSet input[data-set="autoScroll"]'); t.checked=!t.checked; t.dispatchEvent(new Event('change',{bubbles:true})); }); await sleep(300);
-  ok('toggle on Settings page saves and redraws', await pg.evaluate(()=>S.autoScroll===true && !!document.querySelector('#readSet input[data-set="scrollWpm"]')));
-  await pg.evaluate(()=>{ const r=document.querySelector('#readSet input[data-set="dim"]'); r.value='20'; r.dispatchEvent(new Event('input',{bubbles:true})); }); await sleep(200);
-  ok('range on Settings page saves', await pg.evaluate(()=>S.dim===20));
-  await pg.evaluate(()=>{ S.autoScroll=false; S.dim=0; saveSettings(); $('#backToBook').click(); }); await sleep(900);
-  ok('Back returns to the book at the same place', await pg.evaluate(p=>!$('#v-reader').hidden && $('#v-settings').hidden && R.inSet===false && Math.abs(R.pos-p)<60, pos0), await pg.evaluate(()=>R.pos));
-  // speed mode Aa shows word display
-  await pg.evaluate(async()=>{ await switchMode('speed'); openPanel(); }); await sleep(700);
-  ok('Speed Aa: mode, theme, word display', await pg.evaluate(()=>/Word display/.test($('#sheet').textContent) && !/Reading speed/.test($('#sheet').textContent)));
-  await pg.evaluate(async()=>{ closeSheet(); await switchMode('pages'); }); await sleep(800);
+  await pg.evaluate(()=>{ R.bookFamily='TestBookFont'; R.text.font={family:'Test-Book_Font'}; openPanel(); document.querySelector('#sheet details[data-k="text"]').open=true; }); await sleep(500);
+  const bf=await pg.evaluate(()=>{ const c=document.querySelector('#sheet .fontgrid [data-v="original"]'); return c&&[c.textContent, c.style.fontFamily]; });
+  ok('Book’s font tile when the book has a font', bf && /Book’s font/.test(bf[0]) && /TestBookFont/.test(bf[1]), bf);
+  await pg.evaluate(()=>{ R.bookFamily=null; R.text.font=null; refreshPanel(); });
+  ok('no Book’s font tile otherwise', await pg.evaluate(()=>!document.querySelector('#sheet .fontgrid [data-v="original"]')));
+  await pg.evaluate(()=>closeSheet()); await sleep(300);
   // 5. spoken words
   const sw=await pg.evaluate(()=>{
     const save=R.words, n=R.n;
@@ -92,8 +73,8 @@ const fs=require('fs');
   ok('voice shows downloaded', await pg.evaluate(()=>pipDownloaded('en_US-lessac-medium')));
   await pg.evaluate(async()=>{ await pipRemove('en_US-lessac-medium'); });
   ok('remove download deletes it', await pg.evaluate(async()=>!(await pipDownloaded('en_US-lessac-medium'))));
-  await pg.evaluate(()=>showView('settings')); await sleep(800);
-  ok('settings shows Download now', await pg.evaluate(()=>/Not downloaded/.test(($('#kokState')||{}).textContent||'')), await pg.evaluate(()=>($('#kokState')||{}).textContent));
+  await pg.evaluate(()=>openVoiceSheet()); await sleep(800);
+  ok('voice sheet shows Download now', await pg.evaluate(()=>/Not downloaded/.test(($('#kokState')||{}).textContent||'')), await pg.evaluate(()=>($('#kokState')||{}).textContent));
   ok('no page errors', errs.length===0, errs);
   await b.close();
 })();

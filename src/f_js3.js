@@ -51,39 +51,28 @@ function renderSettings(){
   $('#settingsBody').innerHTML=`
     ${R.inSet?`<button class="btn" type="button" id="backToBook" style="margin-bottom:10px">‹ Back to the book</button>`:''}
     <div class="topbar"><div><div class="eyebrow">Tooz eReader</div><h1>Settings</h1></div></div>
-    <h2 id="readHead">Reading options</h2>
-    <p class="note" style="margin:-4px 0 10px">The mode, theme and text are in the <b>Aa</b> button inside any book. Everything here applies to every book.</p>
-    <div id="readSet">${readingSettingsHTML()}</div>
-    <h2>Reading time</h2>
+    <p class="note" style="margin:-6px 0 14px">How the page looks is in <b>Aa</b> inside any book. Read-aloud, auto-scroll and speed-reading options are on their own controls.</p>
+    <h2>Reading</h2>
     <div class="group"><div class="set">
-      <div class="hd"><b>Stop counting reading time after</b></div>
+      <div class="hd"><b>Count idle time for up to</b></div>
       <div class="seg" id="idleSeg">${[3,5,10].map(v=>`<button type="button" data-v="${v}" aria-pressed="${(S.idleMins||5)===v}">${v} min</button>`).join('')}</div>
-      <div class="desc">If you don’t turn a page, scroll or touch the screen for this long, Tooz assumes you stepped away and counts only the time that stretch of text usually takes you.</div>
-    </div></div>
-    <h2>Send text from other apps</h2>
+      <div class="desc">For your reading stats. If you don’t touch the screen for longer, Tooz counts only the time that text usually takes you.</div>
+    </div>
+    <div class="set">
+      <div class="hd"><b>Bottom line shows</b></div>
+      <div class="seg" id="infoSeg">${[[0,'Chapter time'],[1,'Book time'],[2,'Location']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${(S.info||0)===v}">${l}</button>`).join('')}</div>
+      <div class="desc">You can also tap that line in a book to switch.</div>
+    </div>
+    <div class="set"><button class="btn" type="button" id="resetBtn">Reset reading options</button>
+      <div class="desc">Puts the look, page, auto-scroll, speed and voice options back to how they started.</div></div></div>
+    <h2>Backup and restore</h2>
     <div class="group"><div class="set">
-      <div class="desc" style="color:var(--ink)">Make a shortcut once, and “Send to Tooz” shows up in the iPhone share sheet.</div>
-      <ol class="steps">
-        <li>Open the <b>Shortcuts</b> app and tap <b>+</b>. Name it <b>Send to Tooz</b>.</li>
-        <li>Tap the <b>ⓘ</b> button and turn on <b>Show in Share Sheet</b>. Set it to receive <b>Text</b>, <b>URLs</b> and <b>Safari web pages</b>.</li>
-        <li>Add the action <b>Copy to Clipboard</b> (it copies the Shortcut Input).</li>
-        <li>Share any text or link to <b>Send to Tooz</b>, open Tooz from your Home Screen, tap <b>Paste text</b>, then <b>Paste from clipboard</b>. A link loads the article; text is added as is.</li>
-      </ol>
-      <div class="desc">A shortcut can’t open the Home Screen app directly. It would open Safari, which keeps a separate library.</div>
-    </div></div>
-    <h2>Loading links</h2>
-    <div class="group"><div class="set">
-      <div class="hd"><label for="sLinkSvc">Your own reader service <span class="muted" style="font-weight:400">(optional)</span></label></div>
-      <input class="input" id="sLinkSvc" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://my-proxy.example.workers.dev/?url={url}" value="${esc(S.linkService||'')}">
-      <div class="desc">When a site won’t let apps load it, Tooz tries a reader service. Public ones are free but sometimes down. If you run your own, enter its address here with {url} where the link goes; it’s tried first.</div>
-    </div></div>
-    <h2>Your library</h2>
-    <div class="group"><div class="set">
-      <div class="desc">Your library lives on this device, inside this browser. A backup keeps your books, highlights, notes, bookmarks, saved words, archive, reading log and settings safe if browser data is cleared.</div>
+      <div class="desc">Your library lives only on this device. A backup saves your books, notes, highlights, archive, reading log and settings in one file.</div>
       <div class="row"><button class="btn" type="button" id="backupBtn">Save backup</button><button class="btn" type="button" id="restoreBtn">Restore backup</button></div>
       <div class="desc" id="bkLast"></div>
       <div class="desc" id="storeNote"></div>
     </div>
+    <div class="set"><details class="tdet"><summary>${canPickFolder()?'Automatic backups':'Backup reminders'}</summary>
     ${canPickFolder()?`<div class="set">
       <div class="hd"><b>Backup folder</b></div>
       <div class="desc" id="bkFolder"></div>
@@ -93,24 +82,38 @@ function renderSettings(){
       <div class="hd"><b>Backup reminder</b></div>
       <div class="seg" id="bkRemind">${[['0','Off'],['1','Daily'],['7','Weekly']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(S.bkRemind)===v}">${l}</button>`).join('')}</div>
       <div class="desc">On iPhone, Apple doesn’t let web apps pick a folder or save files without a tap, so automatic backups aren’t possible here. Instead, Tooz reminds you when your library has changed and it’s been a while. When you tap <b>Save backup</b>, choose <b>Save to Files</b>; iPhone opens the folder you used last time.</div>
-    </div>`}</div>
+    </div>`}</details></div></div>
     <h2>Storage</h2>
     <div class="group"><div class="set">
       <div class="desc" id="storeUse" style="color:var(--ink)">Checking…</div>
       <button class="btn" type="button" id="storeBooks">Show space used by each book</button>
       <button class="btn" type="button" id="rmVoices" style="margin-top:8px">Remove all downloaded voices</button>
     </div></div>
-    <h2>Tags</h2>
-    <div class="group"><div class="set" id="tagSet">${(()=>{ const n=tagCounts().length; return n? `<details class="tdet" id="tagDet"${TAGS_OPEN?' open':''}><summary>${n} tag${n===1?'':'s'} <span>· tap to ${TAGS_OPEN?'hide':'show'}</span></summary>${tagsSettingsHTML()}</details>` : tagsSettingsHTML(); })()}</div></div>
-    <h2>Archived books${ARCH.list().length?' <span class="muted" style="font-weight:400">('+ARCH.list().length+')</span>':''}</h2>
-    <div class="group"><div class="set" id="archSet">${archiveSettingsHTML()}</div></div>
-    <h2>Tutorial</h2>
+    <h2>Library</h2>
+    <div class="group"><div class="set"><div class="hd"><b>Tags</b></div></div><div class="set" id="tagSet">${(()=>{ const n=tagCounts().length; return n? `<details class="tdet" id="tagDet"${TAGS_OPEN?' open':''}><summary>${n} tag${n===1?'':'s'} <span>· tap to ${TAGS_OPEN?'hide':'show'}</span></summary>${tagsSettingsHTML()}</details>` : tagsSettingsHTML(); })()}</div></div>
+    <div class="group" style="margin-top:10px"><div class="set"><div class="hd"><b>Archived books${ARCH.list().length?' <span class="muted" style="font-weight:400">('+ARCH.list().length+')</span>':''}</b></div></div><div class="set" id="archSet">${archiveSettingsHTML()}</div></div>
+    <h2>Adding books</h2>
+    <div class="group"><div class="set"><details class="tdet"><summary>Send text from other apps</summary>
+      <div class="desc" style="color:var(--ink);margin-top:8px">Make a shortcut once, and “Send to Tooz” shows up in the iPhone share sheet.</div>
+      <ol class="steps">
+        <li>Open the <b>Shortcuts</b> app and tap <b>+</b>. Name it <b>Send to Tooz</b>.</li>
+        <li>Tap the <b>ⓘ</b> button and turn on <b>Show in Share Sheet</b>. Set it to receive <b>Text</b>, <b>URLs</b> and <b>Safari web pages</b>.</li>
+        <li>Add the action <b>Copy to Clipboard</b> (it copies the Shortcut Input).</li>
+        <li>Share any text or link to <b>Send to Tooz</b>, open Tooz from your Home Screen, tap <b>Paste text</b>, then <b>Paste from clipboard</b>. A link loads the article; text is added as is.</li>
+      </ol>
+      <div class="desc">A shortcut can’t open the Home Screen app directly. It would open Safari, which keeps a separate library.</div>
+    </details></div>
+    <div class="set"><details class="tdet"><summary>Loading links</summary><div style="margin-top:8px">
+      <div class="hd"><label for="sLinkSvc">Your own reader service <span class="muted" style="font-weight:400">(optional)</span></label></div>
+      <input class="input" id="sLinkSvc" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://my-proxy.example.workers.dev/?url={url}" value="${esc(S.linkService||'')}">
+      <div class="desc">When a site won’t let apps load it, Tooz tries a reader service. Public ones are free but sometimes down. If you run your own, enter its address here with {url} where the link goes; it’s tried first.</div>
+    </div></details></div></div>
+    <h2>Help</h2>
     <div class="group"><div class="set">
       <div class="desc">${LIB.some(m=>m.kind==='sample')?'The tutorial is in your library. When you close it, Tooz asks whether to keep it there or tuck it away here.':'The tutorial walks you through every feature. It’s tucked away here until you want it.'}</div>
       <div class="row">${LIB.some(m=>m.kind==='sample')?'':'<button class="btn" type="button" id="tutRestore">Restore tutorial to library</button>'}<button class="btn" type="button" id="tutOpen">Open the tutorial</button></div>
     </div></div>
-    <h2>About</h2>
-    <div class="group"><div class="set">
+    <div class="group" style="margin-top:10px"><div class="set">
       <div class="hd"><b>Tooz eReader</b><span class="val" style="font-family:var(--f-mono)">Version ${APP_VERSION}</span></div>
       <button class="btn" type="button" id="wnBtn">What’s new</button>
     </div></div>
@@ -143,9 +146,8 @@ function renderSettings(){
   if($('#bkOff')) $('#bkOff').onclick=async()=>{ BK.dir=null; await kvSet('backupDir',null); bkSettingsUI(); toast('Automatic backups turned off'); };
   if($('#bkRemind')) $('#bkRemind').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.bkRemind=+b.dataset.v; saveSettings(); $('#bkRemind').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); };
   $('#restoreBtn').onclick=()=>{ $('#restoreIn').value=''; $('#restoreIn').click(); };
-  bindPanel($('#readSet'));
-  $('#readSet').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const fn=READ_ACTS[b.dataset.act]; if(fn) fn(b,e); });
-  setTimeout(natStateUI,0);
+  $('#resetBtn').onclick=()=>{ resetReading(); toast('Reading options reset'); };
+  $('#infoSeg').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.info=+b.dataset.v; saveSettings(); $('#infoSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); if(R.meta) updateChrome(); };
   if($('#backToBook')) $('#backToBook').onclick=backToBook;
 }
 
@@ -1019,7 +1021,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=12;
+const SAMPLE_V=13;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1030,16 +1032,17 @@ const SAMPLE_HTML=`
 <ul><li><strong>Pages</strong> turns pages like a printed book.</li><li><strong>Scroll</strong> gives you one long column to scroll through.</li><li><strong>Speed</strong> flashes the words one at a time in the same spot, so your eyes never have to move.</li></ul>
 <p>All three share your place, down to the word. Switch in the middle of a sentence and you carry on <em>exactly</em> where you were.</p>
 <h2>Auto-scroll</h2>
-<p>In Scroll, turn on <strong>Auto-scroll</strong> in Settings (or Aa → <strong>More settings</strong>). A play button and a speed slider appear at the bottom. The text then moves by itself at the words per minute you set, easing in gently when it starts. Tap the page to pause. After that, a tap simply shows or hides the controls so you can read at your own pace; press the play button when you want it to move again.</p>
-<p>It can also pause for a moment at pictures and headings, so you have time to take them in.</p>
+<p>In Scroll, tap the <strong>auto-scroll</strong> button (the arrow pointing down) at the bottom. A play button and a speed slider appear. The text then moves by itself at the words per minute you set, easing in gently when it starts. Tap the page to pause. After that, a tap simply shows or hides the controls so you can read at your own pace; press the play button when you want it to move again.</p>
+<p>Tap <strong>⋯</strong> on the auto-scroll controls to have it ease into speed or pause for a moment at pictures and headings. Tap the auto-scroll button again to put the controls away.</p>
 <h2>Speed reading</h2>
 <p>In Speed, press play and keep your eyes on the coloured letter. Tap anywhere to pause, and the whole sentence appears so you can find your place. The buttons step back or forward by a word or a sentence, and the slider sets your speed.</p>
-<p>Every speed setting is in Settings under Speed mode (or Aa → <strong>More settings</strong>): pauses at commas and full stops, a gentle ramp up to speed, two or three words at once, and the colour of the focus letter.</p>
+<p>Tap the <strong>gear</strong> next to the speed slider for the rest: pauses at commas and full stops, a gentle ramp up to speed, two or three words at once, and more. The colour of the focus letter is in Aa under <strong>Word display</strong>.</p>
 <p>Hyphenated words like well-known and twenty-five stay on screen a little longer. A dash joins the word before it—like this—and gets the same short pause as a comma.</p>
 <h2>Make it yours</h2>
-<p>Tap <strong>Aa</strong> for the things you change most:</p>
-<ul><li>The mode: Pages, Scroll or Speed.</li><li>The theme, from white through sepia to black, with a night theme that can switch on by itself.</li><li>The font (including the dyslexia-friendly Lexend and OpenDyslexic), text size, line spacing and margins. If a book comes with its own font, a <strong>Book’s font</strong> choice appears too.</li><li>Paragraphs: indented, spaced, or spaced and indented.</li></ul>
-<p>Everything else is in <strong>Settings</strong>, or tap <strong>More settings</strong> at the bottom of Aa: brightness and warmth, how pages turn and where you tap, auto-scroll, speed reading and read aloud.</p>
+<p>Tap <strong>Aa</strong> to change how the page looks. At the top are the things you change most: the mode (Pages, Scroll or Speed), text size, theme and a few fonts.</p>
+<p>Underneath, tap a heading to open more:</p>
+<ul><li><strong>More text options</strong>: every font (including the dyslexia-friendly Lexend and OpenDyslexic), line spacing, margins, paragraphs, justified text and more. If a book comes with its own font, a <strong>Book’s font</strong> choice appears too.</li><li><strong>Light</strong>: dim and warmth for reading in the dark, and a night theme that can switch on by itself.</li><li><strong>Pages</strong> or <strong>Scrolling</strong>: how pages turn, where you tap, and whether the controls hide while you read.</li></ul>
+<p>Options for read aloud, auto-scroll and speed reading are on their own controls, right where you use them. <strong>Settings</strong> holds the things for the whole app: reading stats, backups, storage, tags and help.</p>
 <p>Change any of these, or turn your phone sideways, and the page keeps the word you were reading in view.</p>
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>
@@ -1059,7 +1062,7 @@ const SAMPLE_HTML=`
 <h2>Read aloud</h2>
 <p>Tap the speaker at the bottom to open the audio controls. Nothing plays yet: tap a word to choose where to start, then press <strong>play</strong>. Each word is marked as it is spoken and the page turns by itself. Tap another word while it plays to jump there. The arrows go back or forward a sentence, and the slider sets the speed. The controls stay on screen until you tap the speaker again to close them.</p>
 <p>Read aloud skips footnote numbers and the notes themselves, pauses a little longer before a new heading, and reads Bible references in full: Rom. 8:28 is read as “Romans chapter 8 verse 28”, and 1 Cor. 10:31 as “First Corinthians chapter 10 verse 31”. Abbreviations like e.g. and Dr. are read as words. While it reads in Scroll, the page moves so the spoken word stays near the middle of the screen.</p>
-<p>There are two kinds of voice, in Settings → Read aloud. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
+<p>Tap the <strong>voice</strong> button on the audio controls to choose a voice. There are two kinds. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
 <h2>Helpful extras</h2>
 <ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li><li><strong>Your year in books</strong>, also on Stats, lists the books you finished each year, your longest streak, and a goal for how many books to finish this year.</li></ul>
 <h2>How reading time is counted</h2>
