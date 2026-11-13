@@ -1,6 +1,6 @@
 /* Tooz eReader offline cache.
    - The app's own files: network first, so updates arrive right away; cached copy when offline.
-   - The EPUB/PDF readers and fonts: cached after first download, so files open offline.
+   - The EPUB/PDF readers, fonts and the natural-voice engine: cached after first download, so they work offline.
    - Everything else (articles you load by link) is left alone. */
 const CACHE = 'tooz-v3';
 const CORE = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-512.png'];
@@ -9,7 +9,7 @@ const LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 ];
-const CACHE_HOSTS = ['cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+const CACHE_HOSTS = ['cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'];
 
 self.addEventListener('install', e => {
   e.waitUntil((async () => {

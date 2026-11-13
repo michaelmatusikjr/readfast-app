@@ -246,7 +246,7 @@ async function pgTurn(d){
     else return;
   }
   R.pos=pgFirstWord(P.page); afterMove(); if(S.focus) setChrome(false);
-  if(TTS.on){ TTS.seq++; try{ speechSynthesis.cancel(); }catch(e){} ttsSpeakFrom(R.pos, TTS.seq); }
+  if(TTS.on) ttsRestart();
 }
 let pgPt=null;
 pgView.addEventListener('pointerdown',e=>{ if(e.button>0) return; pgPt={x:e.clientX,y:e.clientY,t:performance.now()}; });
@@ -966,13 +966,20 @@ function voicePreview(){ try{ speechSynthesis.cancel(); const u=new SpeechSynthe
 function ttsVoices(){ try{ TTS.voices=speechSynthesis.getVoices()||[]; }catch(e){ TTS.voices=[]; } return TTS.voices; }
 if('speechSynthesis' in window){ ttsVoices(); try{ speechSynthesis.addEventListener('voiceschanged',ttsVoices); }catch(e){} }
 function ttsStart(){
-  if(!('speechSynthesis' in window)){ toast('Read aloud isn’t available on this device.'); return; }
   if(R.mode==='speed') return;
-  stopActivity(); selClear(); TTS.on=true; TTS.seq++; requestWake(); updateChrome(); if(S.focus) setChrome(false);
+  const nat=S.ttsEngine!=='system';
+  if(!nat && !('speechSynthesis' in window)){ toast('Read aloud isn’t available on this device.'); return; }
+  stopActivity(); selClear(); TTS.on=true; TTS.seq++; TTS.nat=nat; requestWake(); updateChrome(); if(S.focus) setChrome(false);
+  if(nat){ kokStart(); return; }
   try{ speechSynthesis.cancel(); }catch(e){}
   ttsSpeakFrom(R.pos, TTS.seq);
 }
-function ttsStop(){ if(!TTS.on) return; TTS.on=false; TTS.seq++; try{ speechSynthesis.cancel(); }catch(e){} ttsMark(-1); releaseWake(); resetClock(); updateChrome(); setChrome(true); }
+function ttsStop(){ if(!TTS.on) return; TTS.on=false; TTS.seq++; if(TTS.nat) kokClear(); try{ speechSynthesis.cancel(); }catch(e){} ttsMark(-1); releaseWake(); resetClock(); updateChrome(); setChrome(true); }
+/* start reading again from the current word (after a jump or a voice change) */
+function ttsRestart(){
+  if(TTS.nat){ if(!KOK.ready) return; /* still loading: it starts from R.pos when ready */ TTS.seq++; kokSpeakFrom(R.pos, TTS.seq); return; }
+  TTS.seq++; try{ speechSynthesis.cancel(); }catch(e){} ttsSpeakFrom(R.pos, TTS.seq);
+}
 function ttsSpeakFrom(i, seq){
   if(!TTS.on || seq!==TTS.seq) return;
   if(i>=R.n){ ttsStop(); toast('Finished reading aloud'); return; }
@@ -1080,17 +1087,7 @@ function panelHTML(){
   }
   if(m!=='speed'){
     const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase();
-    const vs=ttsVoices().filter(v=>(v.lang||'').toLowerCase().startsWith(lang));
-    const grp=[['Best quality',[]],['Standard',[]],['Novelty and older voices',[]]];
-    for(const v of vs) grp[voiceTier(v)][1].push(v);
-    for(const g of grp) g[1].sort((a,b)=>a.name.localeCompare(b.name));
-    const opt=v=>`<option value="${esc(v.voiceURI)}"${v.voiceURI===S.ttsVoice?' selected':''}>${esc(voiceLabel(v))}</option>`;
-    h+=`<div class="panel-sec"><h3>Read aloud</h3><div class="group">
-      ${pRange('ttsRate','Speaking speed',0.5,2,0.05)}
-      <div class="set"><div class="hd"><label for="o_voice">Voice</label></div><select class="input" id="o_voice" data-set="ttsVoice" data-type="text"><option value="">Default</option>${grp.filter(g=>g[1].length).map(([l,L])=>`<optgroup label="${l}">${L.map(opt).join('')}</optgroup>`).join('')}</select>
-      <button class="btn" type="button" data-act="vprev" style="margin-top:8px">${ICON.speaker} Hear this voice</button>
-      <div class="desc">Enhanced and Premium voices sound the most natural. To add them on iPhone, open <b>Settings → Accessibility → Spoken Content → Voices → English</b>, pick a voice and download its Enhanced or Premium version. Then close and reopen Tooz and it appears under Best quality. Tap the speaker at the bottom of the page to start.</div></div>
-    </div></div>`;
+    h+=voiceSectionHTML(lang);
   }
   h+=`<button class="btn block" type="button" data-act="resetlook">Reset reading options</button>`;
   return h;
@@ -1098,10 +1095,11 @@ function panelHTML(){
 function openPanel(){
   if(R.mode==='speed' && R.playing) pause();
   if(SC.auto) asStop(true);
-  openSheet('Reading options', panelHTML(), { vprev:()=>{ if(TTS.on&&typeof ttsStop==='function') ttsStop(); voicePreview(); }, resetlook:()=>{ resetReading(); refreshPanel(); toast('Reading options reset'); } }, 'short');
+  setTimeout(kokStateUI,0);
+  openSheet('Reading options', panelHTML(), { vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') kokPreview(); else voicePreview(); }, kokget:async()=>{ if(await kokEnsure()){ toast('Natural voice is ready'); } kokStateUI(); }, kokdel:async()=>{ if(TTS.on) ttsStop(); await kokRemove(); toast('Natural voice download removed'); kokStateUI(); }, resetlook:()=>{ resetReading(); refreshPanel(); toast('Reading options reset'); } }, 'short');
   bindPanel();
 }
-function refreshPanel(){ const body=$('#sheet .sheet-body'); if(!body) return; const st=body.scrollTop; body.innerHTML=panelHTML(); bindPanel(); body.scrollTop=st; }
+function refreshPanel(){ const body=$('#sheet .sheet-body'); if(!body) return; const st=body.scrollTop; body.innerHTML=panelHTML(); bindPanel(); body.scrollTop=st; kokStateUI(); }
 function resetReading(){
   const keep={linkService:S.linkService, goalMins:S.goalMins, measuredWpm:S.measuredWpm, info:S.info};
   Object.assign(S, DEFAULTS, keep, {mode:S.mode}); saveSettings(); applyLook(); setWpm(S.wpm); asUI(); relayoutSoon();
@@ -1112,6 +1110,8 @@ function afterSet(key){
   if(key==='wpm') setWpm(S.wpm);
   if(key==='scrollWpm'||key==='autoScroll'){ if(!S.autoScroll && SC.auto) asStop(true); asUI(); }
   if(key==='focus') setChrome(true);
+  if(key==='ttsEngine'){ if(TTS.on) ttsStop(); refreshPanel(); return; }
+  if((key==='kokVoice'||key==='ttsVoice'||key==='ttsRate') && TTS.on){ clearTimeout(TTS.restartT); TTS.restartT=setTimeout(()=>{ if(TTS.on) ttsRestart(); },400); }
   applyLook();
   if(key==='speedSize'||key==='focusColor'||key==='boldText'){ if(R.mode==='speed') showChunk(R.pos); }
   if((key==='font'||key==='speedFont') && R.mode==='speed'){ document.fonts&&document.fonts.ready.then(()=>{ if(R.mode==='speed'){ showChunk(R.pos); syncScroll(true); } }); }

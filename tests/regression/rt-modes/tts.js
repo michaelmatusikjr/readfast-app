@@ -2,7 +2,7 @@
 const H=require('./h.js');
 (async()=>{
   const b=await H.launch();
-  const pg=await H.page(b,{settings:{mode:'pages',focus:false,turn:'none'}});
+  const pg=await H.page(b,{settings:{mode:'pages',focus:false,turn:'none',ttsEngine:'system'}});
   await pg.addInitScript(()=>{});
   // stub: emits word boundaries every 20ms, onend after the last
   await pg.evaluate(()=>{
