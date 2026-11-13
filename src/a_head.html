@@ -187,6 +187,14 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 
 /* Auto-scroll bar */
 #asBar{display:flex;align-items:center;gap:4px}
+#ttsBar{display:flex;align-items:center;gap:2px}
+#ttsHint{font-size:.8rem;color:var(--page-muted);text-align:center;padding:2px 0 4px}
+#ttsBar[hidden]{display:none}
+#ttsBar .icon-btn{width:38px;height:40px;flex:none}
+#ttsBar .icon-btn.play{width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--accent-ink,#fff)}
+#ttsBar input[type=range]{flex:1;min-width:50px}
+#ttsLabel{font-family:var(--f-mono);font-size:.82rem;min-width:3.2em;text-align:right;color:var(--page-ink);font-variant-numeric:tabular-nums}
+.book w.ttspick{box-shadow:inset 0 -2px 0 var(--accent);background:color-mix(in srgb,var(--accent) 18%,transparent);border-radius:2px}
 #asBar .icon-btn{width:40px;height:40px}
 #asPlay{background:var(--page-link);color:var(--page-bg);border-radius:50%}
 #asLabel{font-family:var(--f-mono);font-size:.82rem;min-width:5.4em;text-align:right;color:var(--page-ink);font-variant-numeric:tabular-nums}

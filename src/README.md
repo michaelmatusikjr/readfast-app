@@ -19,7 +19,7 @@ python3 to_artifact.py out.html   # optional: the version used for the Claude te
 | `c_js1.js` | Settings (`S`, `DEFAULTS`), storage helpers, fonts, themes |
 | `old.html` | The original app. `assemble.py` copies line ranges from it wherever a part contains `/*@@OLD:a-b@@*/`, and applies small `rep()`/`fill()` patches |
 | `e_reader.js` | The reader: Pages, Scroll, Speed, read aloud, selection, highlights, reading clock |
-| `h_voice.js` | Natural read-aloud voices: Piper (default, via `../piper-worker.js`) and Kokoro (Premium), plus the iPhone voice list |
+| `h_voice.js` | Natural read-aloud voices (Piper, via `../piper-worker.js`) and the iPhone voice list |
 | `g_extra.js` | What's new and version, storage use, search inside books, export, year in books |
 | `f_js3.js` | Stats, settings, backup, library, tags, archive, notes tab, tutorial book, boot |
 

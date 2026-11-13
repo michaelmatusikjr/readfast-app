@@ -1,18 +1,9 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.2';
+const APP_VERSION='2026.11.13.3';
 const WHATSNEW=[
-  ['Faster natural voices','Natural voices now use Piper, which is quick enough for phones. Each voice downloads once (about 60 MB); <b>Lessac</b> is the default. The slower, more lifelike voices are still there as <b>Premium</b>. Change them in Aa → Read aloud.'],
-  ['Natural voices','Read aloud can now use natural-sounding voices that run on your phone. Choose <b>Natural</b> in Aa → Read aloud; the first time, the voice downloads once (about 90 MB). The iPhone voice list no longer shows duplicates.'],
-  ['Pick text your way','Press and hold a word to select it, then drag the round handles. The phone’s own menu stays out of the way; tap <b>Define</b> to look a word up.'],
-  ['Define finds the right word','Define now looks up the word you selected, not the one beside it.'],
-  ['Share a quote as a picture','Select text or tap a highlight, then <b>Share image</b> for a quote card in light, sepia or dark.'],
-  ['Copy with the source','<b>Copy</b> adds the author, book and chapter after the quote.'],
-  ['Search inside every book','Type three letters or more in the library search, then tap <b>Search inside books</b>.'],
-  ['Your year in books','Stats shows books finished each year, your longest streak and an optional yearly goal.'],
-  ['Export highlights and notes','Save every highlight, note and bookmark from a book as a document.'],
-  ['Fairer reading time','Time stops when you switch apps or lock the phone, idle stretches count only partly, and the last page counts when you close the book. Choose the idle limit in Settings.'],
-  ['Still reading?','Auto-scroll and Speed pause after 10 minutes with no touch and ask whether you’re still there.'],
-  ['Storage','Settings shows how much space Tooz uses, book by book.']
+  ['Audio controls','Tap the speaker to open the audio controls. Tap a word to choose where to start, then press play. Skip back or forward a sentence and change the speed while it plays.'],
+  ['Natural voices','Read aloud uses natural-sounding voices that run on your phone. Each voice downloads once (about 60 MB) and then works offline. The slower Premium voices have been removed, along with their downloads.'],
+  ['Free up space','Settings → Storage has a new button to remove every downloaded voice at once.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

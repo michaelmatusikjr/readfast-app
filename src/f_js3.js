@@ -98,6 +98,7 @@ function renderSettings(){
     <div class="group"><div class="set">
       <div class="desc" id="storeUse" style="color:var(--ink)">Checking…</div>
       <button class="btn" type="button" id="storeBooks">Show space used by each book</button>
+      <button class="btn" type="button" id="rmVoices" style="margin-top:8px">Remove all downloaded voices</button>
     </div></div>
     <h2>Tags</h2>
     <div class="group"><div class="set" id="tagSet">${(()=>{ const n=tagCounts().length; return n? `<details class="tdet" id="tagDet"${TAGS_OPEN?' open':''}><summary>${n} tag${n===1?'':'s'} <span>· tap to ${TAGS_OPEN?'hide':'show'}</span></summary>${tagsSettingsHTML()}</details>` : tagsSettingsHTML(); })()}</div></div>
@@ -127,7 +128,15 @@ function renderSettings(){
   $('#storeNote').textContent=Store.db?'':'Storage is unavailable in this view, so documents will disappear when you close the app.';
   $('#sLinkSvc').addEventListener('change',e=>{ S.linkService=e.target.value.trim(); saveSettings(); toast(S.linkService?'Reader service saved':'Reader service cleared'); });
   $('#backupBtn').onclick=backup;
-  $('#storeBooks').onclick=storageSheet; $('#wnBtn').onclick=whatsNewSheet; storageSummary();
+  $('#storeBooks').onclick=storageSheet; $('#rmVoices').onclick=()=>openSheet('Remove all downloaded voices?', `<p class="note" style="margin-top:0">This deletes every read-aloud voice saved on this phone. Your books, notes and settings stay. A voice downloads again the next time you use it.</p>
+    <button class="btn danger block" type="button" data-act="yes">Remove all voices</button><button class="btn block" type="button" data-act="no">Cancel</button>`, { no:closeSheet, yes:async()=>{
+      closeSheet(); if(TTS.on) ttsStop();
+      let before=0, after=0; try{ before=(await navigator.storage.estimate()).usage||0; }catch(e){}
+      const n=await natRemoveAll();
+      try{ after=(await navigator.storage.estimate()).usage||0; }catch(e){}
+      const freed=Math.max(0,before-after);
+      toast(n? `Removed ${n} voice${n===1?'':'s'}${freed>1048576?' · freed about '+fmtBytes(freed):''}` : 'No downloaded voices to remove'); storageSummary();
+    } }); $('#wnBtn').onclick=whatsNewSheet; storageSummary();
   $('#idleSeg').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.idleMins=+b.dataset.v; saveSettings(); $('#idleSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); };
   bkSettingsUI();
   if($('#bkPick')) $('#bkPick').onclick=pickBackupFolder;
@@ -1004,7 +1013,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=10;
+const SAMPLE_V=11;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1041,8 +1050,8 @@ const SAMPLE_HTML=`
 <p>The list icon at the top opens the contents. The note icon beside it opens this book’s highlights, notes and bookmarks. In very long books, like the Bible, the contents show the books first; tap one to see its chapters. The magnifying glass searches the whole book. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book.</p>
 <p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
 <h2>Read aloud</h2>
-<p>Tap the speaker at the bottom and the book is read to you, with each word marked as it is spoken. The page turns by itself. Choose the voice and its speed in Aa, and tap <strong>Hear this voice</strong> to try one.</p>
-<p>There are three kinds of voice. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start. <strong>Premium</strong> voices are even more lifelike but too slow on many phones, so there may be pauses between sentences. <strong>iPhone</strong> voices start instantly but sound more robotic. Switch between them in Aa → Read aloud; the first sample of a voice also tells you whether your phone can keep up.</p>
+<p>Tap the speaker at the bottom to open the audio controls. Nothing plays yet: tap a word to choose where to start, then press <strong>play</strong>. Each word is marked as it is spoken and the page turns by itself. Tap another word while it plays to jump there. The arrows go back or forward a sentence, and the slider sets the speed. Tap the speaker again to close the controls.</p>
+<p>There are two kinds of voice, in Aa → Read aloud. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
 <h2>Helpful extras</h2>
 <ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li><li><strong>Your year in books</strong>, also on Stats, lists the books you finished each year, your longest streak, and a goal for how many books to finish this year.</li></ul>
 <h2>How reading time is counted</h2>
