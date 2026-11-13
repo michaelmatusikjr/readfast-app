@@ -1,13 +1,13 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.12';
+const APP_VERSION='2026.11.12.2';
 const WHATSNEW=[
+  ['Natural voices','Read aloud can now use natural-sounding voices that run on your phone. Choose <b>Natural</b> in Aa → Read aloud; the first time, the voice downloads once (about 90 MB). The iPhone voice list no longer shows duplicates.'],
   ['Pick text your way','Press and hold a word to select it, then drag the round handles. The phone’s own menu stays out of the way; tap <b>Define</b> to look a word up.'],
   ['Define finds the right word','Define now looks up the word you selected, not the one beside it.'],
   ['Share a quote as a picture','Select text or tap a highlight, then <b>Share image</b> for a quote card in light, sepia or dark.'],
   ['Copy with the source','<b>Copy</b> adds the author, book and chapter after the quote.'],
   ['Search inside every book','Type three letters or more in the library search, then tap <b>Search inside books</b>.'],
   ['Your year in books','Stats shows books finished each year, your longest streak and an optional yearly goal.'],
-  ['Better voices','Read aloud lists the most natural voices first, with a button to hear each one.'],
   ['Export highlights and notes','Save every highlight, note and bookmark from a book as a document.'],
   ['Fairer reading time','Time stops when you switch apps or lock the phone, idle stretches count only partly, and the last page counts when you close the book. Choose the idle limit in Settings.'],
   ['Still reading?','Auto-scroll and Speed pause after 10 minutes with no touch and ask whether you’re still there.'],

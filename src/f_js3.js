@@ -1004,7 +1004,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=7;
+const SAMPLE_V=8;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1042,7 +1042,7 @@ const SAMPLE_HTML=`
 <p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
 <h2>Read aloud</h2>
 <p>Tap the speaker at the bottom and the book is read to you, with each word marked as it is spoken. The page turns by itself. Choose the voice and its speed in Aa, and tap <strong>Hear this voice</strong> to try one.</p>
-<p>The most natural voices are listed first, under <em>Best quality</em>. To add more, open the iPhone’s <strong>Settings → Accessibility → Spoken Content → Voices</strong> and download an Enhanced or Premium voice.</p>
+<p>There are two kinds of voice. <strong>Natural</strong> voices sound like a person reading; they run on your phone after a one-time download of about 90 MB, then work offline. <strong>Heart</strong> is the best of them. <strong>iPhone</strong> voices start instantly but sound more robotic. Switch between them in Aa → Read aloud. The first sample of a natural voice also tells you whether your phone can make speech fast enough for smooth reading.</p>
 <h2>Helpful extras</h2>
 <ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li><li><strong>Your year in books</strong>, also on Stats, lists the books you finished each year, your longest streak, and a goal for how many books to finish this year.</li></ul>
 <h2>How reading time is counted</h2>
