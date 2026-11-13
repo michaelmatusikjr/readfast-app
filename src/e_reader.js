@@ -1143,11 +1143,6 @@ function panelHTML(){
       </div>
       <p class="note" style="margin:6px 0 0">Speed, pauses and the speed ramp are under ${ICON.gear} on the Speed controls.</p>`);
   }
-  h+=fold('light','Light',`<div class="group">
-      ${pRange('dim','Dim',0,80,5,'Darkens the page beyond the phone’s lowest brightness.')}${pRange('warmth','Warmth',0,100,5,'Adds a warm tint for night reading.')}
-      ${pToggle('nightAuto','Switch theme at night')}
-      ${S.nightAuto?`<div class="set"><div class="timerow">From <input class="input" type="time" data-set="nightFrom" data-type="text" value="${esc(S.nightFrom)}"> to <input class="input" type="time" data-set="nightTo" data-type="text" value="${esc(S.nightTo)}"></div>${pSeg('nightTheme',[['sepia','Sepia'],['gray','Gray'],['dark','Dark'],['black','Black']],'Night theme')}</div>`:''}
-    </div>`);
   if(m==='pages') h+=fold('pages','Pages',`<div class="group">
       ${pSeg('turn',[['slide','Slide'],['fade','Fade'],['none','None']],'Page turn')}
       ${pSeg('tapZones',[['edges','Edges'],['anywhere','Anywhere']],'Tap to turn', S.tapZones==='edges'?'Tap the left or right edge to turn. Tap the middle to show or hide controls.':'Tap the left third to go back, anywhere else to go forward. Tap the top to show or hide controls.')}
@@ -1160,6 +1155,12 @@ function panelHTML(){
     <p class="note" style="margin:6px 0 0">Auto-scroll has its own button at the bottom of the page.</p>`);
   return h;
 }
+/* light settings live on the Settings page (they apply everywhere) */
+function lightHTML(){ return `<div class="group">
+      ${pRange('dim','Dim',0,80,5,'Darkens the page beyond the phone’s lowest brightness.')}${pRange('warmth','Warmth',0,100,5,'Adds a warm tint for night reading.')}
+      ${pToggle('nightAuto','Switch theme at night')}
+      ${S.nightAuto?`<div class="set"><div class="timerow">From <input class="input" type="time" data-set="nightFrom" data-type="text" value="${esc(S.nightFrom)}"> to <input class="input" type="time" data-set="nightTo" data-type="text" value="${esc(S.nightTo)}"></div>${pSeg('nightTheme',[['sepia','Sepia'],['gray','Gray'],['dark','Dark'],['black','Black']],'Night theme')}</div>`:''}
+    </div>`; }
 /* Speed controls → ⚙︎ */
 function speedOptsHTML(){
   return `<div class="group">
@@ -1205,6 +1206,7 @@ function openPanel(){
 }
 /* re-draw whichever reading controls are on screen (the Aa menu, the Settings page section) */
 function refreshPanel(){
+  const ls=$('#lightSet'); if(ls && ls.offsetParent!==null) ls.innerHTML=lightHTML();
   const body=$('#sheet .sheet-body'); if(!body || $('#sheet').hidden) return;
   const html= body.dataset.aa? panelHTML() : body.dataset.sheet==='speed'? speedOptsHTML() : body.dataset.sheet==='as'? asOptsHTML() : body.dataset.sheet==='voice'? voiceSheetHTML() : null;
   if(html==null) return;

@@ -94,6 +94,10 @@ function speechChunk(i, max, min){
     let w=sp[k-i]; if(w===''){ wt.push(0); continue; }
     if(w==null) w=R.words[k];
     w=w.replace(/:(?=\s|$)/g,',').replace(/:/g,' ');
+    /* a short pause before "(" and after ")" */
+    const raw=R.words[k]||'';
+    if(/^[(\[]/.test(raw) && text && !/[,;:.!?—–]$/.test(text)) text+=',';
+    if(/[)\]]["”’]*$/.test(raw) && !/[,;:.!?]$/.test(w)) w+=',';
     if(k>i && !glued(k) && text) text+=' ';
     map[map.length-1]=text.length; text+=w;
     wt.push(w.replace(/[^\p{L}\p{N} ]/gu,'').length+1 + (/[,;—–]$/.test(w)?3:0) + (/[.!?]["”’)]*$/.test(w)?6:0));

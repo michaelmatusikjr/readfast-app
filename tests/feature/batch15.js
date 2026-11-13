@@ -12,7 +12,7 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   // Aa
   await pg.evaluate(()=>openPanel()); await sleep(700);
   const aa=await pg.evaluate(()=>({ folds:[...document.querySelectorAll('#sheet details.aadet summary')].map(x=>x.textContent), open:document.querySelectorAll('#sheet details[open]').length, quickFonts:document.querySelectorAll('#sheet .fontrow button').length, size:!!document.querySelector('#sheet [data-step="size"]'), themes:!!document.querySelector('#sheet .themes'), h:document.querySelector('#sheet .sheet-body').scrollHeight }));
-  ok('Aa quick: size, theme, 4 fonts; folded: text, light, pages', aa.size&&aa.themes&&aa.quickFonts===4&&aa.open===0&&JSON.stringify(aa.folds)===JSON.stringify(['More text options','Light','Pages']), aa);
+  ok('Aa quick: size, theme, 4 fonts; folded: text, pages', aa.size&&aa.themes&&aa.quickFonts===4&&aa.open===0&&JSON.stringify(aa.folds)===JSON.stringify(['More text options','Pages']), aa);
   await pg.screenshot({path:S+'aa_closed.png'});
   // size stepper
   const s0=await pg.evaluate(()=>S.size); await pg.evaluate(()=>document.querySelector('#sheet [data-step="size"][data-d="1"]').click()); await sleep(200);
@@ -21,13 +21,8 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   await pg.evaluate(()=>document.querySelectorAll('#sheet .fontrow button')[1].click()); await sleep(300);
   const f1=await pg.evaluate(()=>S.font); ok('quick font changes font', f1!=='literata', f1);
   await pg.evaluate(()=>{ S.font='literata'; saveSettings(); applyLook(); refreshPanel(); }); await sleep(300);
-  // open Light, change dim, stays open after refresh
-  await pg.evaluate(()=>{ document.querySelector('#sheet details[data-k="light"]').open=true; }); await sleep(200);
-  await pg.evaluate(()=>{ const r=document.querySelector('#sheet input[data-set="dim"]'); r.value='20'; r.dispatchEvent(new Event('input',{bubbles:true})); }); await sleep(200);
-  await pg.evaluate(()=>{ const t=document.querySelector('#sheet input[data-set="nightAuto"]'); t.checked=true; t.dispatchEvent(new Event('change',{bubbles:true})); }); await sleep(300);
-  ok('Light: dim saves; night times appear; section stays open', await pg.evaluate(()=>S.dim===20 && !!document.querySelector('#sheet input[data-set="nightFrom"]') && document.querySelector('#sheet details[data-k="light"]').open));
-  await pg.screenshot({path:S+'aa_light.png'});
-  await pg.evaluate(()=>{ S.dim=0; S.nightAuto=false; saveSettings(); applyLook(); closeSheet(); }); await sleep(400);
+  await pg.evaluate(()=>closeSheet()); await sleep(300);
+
   // Scroll mode: Aa folds + auto-scroll button
   await pg.evaluate(async()=>{ await switchMode('scroll'); S.autoScroll=false; saveSettings(); asUI(); updateChrome(); }); await sleep(800);
   ok('scroll: auto-scroll button shown, bar hidden', await pg.evaluate(()=>!$('#rAs').hidden && $('#asBar').hidden));
@@ -52,7 +47,7 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   await pg.evaluate(()=>$('#rAs').click()); await sleep(300);
   ok('auto-scroll button again hides bar', await pg.evaluate(()=>!S.autoScroll && $('#asBar').hidden));
   await pg.evaluate(()=>openPanel()); await sleep(600);
-  ok('scroll Aa: Scrolling fold', await pg.evaluate(()=>[...document.querySelectorAll('#sheet details.aadet summary')].map(x=>x.textContent).join()==='More text options,Light,Scrolling'));
+  ok('scroll Aa: Scrolling fold', await pg.evaluate(()=>[...document.querySelectorAll('#sheet details.aadet summary')].map(x=>x.textContent).join()==='More text options,Scrolling'));
   await pg.evaluate(()=>closeSheet()); await sleep(300);
   // Speed: gear
   await pg.evaluate(async()=>{ await switchMode('speed'); }); await sleep(800);
@@ -64,14 +59,18 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   await pg.screenshot({path:S+'speed_opts.png'});
   await pg.evaluate(()=>closeSheet()); await sleep(300);
   await pg.evaluate(()=>openPanel()); await sleep(600);
-  ok('speed Aa: word size + Word display + Light', await pg.evaluate(()=>!!document.querySelector('#sheet [data-step="speedSize"]') && [...document.querySelectorAll('#sheet details.aadet summary')].map(x=>x.textContent).join()==='Word display,Light'));
+  ok('speed Aa: word size + Word display + Light', await pg.evaluate(()=>!!document.querySelector('#sheet [data-step="speedSize"]') && [...document.querySelectorAll('#sheet details.aadet summary')].map(x=>x.textContent).join()==='Word display'));
   const ws0=await pg.evaluate(()=>S.speedSize); await pg.evaluate(()=>document.querySelector('#sheet [data-step="speedSize"][data-d="2"]').click()); await sleep(200);
   ok('word size + steps by 2 within 24–72', await pg.evaluate(v=>S.speedSize===Math.min(72,v+2), ws0));
   await pg.evaluate(async()=>{ closeSheet(); await switchMode('pages'); closeReader(); }); await sleep(900); await pg.evaluate(()=>closeSheet());
   // Settings page
   await pg.evaluate(()=>showView('settings')); await sleep(700);
-  const st=await pg.evaluate(()=>({h2:[...document.querySelectorAll('#settingsBody h2')].map(x=>x.textContent.trim()), folds:[...document.querySelectorAll('#settingsBody details summary')].map(x=>x.textContent.trim()), reading:/Brightness|Page turn|Speed ramp|Natural/.test($('#settingsBody').textContent)}));
-  ok('Settings sections app-wide only', JSON.stringify(st.h2)===JSON.stringify(['Reading','Backup and restore','Storage','Library','Adding books','Help','Erase all data']) && !st.reading, st);
+  const st=await pg.evaluate(()=>({h2:[...document.querySelectorAll('#settingsBody h2')].map(x=>x.textContent.trim())}));
+  ok('Settings sections app-wide only', JSON.stringify(st.h2)===JSON.stringify(['Reading','Light','Backup and restore','Storage','Library','Adding books','Help','Erase all data']) && !/Page turn|Speed ramp|Natural/.test(await pg.evaluate(()=>$('#settingsBody').textContent)), st);
+  await pg.evaluate(()=>{ const r=document.querySelector('#lightSet input[data-set="dim"]'); r.value='20'; r.dispatchEvent(new Event('input',{bubbles:true})); }); await sleep(200);
+  await pg.evaluate(()=>{ const t=document.querySelector('#lightSet input[data-set="nightAuto"]'); t.checked=true; t.dispatchEvent(new Event('change',{bubbles:true})); }); await sleep(300);
+  ok('Light on Settings: dim saves; night times appear', await pg.evaluate(()=>S.dim===20 && !!document.querySelector('#lightSet input[data-set="nightFrom"]')));
+  await pg.evaluate(()=>{ S.dim=0; S.nightAuto=false; saveSettings(); applyLook(); });
   await pg.evaluate(()=>document.querySelector('#infoSeg [data-v="2"]').click()); await sleep(200);
   ok('bottom line choice', await pg.evaluate(()=>S.info===2));
   await pg.evaluate(()=>{ S.info=0; saveSettings(); });
