@@ -18,7 +18,7 @@ function refPhrase(m, book){
   if(x) return `${ch} verses ${v} through ${x}`;
   return `${ch} verse ${v}`;
 }
-const coreOf=w=>String(w||'').replace(/^[(\[“"‘']+/,'').replace(/[.,;:!?)\]”"’']+$/,'');
+const coreOf=w=>String(w||'').replace(/^[(\[“"‘']+/,'').replace(/[.,;:!?)\]”"’'—–]+$/,'');
 const isRef=w=>REF_RE.test(coreOf(w));
 /* a book name (or abbreviation) that is followed by chapter:verse */
 const bookAtWord=k=>{ const b=BIBLE_BOOKS[bookKey(R.words[k]||'')]; return b && isRef(R.words[k+1]) ? b : null; };
@@ -39,7 +39,7 @@ function spokenWords(i, j){
   let book=null, bookAt=-99;
   for(let k=Math.max(0,i-8);k<i;k++){ if(isRef(R.words[k])){ const b=BIBLE_BOOKS[bookKey(R.words[k-1]||'')]; if(b){ book=b; bookAt=k; } else if(book && k-bookAt<=6) bookAt=k; } }
   for(let k=i;k<j;k++){
-    const raw=R.words[k]||''; const trail=(raw.match(/[.,;:!?)\]”"’']+$/)||[''])[0];
+    const raw=R.words[k]||''; const trail=(raw.match(/[.,;:!?)\]”"’'—–]+$/)||[''])[0];
     const core=coreOf(raw);
     const pausePunct=trail.replace(/[)\]”"’']/g,'').replace(/:/g,',');
     /* book name before chapter:verse ("Isa.", "1 Cor.") */

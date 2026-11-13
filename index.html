@@ -2193,6 +2193,47 @@ async function loadBookFont(text){
   }
   R.bookFamily=name;
 }
+/* Words joined by a dash ("26:8—“Yes,", "me—and") become two words, so each side can be selected,
+   highlighted and read on its own. Older books are converted once: every saved position, highlight,
+   bookmark, chapter, paragraph, note and picture is moved to its new word number. */
+function splitDashWord(w){
+  if(!w || !/[^—–\s-](?:[—–]+|-{2,})[^—–\s-]/.test(w)) return null;
+  const p=w.match(/.*?(?:[—–]+|-{2,})(?=[^—–-])|.+$/g).filter(Boolean);
+  return p.length>1? p : null;
+}
+function dashSplitText(text, meta){
+  if(text.dashSplit) return false;
+  const W=text.words, WF=text.wf&&text.wf.length===W.length?text.wf:null, n=W.length;
+  let any=false; for(let k=0;k<n;k++){ if(splitDashWord(W[k])){ any=true; break; } }
+  text.dashSplit=1; if(!any){ if(meta) meta.dashSplit=1; return true; }
+  const map=new Int32Array(n+1), words=[], wf=[];
+  for(let k=0;k<n;k++){
+    map[k]=words.length; const parts=splitDashWord(W[k])||[W[k]]; const f=WF?WF[k]:0;
+    parts.forEach((pt,q)=>{ words.push(pt); wf.push(q? (f|F_GLUE)&~F_N : f); });
+  }
+  map[n]=words.length;
+  const M=i=>(i==null||i<0)?i: i>=n? words.length+(i-n) : map[i];
+  const MI=i=>(i==null||i<0)?i: i>=n-1? (i>=n? words.length+(i-n) : words.length-1) : map[i+1]-1;   /* inclusive end */
+  text.words=words; if(WF||wf.some(x=>x)) text.wf=Uint8Array.from(wf);
+  if(text.ends) text.ends=text.ends.map(MI);
+  if(text.blocks) text.blocks=text.blocks.map(b=>Object.assign({},b,{s:M(b.s), e:M(b.e)}));
+  if(text.chapters) text.chapters=text.chapters.map(c=>Object.assign({},c,{i:M(c.i)}));
+  if(text.notes) text.notes=text.notes.map(([a,b])=>[M(a),M(b)]);
+  if(text.breaks) text.breaks=text.breaks.map(M);
+  if(text.secs) text.secs=text.secs.map(M);
+  if(text.images && text.images.at) text.images.at=text.images.at.map(a=>Object.assign({},a,{i:M(a.i)}));
+  if(meta){
+    meta.count=words.length;
+    if(meta.chapters) meta.chapters=meta.chapters.map(c=>Object.assign({},c,{i:M(c.i)}));
+    if(meta.dashSplit) return true;   /* positions already use the new word numbers (e.g. restored from the archive) */
+    if(typeof meta.pos==='number') meta.pos=M(meta.pos);
+    if(Array.isArray(meta.highlights)) meta.highlights=meta.highlights.map(h=>Object.assign({},h,{s:M(h.s), e:MI(h.e)}));
+    if(Array.isArray(meta.bookmarks)) meta.bookmarks=meta.bookmarks.map(b=>Object.assign({},b,{i:M(b.i)}));
+    const lp=LS.get('pos.'+meta.id,null); if(lp && typeof lp.pos==='number'){ lp.pos=M(lp.pos); LS.set('pos.'+meta.id,lp); }
+    meta.dashSplit=1;
+  }
+  return true;
+}
 async function openDoc(id){
   const meta=LIB.find(x=>x.id===id); if(!meta){ toast('That document couldn’t be found.'); return false; }
   if(meta.pending){ if(!await fetchShelfBook(meta)) return false; }
@@ -2200,6 +2241,7 @@ async function openDoc(id){
   let text=await Store.get('texts',id).catch(()=>null);
   if(!text){ text=fetchText(meta); if(!text){ toast('That document’s text is missing. Delete it and add the file again.', null, 6000); return false; } Store.put('texts',text).catch(()=>{}); }
   if(R.meta){ stopActivity(); saveProgress(true); if(R.mode) MODES[R.mode].leave(); R.mode=null; }
+  if(!text.dashSplit && dashSplitText(text, meta)){ Store.put('texts',text).catch(()=>{}); touch(meta); }
   applySavedPos(meta);
   R.meta=meta; R.text=text; R.words=text.words; R.n=text.words.length; R.ends=new Set(text.ends);
   R.wf=(text.wf && text.wf.length===R.n)? text.wf : null;
@@ -2895,7 +2937,7 @@ function refPhrase(m, book){
   if(x) return `${ch} verses ${v} through ${x}`;
   return `${ch} verse ${v}`;
 }
-const coreOf=w=>String(w||'').replace(/^[(\[“"‘']+/,'').replace(/[.,;:!?)\]”"’']+$/,'');
+const coreOf=w=>String(w||'').replace(/^[(\[“"‘']+/,'').replace(/[.,;:!?)\]”"’'—–]+$/,'');
 const isRef=w=>REF_RE.test(coreOf(w));
 /* a book name (or abbreviation) that is followed by chapter:verse */
 const bookAtWord=k=>{ const b=BIBLE_BOOKS[bookKey(R.words[k]||'')]; return b && isRef(R.words[k+1]) ? b : null; };
@@ -2916,7 +2958,7 @@ function spokenWords(i, j){
   let book=null, bookAt=-99;
   for(let k=Math.max(0,i-8);k<i;k++){ if(isRef(R.words[k])){ const b=BIBLE_BOOKS[bookKey(R.words[k-1]||'')]; if(b){ book=b; bookAt=k; } else if(book && k-bookAt<=6) bookAt=k; } }
   for(let k=i;k<j;k++){
-    const raw=R.words[k]||''; const trail=(raw.match(/[.,;:!?)\]”"’']+$/)||[''])[0];
+    const raw=R.words[k]||''; const trail=(raw.match(/[.,;:!?)\]”"’'—–]+$/)||[''])[0];
     const core=coreOf(raw);
     const pausePunct=trail.replace(/[)\]”"’']/g,'').replace(/:/g,',');
     /* book name before chapter:verse ("Isa.", "1 Cor.") */
@@ -3205,12 +3247,10 @@ async function natStateUI(){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.7';
+const APP_VERSION='2026.11.13.8';
 const WHATSNEW=[
-  ['Settings, simplified','Aa now shows just the mode, text size, theme and a few fonts. Tap a heading underneath for more text options and page settings.'],
-  ['Options where you use them','Choose a voice with the new voice button on the audio controls. In Scroll, auto-scroll has its own button at the bottom, with its options under ⋯. In Speed, the gear next to the speed slider holds the speed-reading options.'],
-  ['App settings in one place','Settings now holds only app-wide things: light (dim, warmth and the night theme), reading stats, what the bottom line shows, backups, storage, tags and help.'],
-  ['Taller bottom bars','The bars at the bottom of the screen are taller and reach the bottom edge, like other iPhone apps.']
+  ['Highlight up to a dash','Words joined by a dash, like “me—and”, are now separate words, so a highlight can stop right at the dash. Books you already have update the first time you open them; your place, highlights and bookmarks stay put.'],
+  ['References before a dash','Read aloud now says “Isaiah chapter 26 verse 8” even when the reference is followed straight away by a dash.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -4170,7 +4210,7 @@ async function archiveBook(d, finished, st){
   const rec={id:d.id, title:d.title, author:d.author||'', tags:[...tagsOf(d)], kind:d.kind, source:d.source||null, count:d.count||0,
     status:finished?'finished':'dnf', finishedAt:finished?(d.finishedAt||Date.now()):null, archivedAt:Date.now(),
     rating:finished?(st.rating||0):0, review:finished?(st.review||'').trim():'',
-    kept:{ progress: k.progress? {pos:finished?Math.max(0,(d.count||1)-1):(d.pos||0), pct:pctRead(d)} : null,
+    kept:{ dashSplit: !!d.dashSplit, progress: k.progress? {pos:finished?Math.max(0,(d.count||1)-1):(d.pos||0), pct:pctRead(d)} : null,
       bookmarks: k.bookmarks? (d.bookmarks||[]).map(b=>({i:b.i, name:b.name||'', at:b.at, q:snip(d,b.i,b.i+11)})) : [],
       highlights: (d.highlights||[]).filter(h=>k.highlights || (k.notes && h.note)).map(h=>({s:h.s, e:h.e, c:h.c, at:h.at, note:k.notes?(h.note||''):'', q:full(h.s,h.e), noteOnly:!k.highlights})) } };
   ARCH.list().unshift(rec); ARCH.save();
@@ -4210,6 +4250,7 @@ function applyKept(m, a){
   const kp=a.kept||{};
   if(kp.progress){ m.pos=a.status==='finished'?0:kp.progress.pos; m.lastRead=a.status==='finished'?0:Date.now(); LS.set('pos.'+m.id,{pos:m.pos,t:m.lastRead,fin:false}); }
   m.bookmarks=(kp.bookmarks||[]).map(b=>({i:b.i, name:b.name, at:b.at}));
+  if(kp.dashSplit) m.dashSplit=1;   /* saved word numbers already use the split-dash words */
   m.highlights=(kp.highlights||[]).map(h=>({s:h.s, e:h.e, c:h.c||1, at:h.at, ...(h.note?{note:h.note}:{})}));
   const tg=tagsOf(m).slice(); for(const t of a.tags||[]) if(!tg.some(x=>x.toLowerCase()===t.toLowerCase())) tg.push(t); m.tags=tg;
   if(a.author && !m.author) m.author=a.author;

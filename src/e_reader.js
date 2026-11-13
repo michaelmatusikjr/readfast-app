@@ -594,6 +594,47 @@ async function loadBookFont(text){
   }
   R.bookFamily=name;
 }
+/* Words joined by a dash ("26:8—“Yes,", "me—and") become two words, so each side can be selected,
+   highlighted and read on its own. Older books are converted once: every saved position, highlight,
+   bookmark, chapter, paragraph, note and picture is moved to its new word number. */
+function splitDashWord(w){
+  if(!w || !/[^—–\s-](?:[—–]+|-{2,})[^—–\s-]/.test(w)) return null;
+  const p=w.match(/.*?(?:[—–]+|-{2,})(?=[^—–-])|.+$/g).filter(Boolean);
+  return p.length>1? p : null;
+}
+function dashSplitText(text, meta){
+  if(text.dashSplit) return false;
+  const W=text.words, WF=text.wf&&text.wf.length===W.length?text.wf:null, n=W.length;
+  let any=false; for(let k=0;k<n;k++){ if(splitDashWord(W[k])){ any=true; break; } }
+  text.dashSplit=1; if(!any){ if(meta) meta.dashSplit=1; return true; }
+  const map=new Int32Array(n+1), words=[], wf=[];
+  for(let k=0;k<n;k++){
+    map[k]=words.length; const parts=splitDashWord(W[k])||[W[k]]; const f=WF?WF[k]:0;
+    parts.forEach((pt,q)=>{ words.push(pt); wf.push(q? (f|F_GLUE)&~F_N : f); });
+  }
+  map[n]=words.length;
+  const M=i=>(i==null||i<0)?i: i>=n? words.length+(i-n) : map[i];
+  const MI=i=>(i==null||i<0)?i: i>=n-1? (i>=n? words.length+(i-n) : words.length-1) : map[i+1]-1;   /* inclusive end */
+  text.words=words; if(WF||wf.some(x=>x)) text.wf=Uint8Array.from(wf);
+  if(text.ends) text.ends=text.ends.map(MI);
+  if(text.blocks) text.blocks=text.blocks.map(b=>Object.assign({},b,{s:M(b.s), e:M(b.e)}));
+  if(text.chapters) text.chapters=text.chapters.map(c=>Object.assign({},c,{i:M(c.i)}));
+  if(text.notes) text.notes=text.notes.map(([a,b])=>[M(a),M(b)]);
+  if(text.breaks) text.breaks=text.breaks.map(M);
+  if(text.secs) text.secs=text.secs.map(M);
+  if(text.images && text.images.at) text.images.at=text.images.at.map(a=>Object.assign({},a,{i:M(a.i)}));
+  if(meta){
+    meta.count=words.length;
+    if(meta.chapters) meta.chapters=meta.chapters.map(c=>Object.assign({},c,{i:M(c.i)}));
+    if(meta.dashSplit) return true;   /* positions already use the new word numbers (e.g. restored from the archive) */
+    if(typeof meta.pos==='number') meta.pos=M(meta.pos);
+    if(Array.isArray(meta.highlights)) meta.highlights=meta.highlights.map(h=>Object.assign({},h,{s:M(h.s), e:MI(h.e)}));
+    if(Array.isArray(meta.bookmarks)) meta.bookmarks=meta.bookmarks.map(b=>Object.assign({},b,{i:M(b.i)}));
+    const lp=LS.get('pos.'+meta.id,null); if(lp && typeof lp.pos==='number'){ lp.pos=M(lp.pos); LS.set('pos.'+meta.id,lp); }
+    meta.dashSplit=1;
+  }
+  return true;
+}
 async function openDoc(id){
   const meta=LIB.find(x=>x.id===id); if(!meta){ toast('That document couldn’t be found.'); return false; }
   if(meta.pending){ if(!await fetchShelfBook(meta)) return false; }
@@ -601,6 +642,7 @@ async function openDoc(id){
   let text=await Store.get('texts',id).catch(()=>null);
   if(!text){ text=fetchText(meta); if(!text){ toast('That document’s text is missing. Delete it and add the file again.', null, 6000); return false; } Store.put('texts',text).catch(()=>{}); }
   if(R.meta){ stopActivity(); saveProgress(true); if(R.mode) MODES[R.mode].leave(); R.mode=null; }
+  if(!text.dashSplit && dashSplitText(text, meta)){ Store.put('texts',text).catch(()=>{}); touch(meta); }
   applySavedPos(meta);
   R.meta=meta; R.text=text; R.words=text.words; R.n=text.words.length; R.ends=new Set(text.ends);
   R.wf=(text.wf && text.wf.length===R.n)? text.wf : null;
