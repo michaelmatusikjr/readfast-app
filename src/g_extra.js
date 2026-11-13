@@ -1,7 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13';
+const APP_VERSION='2026.11.13.2';
 const WHATSNEW=[
-  ['Faster natural voices','Natural voices can now use your phone’s graphics chip, which is usually several times faster. It’s on by default; the first time, it downloads a larger version of the voice (about 330 MB). If it doesn’t work on your phone, Tooz switches back to Standard. Change it in Aa → Read aloud → Engine.'],
+  ['Faster natural voices','Natural voices now use Piper, which is quick enough for phones. Each voice downloads once (about 60 MB); <b>Lessac</b> is the default. The slower, more lifelike voices are still there as <b>Premium</b>. Change them in Aa → Read aloud.'],
   ['Natural voices','Read aloud can now use natural-sounding voices that run on your phone. Choose <b>Natural</b> in Aa → Read aloud; the first time, the voice downloads once (about 90 MB). The iPhone voice list no longer shows duplicates.'],
   ['Pick text your way','Press and hold a word to select it, then drag the round handles. The phone’s own menu stays out of the way; tap <b>Define</b> to look a word up.'],
   ['Define finds the right word','Define now looks up the word you selected, not the one beside it.'],

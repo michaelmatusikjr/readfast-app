@@ -977,7 +977,7 @@ function ttsStart(){
 function ttsStop(){ if(!TTS.on) return; TTS.on=false; TTS.seq++; if(TTS.nat) kokClear(); try{ speechSynthesis.cancel(); }catch(e){} ttsMark(-1); releaseWake(); resetClock(); updateChrome(); setChrome(true); }
 /* start reading again from the current word (after a jump or a voice change) */
 function ttsRestart(){
-  if(TTS.nat){ if(!KOK.ready) return; /* still loading: it starts from R.pos when ready */ TTS.seq++; kokSpeakFrom(R.pos, TTS.seq); return; }
+  if(TTS.nat){ if(!natReady()){ kokClear(); kokStart(); return; } TTS.seq++; kokSpeakFrom(R.pos, TTS.seq); return; }
   TTS.seq++; try{ speechSynthesis.cancel(); }catch(e){} ttsSpeakFrom(R.pos, TTS.seq);
 }
 function ttsSpeakFrom(i, seq){
@@ -1096,7 +1096,7 @@ function openPanel(){
   if(R.mode==='speed' && R.playing) pause();
   if(SC.auto) asStop(true);
   setTimeout(kokStateUI,0);
-  openSheet('Reading options', panelHTML(), { vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') kokPreview(); else voicePreview(); }, kokget:async()=>{ if(await kokEnsure()){ toast('Natural voice is ready'); } kokStateUI(); }, kokdel:async()=>{ if(TTS.on) ttsStop(); await kokRemove(); toast('Natural voice download removed'); kokStateUI(); }, resetlook:()=>{ resetReading(); refreshPanel(); toast('Reading options reset'); } }, 'short');
+  openSheet('Reading options', panelHTML(), { vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') kokPreview(); else voicePreview(); }, kokget:async()=>{ if(await kokEnsure()){ toast('Natural voice is ready'); } kokStateUI(); }, kokdel:async()=>{ if(TTS.on) ttsStop(); await natRemove(); toast('Natural voice download removed'); kokStateUI(); }, resetlook:()=>{ resetReading(); refreshPanel(); toast('Reading options reset'); } }, 'short');
   bindPanel();
 }
 function refreshPanel(){ const body=$('#sheet .sheet-body'); if(!body) return; const st=body.scrollTop; body.innerHTML=panelHTML(); bindPanel(); body.scrollTop=st; kokStateUI(); }
@@ -1112,7 +1112,8 @@ function afterSet(key){
   if(key==='focus') setChrome(true);
   if(key==='ttsEngine'){ if(TTS.on) ttsStop(); refreshPanel(); return; }
   if(key==='kokDevice'){ if(TTS.on) ttsStop(); kokReset(); refreshPanel(); return; }
-  if((key==='kokVoice'||key==='ttsVoice'||key==='ttsRate') && TTS.on){ clearTimeout(TTS.restartT); TTS.restartT=setTimeout(()=>{ if(TTS.on) ttsRestart(); },400); }
+  if(key==='pipVoice'){ setTimeout(kokStateUI,0); const el=$('#kokSpeed'); if(el) el.textContent='The first sample also shows how quickly this phone can make speech.'; }
+  if((key==='kokVoice'||key==='pipVoice'||key==='ttsVoice'||key==='ttsRate') && TTS.on){ clearTimeout(TTS.restartT); TTS.restartT=setTimeout(()=>{ if(TTS.on) ttsRestart(); },400); }
   applyLook();
   if(key==='speedSize'||key==='focusColor'||key==='boldText'){ if(R.mode==='speed') showChunk(R.pos); }
   if((key==='font'||key==='speedFont') && R.mode==='speed'){ document.fonts&&document.fonts.ready.then(()=>{ if(R.mode==='speed'){ showChunk(R.pos); syncScroll(true); } }); }

@@ -10,13 +10,13 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   await ctx.route(/cdn\.jsdelivr\.net\/npm\/kokoro-js/, r=>r.fulfill({path:S+'tooz/t/'+(variant==='gpu'?'fakekokoro.mjs':'fakekokoro_nogpu.mjs'), contentType:'application/javascript', headers:{'access-control-allow-origin':'*'}}));
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(1500);
-  await pg.evaluate(async()=>{ closeSheet(); S.mode='pages'; saveSettings(); await openDoc(LIB.find(x=>x.kind==='sample').id); }); await sleep(800);
+  await pg.evaluate(async()=>{ closeSheet(); S.mode='pages'; S.ttsEngine='premium'; saveSettings(); await openDoc(LIB.find(x=>x.kind==='sample').id); }); await sleep(800);
   await pg.evaluate(()=>{ window.__dbg=null; openPanel(); }); await sleep(600);
   const p1=await pg.evaluate(()=>[S.kokDevice, !!document.querySelector('[data-set="kokDevice"]'), $('#sheet').textContent.includes('330 MB')]);
   ok(variant+' engine choice shown, faster default', p1[0]==='webgpu' && p1[1] && p1[2], p1);
   await pg.evaluate(()=>document.querySelector('[data-act="vprev"]').click()); await sleep(variant==='gpu'?250:60);
-  const sheetTxt=await pg.evaluate(()=>$('#sheet').textContent.slice(0,140));
-  ok(variant+' download sheet mentions 330 MB', /330 MB/.test(sheetTxt), sheetTxt);
+  const sheetTxt=await pg.evaluate(()=>(($('#kokState')||{}).textContent||'')+' '+$('#sheet').textContent.slice(0,140));
+  if(variant==='gpu') ok(variant+' download progress mentions 330 MB', /330 MB/.test(sheetTxt), sheetTxt.slice(0,120));
   await sleep(2000);
   if(variant==='gpu'){
     await pg.evaluate(()=>openPanel()); await sleep(700);

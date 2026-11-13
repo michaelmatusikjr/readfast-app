@@ -3,7 +3,7 @@
    - The EPUB/PDF readers, fonts and the natural-voice engine: cached after first download, so they work offline.
    - Everything else (articles you load by link) is left alone. */
 const CACHE = 'tooz-v3';
-const CORE = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-512.png'];
+const CORE = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-512.png', 'piper-worker.js'];
 const LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',

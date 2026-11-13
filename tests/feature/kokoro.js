@@ -9,8 +9,8 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   await ctx.route(/cdn\.jsdelivr\.net\/npm\/kokoro-js/, r=>{ fetched++; r.fulfill({path:S+'tooz/t/fakekokoro.mjs', contentType:'application/javascript', headers:{'access-control-allow-origin':'*'}}); });
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); pg.on('console',m=>{ if(m.type()==='error' && !/ERR_TUNNEL|ERR_FAILED/.test(m.text())) errs.push('console: '+m.text()); });
   await pg.goto('http://localhost:8750/'); await sleep(1500);
-  await pg.evaluate(async()=>{ closeSheet(); S.mode='pages'; saveSettings(); await openDoc(LIB.find(x=>x.kind==='sample').id); }); await sleep(800);
-  ok('default engine natural', await pg.evaluate(()=>S.ttsEngine==='kokoro' && S.kokVoice==='af_heart'));
+  await pg.evaluate(async()=>{ closeSheet(); S.mode='pages'; S.ttsEngine='premium'; saveSettings(); await openDoc(LIB.find(x=>x.kind==='sample').id); }); await sleep(800);
+  ok('default engine natural', await pg.evaluate(()=>S.ttsEngine==='premium' && S.kokVoice==='af_heart'));
   await pg.evaluate(()=>openPanel()); await sleep(600);
   const p1=await pg.evaluate(()=>[!!$('#o_kvoice'), $('#o_kvoice').options.length, $('#kokState').textContent]);
   ok('panel natural voices', p1[0] && p1[1]===16 && /Not downloaded/.test(p1[2]), p1);
@@ -43,7 +43,7 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   await pg.evaluate(()=>document.querySelector('[data-set="ttsEngine"] [data-v="system"]').click()); await sleep(500);
   ok('iphone engine panel', await pg.evaluate(()=>S.ttsEngine==='system' && !!$('#o_voice') && !$('#o_kvoice') && !/Enhanced and Premium/.test($('#sheet').textContent)));
   ok('dedupe', await pg.evaluate(()=>{ const fake=[{name:'Samantha',voiceURI:'a',lang:'en-US',localService:true},{name:'Samantha',voiceURI:'b',lang:'en-GB',localService:true},{name:'Daniel',voiceURI:'c',lang:'en-GB',localService:true}]; const o=ttsVoices; window.ttsVoices=()=>fake; TTS.voices=fake; const r=systemVoices('en'); return r.length; })===2);
-  await pg.evaluate(()=>document.querySelector('[data-set="ttsEngine"] [data-v="kokoro"]').click()); await sleep(500);
+  await pg.evaluate(()=>document.querySelector('[data-set="ttsEngine"] [data-v="premium"]').click()); await sleep(500);
   await pg.evaluate(()=>document.querySelector('[data-act="kokdel"]').click()); await sleep(600);
   ok('remove download', await pg.evaluate(()=>/Not downloaded/.test($('#kokState').textContent) && !KOK.ready && !LS.get('kokReady',false)));
   ok('engine fetched once per worker', fetched>=1, fetched);
