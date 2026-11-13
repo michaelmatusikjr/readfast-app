@@ -22,6 +22,7 @@ async function run() {
     try {
       await load(j.voice);
       const t0 = performance.now();
+      globalThis.__toozLenMul = 1 / (j.rate || 1);   /* speed: the library is patched at build time to use this (see build.sh) */
       const wav = await session.predict(j.text);
       const buf = await wav.arrayBuffer();
       post({ type: 'audio', id: j.id, wav: buf, ms: performance.now() - t0 }, [buf]);

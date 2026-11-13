@@ -1,0 +1,42 @@
+const { chromium } = require('playwright-core');
+const S='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
+const P=S+'pip/';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
+const fs=require('fs');
+(async()=>{
+  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--autoplay-policy=no-user-gesture-required','--ignore-certificate-errors'], proxy:{server:process.env.HTTPS_PROXY||process.env.https_proxy, bypass:'localhost,127.0.0.1'}});
+  const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', ignoreHTTPSErrors:true});
+  await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
+  const cors={'access-control-allow-origin':'*'};
+  await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/onnxruntime-web\/1\.18\.0\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:P+'build/node_modules/onnxruntime-web/dist/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/javascript'},cors)}); });
+  await ctx.route(/cdn\.jsdelivr\.net\/npm\/@diffusionstudio\/piper-wasm@1\.0\.0\/build\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:P+'pw/package/build/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/octet-stream'},cors)}); });
+  await ctx.route(/fonts\.(googleapis|gstatic)/, r=>r.abort());
+  const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
+  await pg.goto('http://localhost:8750/'); await sleep(1500);
+  await pg.evaluate(()=>{ closeSheet(); S.ttsEngine='natural'; S.pipVoice='en_US-lessac-medium'; S.ttsRate=1; saveSettings(); });
+  const r=await pg.evaluate(async()=>{
+    await natEnsure();
+    const t='The first statement of the Declaration says, because I was created by God and for His glory, I will magnify Him.';
+    S.ttsRate=1; const a=await natGen(t,350); S.ttsRate=1.5; const c=await natGen(t,350); S.ttsRate=1;
+    const save=async g=>Array.from(new Uint8Array(await (await fetch(g.url)).arrayBuffer()));
+    return {a:{raw:a.raw,dur:a.dur,sdur:a.sdur}, c:{raw:c.raw,dur:c.dur,sdur:c.sdur}, wa:await save(a), wc:await save(c)};
+  });
+  fs.writeFileSync(S+'st/piper_r1.wav',Buffer.from(r.wa)); fs.writeFileSync(S+'st/piper_r15.wav',Buffer.from(r.wc));
+  ok('1.5x is made faster by the voice', r.c.sdur < r.a.sdur*0.8 && r.c.sdur > r.a.sdur*0.55, [r.a, r.c]);
+  ok('silence trimmed, exact pause added', Math.abs((r.a.dur-r.a.sdur)-0.35)<0.01 && Math.abs((r.c.dur-r.c.sdur)-0.35/1.5)<0.01 && r.a.sdur < r.a.raw);
+  /* one sentence per stretch; a long sentence is cut at a comma */
+  const ch=await pg.evaluate(async()=>{ await openDoc(LIB.find(x=>x.kind==='sample').id); const out=[]; let i=0; for(let n=0;n<8;n++){ const c=natChunkAt(i); out.push([c.text.split(' ').length, c.ends]); i=c.j; } return out; });
+  ok('stretches are single sentences', ch.every(([n,e])=>n<=48 && ['sent','block','clause','cap'].includes(e)), ch);
+  await pg.evaluate(()=>{ closeSheet(); $('#rTts').click(); $('#ttsPlay').click(); }); await sleep(6000);
+  const p1=await pg.evaluate(()=>[TTS.on, TTS.cur, NAT.audio.playbackRate, TTS.kq.length]);
+  ok('plays at playback rate 1', p1[0] && p1[1]>=0 && p1[2]===1, p1);
+  await pg.evaluate(()=>ttsSetRate(1.4)); await sleep(3000);
+  const p2=await pg.evaluate(()=>[TTS.on, TTS.kq.map(c=>c.p && c.url ? 1:0), TTS.kq.length]);
+  ok('speed change remakes the queue and keeps playing', p2[0] && p2[2]>0, p2);
+  await sleep(4000);
+  ok('still reading after the change', await pg.evaluate(()=>TTS.on && TTS.cur>0));
+  await pg.evaluate(()=>$('#rTts').click());
+  ok('no page errors', !errs.length, errs);
+  await b.close();
+})();

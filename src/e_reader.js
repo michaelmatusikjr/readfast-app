@@ -1131,7 +1131,7 @@ function ttsSkip(d){
 let ttsRateT=0;
 function ttsRateApply(){
   ttsBarUI();
-  if(TTS.on && TTS.nat){ if(NAT.audio){ NAT.audio.defaultPlaybackRate=NAT.audio.playbackRate=natRate(); } return; }
+  if(TTS.on && TTS.nat){ natRateChanged(); return; }
   if(TTS.on){ clearTimeout(ttsRateT); ttsRateT=setTimeout(()=>{ if(TTS.on){ R.pos=Math.max(0,TTS.cur); ttsRestart(); } },400); }
 }
 function ttsSetRate(v){ S.ttsRate=Math.round(clamp(v,0.5,2)*20)/20; saveSettings(); ttsRateApply(); }

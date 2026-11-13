@@ -87,11 +87,33 @@ const natSize=()=> isST(pipVoice())? 'about 100 MB, shared by all Supertonic voi
 const natReady=()=> VM(pipVoice()).ready===pipVoice();
 async function natDownloaded(){ return pipDownloaded(pipVoice()); }
 function natLoad(prog){ return pipLoad(pipVoice(), prog); }
-async function natGen(text){
-  const r=await pipCall({type:'gen', text, voice:pipVoice()});
-  const {dur}=wavInfo(r.wav); return {url:URL.createObjectURL(new Blob([r.wav],{type:'audio/wav'})), dur, ms:r.ms};
+async function natGen(text, padMs){
+  const rate=natRate();
+  const r=await pipCall({type:'gen', text, voice:pipVoice(), rate});
+  const t=wavTrimPad(r.wav, (padMs||0)/rate);
+  return {url:URL.createObjectURL(new Blob([t.buf],{type:'audio/wav'})), dur:t.dur, sdur:t.sdur, ms:r.ms, raw:wavInfo(r.wav).dur, rate};
 }
-const natRate=()=> S.ttsRate||1;   /* speed is applied on playback, with the pitch kept */
+const natRate=()=> S.ttsRate||1;   /* speed is given to the voice when it makes the speech (Nov 13), so its timing stays natural */
+/* pauses between stretches at normal speed (ms); the voice's own silence at each end is trimmed off first, so every gap is exact */
+const NAT_PAUSE={sent:350, clause:180, cap:120, para:700, headBefore:1100, headAfter:800};
+function natPauseFor(c){
+  if(c.ends==='block'){ return c.pauseAfter>=1100? NAT_PAUSE.headBefore : c.pauseAfter>=700? NAT_PAUSE.headAfter : NAT_PAUSE.para; }
+  return NAT_PAUSE[c.ends]||NAT_PAUSE.sent;
+}
+/* cut the silence the voice leaves at the start and end, then add our own pause at the end (16-bit mono WAV) */
+function wavTrimPad(buf, padMs){
+  const v=new DataView(buf); const sr=v.getUint32(24,true)||22050;
+  const n=Math.floor((buf.byteLength-44)/2), x=new Int16Array(buf,44,n), th=400;
+  let a=0; while(a<n && Math.abs(x[a])<th) a++;
+  let b=n-1; while(b>a && Math.abs(x[b])<th) b--;
+  if(a>=b){ a=0; b=n-1; }
+  a=Math.max(0,a-Math.round(sr*0.03)); b=Math.min(n-1,b+Math.round(sr*0.06));
+  const speech=b-a+1, pad=Math.round(sr*padMs/1000), out=new ArrayBuffer(44+(speech+pad)*2);
+  new Uint8Array(out,0,44).set(new Uint8Array(buf,0,44));
+  const o=new DataView(out); o.setUint32(4,36+(speech+pad)*2,true); o.setUint32(40,(speech+pad)*2,true);
+  new Int16Array(out,44,speech).set(x.subarray(a,b+1));
+  return {buf:out, sdur:speech/sr, dur:(speech+pad)/sr};
+}
 async function natRemove(){ await pipRemove(pipVoice()); }
 /* removes every downloaded voice; returns how many */
 async function natRemoveAll(){
@@ -129,14 +151,28 @@ async function natEnsure(){
     toast('The natural voice couldn’t load ('+String(e.message||e).replace(/\.+$/,'')+'). Check your connection and try again.', null, 7000); return false; }
 }
 /* chunks: one or two sentences, with each word's share of the audio by length (plus a little for pauses) */
-function natChunkAt(i){ return speechChunk(i,55,6); }
+/* one sentence at a time (a long one is cut at a comma or dash), so every pause between sentences is the same */
+function natChunkAt(i){ return speechChunk(i,40,1); }
 function natFill(seq){
-  while(TTS.on && seq===TTS.seq && TTS.kq.length<3 && TTS.knext<R.n){
+  while(TTS.on && seq===TTS.seq && TTS.kq.length<4 && TTS.knext<R.n){
     const c=natChunkAt(TTS.knext); TTS.knext=c.j; if(c.j<=c.i) break;
-    c.p= !c.text ? Promise.resolve(c) : natGen(c.text).then(r=>{ c.url=r.url; c.dur=r.dur; return c; });
+    c.p= !c.text ? Promise.resolve(c) : natGen(c.text, natPauseFor(c)).then(r=>{ c.url=r.url; c.dur=r.dur; c.sdur=r.sdur; return c; });
     c.p.catch(()=>{});
     TTS.kq.push(c);
   }
+}
+/* after a speed change, remake the sentences already prepared at the old speed (the one playing finishes as it is) */
+function natRateChanged(){
+  clearTimeout(NAT.rt);
+  NAT.rt=setTimeout(()=>{
+    if(!TTS.on || !TTS.nat || !TTS.kq) return;
+    const rate=natRate(); if(!TTS.kq.length) return;
+    const first=TTS.kq[0];
+    for(const c of TTS.kq) if(c.url) URL.revokeObjectURL(c.url);
+    TTS.kq=[]; TTS.knext=first.i;
+    for(const M of [PIP,STV]) try{ M.w && M.w.postMessage({type:'cancel'}); }catch(e){}
+    natFill(TTS.seq);
+  },450);
 }
 function natClear(){
   clearInterval(TTS.kt); TTS.kt=0;
@@ -153,19 +189,22 @@ async function natPlayNext(seq){
   const c=TTS.kq[0];
   if(!c){ ttsStop(); toast('Finished reading aloud'); return; }
   if(!c.url && c.text) ttsMark(c.i);
-  try{ await c.p; }catch(e){ if(seq===TTS.seq && TTS.on && e.message!=='cancelled' && e.message!=='stopped'){ ttsStop(); toast('The natural voice stopped: '+e.message); } return; }
+  try{ await c.p; }catch(e){
+    if(e.message==='cancelled' || e.message==='stopped'){ if(seq===TTS.seq && TTS.on && TTS.kq[0]!==c) natPlayNext(seq); return; }   /* replaced after a speed change */
+    if(seq===TTS.seq && TTS.on){ ttsStop(); toast('The natural voice stopped: '+e.message); } return; }
   if(!TTS.on || seq!==TTS.seq) return;
+  if(TTS.kq[0]!==c){ if(c.url) URL.revokeObjectURL(c.url); natPlayNext(seq); return; }
   TTS.kq.shift(); natFill(seq);
   if(!c.url){ natPlayNext(seq); return; }
-  const a=natAudio(); a.src=c.url; a.preservesPitch=true; a.defaultPlaybackRate=a.playbackRate=natRate(); ttsMark(c.i);
+  const a=natAudio(); a.src=c.url; a.defaultPlaybackRate=a.playbackRate=1; ttsMark(c.i);
   clearInterval(TTS.kt);
   TTS.kt=setInterval(()=>{
     if(seq!==TTS.seq){ clearInterval(TTS.kt); return; }
-    const f=a.duration? a.currentTime/a.duration : 0; let k=0; while(k+1<c.cum.length && c.cum[k+1]<=f) k++;
+    const f=c.sdur? Math.min(1,a.currentTime/c.sdur) : a.duration? a.currentTime/a.duration : 0;   /* the pause at the end isn't speech */ let k=0; while(k+1<c.cum.length && c.cum[k+1]<=f) k++;
     if(R.wf && (R.wf[c.i+k]&F_N)) return;
     if(c.i+k!==TTS.cur) ttsMark(c.i+k);
   },100);
-  a.onended=()=>{ clearInterval(TTS.kt); URL.revokeObjectURL(c.url); if(seq===TTS.seq && TTS.on){ const ms=c.dur*1000/natRate(); recordStats(Math.max(300,ms), c.j-c.i); ttsLearn(c.j-c.i, ms); if(c.pauseAfter) setTimeout(()=>natPlayNext(seq), c.pauseAfter/natRate()); else natPlayNext(seq); } };
+  a.onended=()=>{ clearInterval(TTS.kt); URL.revokeObjectURL(c.url); if(seq===TTS.seq && TTS.on){ const ms=c.dur*1000; recordStats(Math.max(300,ms), c.j-c.i); ttsLearn(c.j-c.i, ms); natPlayNext(seq); } };
   try{ await a.play(); }catch(e){ if(seq===TTS.seq){ ttsStop(); toast('Couldn’t play the voice. Tap the speaker to try again.'); } }
 }
 async function natStart(){
@@ -182,8 +221,8 @@ async function natPreview(){
   const out=$('#kokSpeed'); if(out) out.textContent='Making a sample…';
   try{
     const r=await natGen('This is how your books will sound when Tooz reads them aloud.');
-    const url=r.url, a=natAudio(); a.onended=()=>URL.revokeObjectURL(url); a.src=url; a.preservesPitch=true; a.defaultPlaybackRate=a.playbackRate=natRate(); a.play().catch(()=>{});
-    const dur=r.dur/natRate(), x=dur/(r.ms/1000);
+    const url=r.url, a=natAudio(); a.onended=()=>URL.revokeObjectURL(url); a.src=url; a.defaultPlaybackRate=a.playbackRate=1; a.play().catch(()=>{});
+    const dur=r.raw, x=dur/(r.ms/1000);
     const el=$('#kokSpeed'); if(el) el.textContent=`Made ${dur.toFixed(1)} seconds of speech in ${(r.ms/1000).toFixed(1)} seconds — ${x>=1.3?'fast enough for smooth reading.':x>=0.9?'just about fast enough; expect an occasional short pause.':'slower than real time on this phone, so there will be pauses between sentences.'}`;
   }catch(e){ const el=$('#kokSpeed'); if(el) el.textContent='Couldn’t make a sample: '+e.message; }
 }
