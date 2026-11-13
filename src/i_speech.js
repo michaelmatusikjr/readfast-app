@@ -18,6 +18,8 @@ function refPhrase(m, book){
   if(x) return `${ch} verses ${v} through ${x}`;
   return `${ch} verse ${v}`;
 }
+/* "3:7–" + "8": a number range that an earlier version split at the dash (books opened Nov 13); spoken as one */
+const rangeJoin=k=>/\d[–-]$/.test(R.words[k]||'') && glued(k+1) && /^\d/.test(R.words[k+1]||'');
 const coreOf=w=>String(w||'').replace(/^[(\[“"‘']+/,'').replace(/[.,;:!?)\]”"’'—–]+$/,'');
 const isRef=w=>REF_RE.test(coreOf(w));
 /* a book name (or abbreviation) that is followed by chapter:verse */
@@ -38,8 +40,12 @@ function spokenWords(i, j){
   /* a reference list that started before this stretch ("Rom. 8:28; 12:1") */
   let book=null, bookAt=-99;
   for(let k=Math.max(0,i-8);k<i;k++){ if(isRef(R.words[k])){ const b=BIBLE_BOOKS[bookKey(R.words[k-1]||'')]; if(b){ book=b; bookAt=k; } else if(book && k-bookAt<=6) bookAt=k; } }
+  let skip=false;
   for(let k=i;k<j;k++){
-    const raw=R.words[k]||''; const trail=(raw.match(/[.,;:!?)\]”"’'—–]+$/)||[''])[0];
+    if(skip){ skip=false; continue; }
+    const join=k+1<j && rangeJoin(k);
+    const raw=(R.words[k]||'')+(join? R.words[k+1] : '');
+    if(join){ out[k+1-i]=''; out[k-i]=raw; skip=true; } const trail=(raw.match(/[.,;:!?)\]”"’'—–]+$/)||[''])[0];
     const core=coreOf(raw);
     const pausePunct=trail.replace(/[)\]”"’']/g,'').replace(/:/g,',');
     /* book name before chapter:verse ("Isa.", "1 Cor.") */
@@ -109,7 +115,7 @@ function speechChunk(i, max, min){
   if(i>=R.n) return {i, j:R.n, text:'', cum:[], map:[], pauseAfter:0};
   const bEnd=R.blocks[bi]? R.blocks[bi].e : R.n;
   /* a word ending in a dash ends the stretch too, so the pause is a real silence whatever the voice does with the dash */
-  const dashEnd=k=>/(?:[—–]|-{2,})["”’)\]]*$/.test(R.words[k]||'');
+  const dashEnd=k=>/(?:[—–]|-{2,})["”’)\]]*$/.test(R.words[k]||'') && !rangeJoin(k);
   let j=i, len=0; while(j<R.n && j<bEnd && len<max){ j++; len++; if(j<bEnd && dashEnd(j-1)) break; if(len>=min && isSentEnd(j-1) && !noBreakAfter(j-1) && j<bEnd) break; }
   /* never end a stretch on a book name or abbreviation that belongs with the next word */
   while(j<bEnd && j<R.n && noBreakAfter(j-1) && j-i<max+8) j++;
