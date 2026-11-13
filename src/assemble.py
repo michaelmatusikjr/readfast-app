@@ -114,6 +114,7 @@ d=rep(d,"chapters:d.chapters||[], bookmarks:[], highlights:[], finished:false,",
 d=d.replace('ReadFast asks','Tooz asks').replace('ReadFast couldn','Tooz couldn')
 parts.append('\n/* ---------- library ---------- */\n'+d.split('/* ---------- library ---------- */',1)[-1] if '/* ---------- library' in d else d)
 parts.append(open(D+'e_reader.js',encoding='utf-8').read())
+parts.append(open(D+'i_speech.js',encoding='utf-8').read())
 parts.append(open(D+'h_voice.js',encoding='utf-8').read())
 parts.append(open(D+'g_extra.js',encoding='utf-8').read())
 parts.append(open(D+'f_js3.js',encoding='utf-8').read())

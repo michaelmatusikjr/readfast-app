@@ -46,16 +46,16 @@ function renderStats(){
   $('#goalChips').addEventListener('click',e=>{ const b=e.target.closest('[data-goal]'); if(!b) return; S.goalMins=+b.dataset.goal; saveSettings(); renderStats(); });
 }
 
-/* ---------- app settings (reading options live in the reader's Aa panel) ---------- */
+/* ---------- app settings (the Aa panel has mode, theme and text; the other reading options are here) ---------- */
 function renderSettings(){
   $('#settingsBody').innerHTML=`
+    ${R.inSet?`<button class="btn" type="button" id="backToBook" style="margin-bottom:10px">‹ Back to the book</button>`:''}
     <div class="topbar"><div><div class="eyebrow">Tooz eReader</div><h1>Settings</h1></div></div>
-    <h2>Reading options</h2>
+    <h2 id="readHead">Reading options</h2>
+    <p class="note" style="margin:-4px 0 10px">The mode, theme and text are in the <b>Aa</b> button inside any book. Everything here applies to every book.</p>
+    <div id="readSet">${readingSettingsHTML()}</div>
+    <h2>Reading time</h2>
     <div class="group"><div class="set">
-      <div class="desc" style="color:var(--ink)">Themes, fonts, layout, page turns, auto-scroll, speed reading and read aloud are in the <b>Aa</b> button inside any book. They apply to every book.</div>
-      <button class="btn" type="button" id="resetBtn">Reset reading options</button>
-    </div>
-    <div class="set">
       <div class="hd"><b>Stop counting reading time after</b></div>
       <div class="seg" id="idleSeg">${[3,5,10].map(v=>`<button type="button" data-v="${v}" aria-pressed="${(S.idleMins||5)===v}">${v} min</button>`).join('')}</div>
       <div class="desc">If you don’t turn a page, scroll or touch the screen for this long, Tooz assumes you stepped away and counts only the time that stretch of text usually takes you.</div>
@@ -79,7 +79,7 @@ function renderSettings(){
     </div></div>
     <h2>Your library</h2>
     <div class="group"><div class="set">
-      <div class="desc">Your library lives on this device, inside this browser. A backup keeps your books, highlights, notes, bookmarks, saved words and reading log safe if browser data is cleared.</div>
+      <div class="desc">Your library lives on this device, inside this browser. A backup keeps your books, highlights, notes, bookmarks, saved words, archive, reading log and settings safe if browser data is cleared.</div>
       <div class="row"><button class="btn" type="button" id="backupBtn">Save backup</button><button class="btn" type="button" id="restoreBtn">Restore backup</button></div>
       <div class="desc" id="bkLast"></div>
       <div class="desc" id="storeNote"></div>
@@ -143,7 +143,10 @@ function renderSettings(){
   if($('#bkOff')) $('#bkOff').onclick=async()=>{ BK.dir=null; await kvSet('backupDir',null); bkSettingsUI(); toast('Automatic backups turned off'); };
   if($('#bkRemind')) $('#bkRemind').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.bkRemind=+b.dataset.v; saveSettings(); $('#bkRemind').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); };
   $('#restoreBtn').onclick=()=>{ $('#restoreIn').value=''; $('#restoreIn').click(); };
-  $('#resetBtn').onclick=()=>{ resetReading(); toast('Reading options reset'); };
+  bindPanel($('#readSet'));
+  $('#readSet').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const fn=READ_ACTS[b.dataset.act]; if(fn) fn(b,e); });
+  setTimeout(natStateUI,0);
+  if($('#backToBook')) $('#backToBook').onclick=backToBook;
 }
 
 /* ---------- backup / restore ---------- */
@@ -168,7 +171,7 @@ async function buildBackup(){
     parts.push(j);
   }
   for(const k of [...BK.cache.keys()]) if(!ids.has(k)) BK.cache.delete(k);
-  const head=JSON.stringify({app:'Tooz', version:2, savedAt:new Date().toISOString(), meta, words:WORDS, stats:LS.get('stats',{}), archive:ARCH.list()});
+  const head=JSON.stringify({app:'Tooz', version:2, savedAt:new Date().toISOString(), meta, words:WORDS, stats:LS.get('stats',{}), archive:ARCH.list(), settings:S, prefs:{libSort:LS.get('libSort',null), qstyle:LS.get('qstyle',null), notesSeg:LS.get('notesSeg',null)}});
   return head.slice(0,-1)+',"texts":['+parts.join(',')+']}';
 }
 function backupDone(){ LS.set('bk.at',Date.now()); LS.set('bk.sig',librarySig()); if($('#bkLast')) bkSettingsUI(); }
@@ -192,8 +195,9 @@ async function backup(){
 $('#restoreIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
   let b; try{ b=JSON.parse(await f.text()); if(!b||!/^(ReadFast|Tooz)$/.test(b.app)||!Array.isArray(b.meta)||!Array.isArray(b.texts)) throw 0; b.words=Array.isArray(b.words)?b.words:[]; b.stats=(b.stats&&typeof b.stats==='object')?b.stats:{}; }catch(err){ toast('That file isn’t a Tooz backup, or it’s incomplete.', null, 6000); return; }
-  openSheet('Restore backup', `<p class="note">This backup from ${esc(new Date(b.savedAt).toLocaleString())} has ${b.meta.length} document${b.meta.length===1?'':'s'} and ${b.words.length} saved word${b.words.length===1?'':'s'}. They’ll be added to what’s here now. Documents already on this phone are replaced by their backed-up copy.</p><button class="btn primary block" type="button" data-act="go">Restore</button>`,{
+  openSheet('Restore backup', `<p class="note">This backup from ${esc(new Date(b.savedAt).toLocaleString())} has ${b.meta.length} document${b.meta.length===1?'':'s'} and ${b.words.length} saved word${b.words.length===1?'':'s'}. They’ll be added to what’s here now. Documents already on this phone are replaced by their backed-up copy.</p>${b.settings&&typeof b.settings==='object'?`<label class="set" style="display:flex;gap:10px;align-items:center;margin:0 0 12px"><input type="checkbox" id="rsSettings" checked> <span>Also restore reading and app settings</span></label>`:''}<button class="btn primary block" type="button" data-act="go">Restore</button>`,{
     go:async()=>{
+      const withSettings=!!($('#rsSettings')&&$('#rsSettings').checked);
       closeSheet(); if(R.meta && !R.mode) R.meta=null;
       try{
         let k=0; const tot=b.texts.length+b.meta.length;
@@ -205,7 +209,9 @@ $('#restoreIn').addEventListener('change',async e=>{
         if(Array.isArray(b.archive)){ const have=new Set(ARCH.list().map(a=>a.id+'|'+a.archivedAt)); for(const a of b.archive) if(!have.has(a.id+'|'+a.archivedAt)) ARCH.list().push(a); ARCH.list().sort((x,y)=>y.archivedAt-x.archivedAt); ARCH.save(); }
         migrateTags();
         const st=LS.get('stats',{}); for(const k in b.stats){ if(!st[k]||(st[k].ms||0)<(b.stats[k].ms||0)) st[k]=b.stats[k]; } LS.set('stats',st);
-        renderLibrary(); renderWords(); toast('Backup restored');
+        if(withSettings){ for(const k in b.settings){ if(k in DEFAULTS && typeof b.settings[k]===typeof DEFAULTS[k]) S[k]=b.settings[k]; } saveSettings(); applyLook();
+          const pf=b.prefs||{}; for(const k of ['libSort','qstyle','notesSeg']) if(pf[k]!=null) LS.set(k,pf[k]); }
+        renderLibrary(); renderWords(); if(!$('#v-settings').hidden) renderSettings(); toast('Backup restored');
       }catch(err){ console.error(err); toast('The backup couldn’t be fully restored'+(err&&err.name==='QuotaExceededError'?' because the phone’s storage for Tooz is full':'')+'.', null, 8000); try{ LIB=await Store.all('meta'); renderLibrary(); }catch(_){} }
     }});
 });
@@ -1013,7 +1019,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=11;
+const SAMPLE_V=12;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1024,15 +1030,16 @@ const SAMPLE_HTML=`
 <ul><li><strong>Pages</strong> turns pages like a printed book.</li><li><strong>Scroll</strong> gives you one long column to scroll through.</li><li><strong>Speed</strong> flashes the words one at a time in the same spot, so your eyes never have to move.</li></ul>
 <p>All three share your place, down to the word. Switch in the middle of a sentence and you carry on <em>exactly</em> where you were.</p>
 <h2>Auto-scroll</h2>
-<p>In Scroll, open Aa and turn on <strong>Auto-scroll</strong>. A play button and a speed slider appear at the bottom. The text then moves by itself at the words per minute you set, easing in gently when it starts. Tap the page to pause. After that, a tap simply shows or hides the controls so you can read at your own pace; press the play button when you want it to move again.</p>
+<p>In Scroll, turn on <strong>Auto-scroll</strong> in Settings (or Aa → <strong>More settings</strong>). A play button and a speed slider appear at the bottom. The text then moves by itself at the words per minute you set, easing in gently when it starts. Tap the page to pause. After that, a tap simply shows or hides the controls so you can read at your own pace; press the play button when you want it to move again.</p>
 <p>It can also pause for a moment at pictures and headings, so you have time to take them in.</p>
 <h2>Speed reading</h2>
 <p>In Speed, press play and keep your eyes on the coloured letter. Tap anywhere to pause, and the whole sentence appears so you can find your place. The buttons step back or forward by a word or a sentence, and the slider sets your speed.</p>
-<p>Every speed setting is in Aa while you are in Speed: pauses at commas and full stops, a gentle ramp up to speed, two or three words at once, and the colour of the focus letter.</p>
+<p>Every speed setting is in Settings under Speed mode (or Aa → <strong>More settings</strong>): pauses at commas and full stops, a gentle ramp up to speed, two or three words at once, and the colour of the focus letter.</p>
 <p>Hyphenated words like well-known and twenty-five stay on screen a little longer. A dash joins the word before it—like this—and gets the same short pause as a comma.</p>
 <h2>Make it yours</h2>
-<p>Aa only shows the options for the mode you are in. For Pages and Scroll you can change:</p>
-<ul><li>The theme, from white through sepia to black, with a night theme that can switch on by itself.</li><li>The font (including the dyslexia-friendly Lexend and OpenDyslexic), text size, line spacing and margins.</li><li>Paragraphs: indented, spaced, or spaced and indented.</li><li>Brightness and warmth, for reading in the dark.</li><li>How pages turn, and where you tap to turn them.</li></ul>
+<p>Tap <strong>Aa</strong> for the things you change most:</p>
+<ul><li>The mode: Pages, Scroll or Speed.</li><li>The theme, from white through sepia to black, with a night theme that can switch on by itself.</li><li>The font (including the dyslexia-friendly Lexend and OpenDyslexic), text size, line spacing and margins. If a book comes with its own font, a <strong>Book’s font</strong> choice appears too.</li><li>Paragraphs: indented, spaced, or spaced and indented.</li></ul>
+<p>Everything else is in <strong>Settings</strong>, or tap <strong>More settings</strong> at the bottom of Aa: brightness and warmth, how pages turn and where you tap, auto-scroll, speed reading and read aloud.</p>
 <p>Change any of these, or turn your phone sideways, and the page keeps the word you were reading in view.</p>
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>
@@ -1050,8 +1057,9 @@ const SAMPLE_HTML=`
 <p>The list icon at the top opens the contents. The note icon beside it opens this book’s highlights, notes and bookmarks. In very long books, like the Bible, the contents show the books first; tap one to see its chapters. The magnifying glass searches the whole book. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book.</p>
 <p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
 <h2>Read aloud</h2>
-<p>Tap the speaker at the bottom to open the audio controls. Nothing plays yet: tap a word to choose where to start, then press <strong>play</strong>. Each word is marked as it is spoken and the page turns by itself. Tap another word while it plays to jump there. The arrows go back or forward a sentence, and the slider sets the speed. Tap the speaker again to close the controls.</p>
-<p>There are two kinds of voice, in Aa → Read aloud. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
+<p>Tap the speaker at the bottom to open the audio controls. Nothing plays yet: tap a word to choose where to start, then press <strong>play</strong>. Each word is marked as it is spoken and the page turns by itself. Tap another word while it plays to jump there. The arrows go back or forward a sentence, and the slider sets the speed. The controls stay on screen until you tap the speaker again to close them.</p>
+<p>Read aloud skips footnote numbers and the notes themselves, pauses a little longer before a new heading, and reads Bible references in full: Rom. 8:28 is read as “Romans chapter 8 verse 28”, and 1 Cor. 10:31 as “First Corinthians chapter 10 verse 31”. Abbreviations like e.g. and Dr. are read as words. While it reads in Scroll, the page moves so the spoken word stays near the middle of the screen.</p>
+<p>There are two kinds of voice, in Settings → Read aloud. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
 <h2>Helpful extras</h2>
 <ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li><li><strong>Your year in books</strong>, also on Stats, lists the books you finished each year, your longest streak, and a goal for how many books to finish this year.</li></ul>
 <h2>How reading time is counted</h2>
@@ -1072,7 +1080,7 @@ const SAMPLE_HTML=`
 <p>You can also archive a book from its three dots at any time. Unless you have reached the very end, Tooz asks whether you finished it; if not, it is kept as <em>Did not finish</em>. Archived books live in <strong>Settings → Archived books</strong>, where you can read your notes, add a book back to your library with everything you kept, or delete it for good.</p>
 <p><strong>Start over from the beginning</strong>, also in the three dots, puts a book back to <em>Not started</em>.</p>
 <h2>Keeping your library safe</h2>
-<p>In Settings, <strong>Save backup</strong> keeps everything in one file, including your archive. <strong>Storage</strong> shows how much space Tooz uses and which books take the most. If you ever want a clean slate, <strong>Erase all data</strong> removes every book, note and setting from this device.</p>
+<p>In Settings, <strong>Save backup</strong> keeps everything in one file, including your archive and your settings. <strong>Storage</strong> shows how much space Tooz uses and which books take the most. If you ever want a clean slate, <strong>Erase all data</strong> removes every book, note and setting from this device.</p>
 <p>When Tooz is updated, a short <em>What’s new</em> note appears the next time you open it. You can read it again, and see the version number, in <strong>Settings → About</strong>.</p>
 <p>That’s the tour. Close this book with the back arrow whenever you’re ready.</p>
 <h2>Notes</h2>

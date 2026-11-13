@@ -53,8 +53,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   log('panel sections', await pg.evaluate(()=>[...document.querySelectorAll('#sheet .panel-sec h3')].map(x=>x.textContent)));
   await pg.click('#sheet .seg[data-set="mode"] button[data-v="scroll"]'); await sleep(800);
   log('panel scroll sections', await pg.evaluate(()=>[R.mode, [...document.querySelectorAll('#sheet .panel-sec h3')].map(x=>x.textContent)]));
-  await pg.check('#o_autoScroll'); await sleep(300);
-  log('autoscroll opts', await pg.evaluate(()=>[!!$('#o_scrollWpm'), !$('#asBar').hidden]));
+  await pg.evaluate(()=>{ S.autoScroll=true; saveSettings(); asUI(); }); await sleep(300); /* auto-scroll moved from Aa to Settings */
+  log('autoscroll opts', await pg.evaluate(()=>[!$('#asBar').hidden]));
   await pg.click('#sheet .seg[data-set="mode"] button[data-v="speed"]'); await sleep(800);
   log('panel speed sections', await pg.evaluate(()=>[R.mode, [...document.querySelectorAll('#sheet .panel-sec h3')].map(x=>x.textContent)]));
   await pg.click('#sheet .seg[data-set="mode"] button[data-v="scroll"]'); await sleep(800);

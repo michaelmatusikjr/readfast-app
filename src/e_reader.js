@@ -442,7 +442,7 @@ for(const t of ['gesturestart','gesturechange','gestureend']) document.addEventL
 document.addEventListener('touchmove',e=>{ if(e.touches.length>1) e.preventDefault(); },{passive:false});
 
 /* ---------- moving around ---------- */
-function setChrome(on){ R.chrome=on; $('#v-reader').classList.toggle('chrome-off',!on); }
+function setChrome(on){ if(TTS.mode) on=true; /* the audio controls stay on screen in voice mode */ R.chrome=on; $('#v-reader').classList.toggle('chrome-off',!on); }
 function toggleChrome(){ setChrome(!R.chrome); }
 function stopActivity(){ if(R.playing) pause(); if(SC.auto) asStop(true); if(TTS.on) ttsStop(); }
 function setBack(prev){ R.backPos=prev; $('#backPill').hidden=false; clearTimeout(R.backT); R.backT=setTimeout(()=>{ $('#backPill').hidden=true; }, 60000); }
@@ -496,11 +496,11 @@ const MODES={
 async function switchMode(m){
   if(!MODES[m]) m='pages'; R.anchor=null;
   if(m===R.mode) return;
-  if(TTS.mode) ttsModeOff();
+  if(TTS.mode) ttsModeOff(true);
   stopActivity(); selClear();
   if(R.mode) MODES[R.mode].leave();
   R.mode=m; S.mode=m; saveSettings();
-  $('#v-reader').dataset.mode=m; $('#v-reader').classList.toggle('overlay', !!S.focus); setChrome(true);
+  $('#v-reader').dataset.mode=m; $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode); setChrome(true);
   await MODES[m].enter(); updateChrome(); resetClock();
 }
 let relayT=null;
@@ -541,7 +541,7 @@ function noteProgress(){
   if(!quiet && !(R.mode==='scroll'&&SC.auto) && w>60 && w<1200){ S.measuredWpm=S.measuredWpm?Math.round(S.measuredWpm*0.85+w*0.15):Math.round(w); if(now-CLK.saveT>20000){ CLK.saveT=now; saveSettings(); } }
   resetClock();
 }
-function readWpm(){ return R.mode==='speed'?S.wpm : (R.mode==='scroll'&&S.autoScroll)?S.scrollWpm : (S.measuredWpm||230); }
+function readWpm(){ return TTS.mode&&R.mode!=='speed'? ttsWpmNow() : R.mode==='speed'?S.wpm : (R.mode==='scroll'&&S.autoScroll)?S.scrollWpm : (S.measuredWpm||230); }
 function chapterEnd(i){ const c=R.meta.chapters||[]; for(const ch of c){ if(ch.i>i) return ch.i; } return R.n; }
 function infoText(){
   const wpm=readWpm(), pct=Math.round(100*R.pos/Math.max(1,R.n-1));
@@ -648,7 +648,7 @@ function creditLastPage(){
   recordStats(creditFor(dt,dw,true), dw); resetClock();
 }
 function closeReader(quiet){
-  creditLastPage(); if(TTS.mode) ttsModeOff(); stopActivity(); noteProgress(); saveProgress(true); selClear();
+  creditLastPage(); if(TTS.mode) ttsModeOff(true); stopActivity(); noteProgress(); saveProgress(true); selClear();
   const m=R.meta;
   if(R.mode) MODES[R.mode].leave(); R.mode=null; R.meta=null; /* nothing may save a closed book's record again */
   const back=R.returnTo||'library'; R.returnTo=null;
@@ -986,13 +986,14 @@ function ttsRestart(){
 function ttsSpeakFrom(i, seq){
   if(!TTS.on || seq!==TTS.seq) return;
   if(i>=R.n){ ttsStop(); toast('Finished reading aloud'); return; }
-  let j=i, len=0; while(j<R.n && len<70){ j++; len++; if(len>=12 && isSentEnd(j-1)) break; }
-  let text='', map=[]; for(let k=i;k<j;k++){ map.push(text.length); if(R.wf && (R.wf[k]&F_N)) continue; if(k>i && !glued(k)) text+=' '; map[map.length-1]=text.length; text+=R.words[k]; }
+  const ch=speechChunk(i,70,12); const j=ch.j, text=ch.text, map=ch.map; i=ch.i;
+  if(!text){ if(j>=R.n){ ttsStop(); toast('Finished reading aloud'); return; } ttsSpeakFrom(j, seq); return; }
+  const t0=performance.now();
   const u=new SpeechSynthesisUtterance(text); u.rate=S.ttsRate;
   const v=TTS.voices.find(x=>x.voiceURI===S.ttsVoice); if(v){ u.voice=v; u.lang=v.lang; } else u.lang=document.documentElement.lang||'en';
   let lastMark=i;
   u.onboundary=(e)=>{ if(seq!==TTS.seq) return; if(e.name && e.name!=='word') return; const c=e.charIndex; let lo=0, hi=map.length-1; while(lo<hi){ const m=(lo+hi+1)>>1; if(map[m]<=c) lo=m; else hi=m-1; } lastMark=i+lo; ttsMark(lastMark); };
-  u.onend=()=>{ if(seq===TTS.seq && TTS.on){ recordStats(Math.max(500,(j-i)/(S.ttsRate*170)*60000), j-i); ttsSpeakFrom(j, seq); } };
+  u.onend=()=>{ if(seq===TTS.seq && TTS.on){ const ms=performance.now()-t0; recordStats(Math.max(500,ms), j-i); ttsLearn(j-i, ms); if(ch.pauseAfter) setTimeout(()=>{ if(seq===TTS.seq && TTS.on) ttsSpeakFrom(j, seq); }, ch.pauseAfter/(S.ttsRate||1)); else ttsSpeakFrom(j, seq); } };
   u.onerror=(e)=>{ if(seq!==TTS.seq) return; if(e.error==='interrupted'||e.error==='canceled') return; ttsStop(); toast('Read aloud stopped ('+(e.error||'error')+').'); };
   TTS.utt=u; ttsMark(i); speechSynthesis.speak(u);
 }
@@ -1006,7 +1007,11 @@ async function ttsMark(k){
   if(!w){ if(R.mode==='pages') await pgShow(k); else if(R.mode==='scroll') await scShow(k); w=wordEl(k); }
   if(!w) return; w.classList.add('tts');
   if(R.mode==='pages'){ const pg=pgPageOfEl(w); if(pg!==P.page){ pgSet(pg,true); } }
-  else if(R.mode==='scroll'){ const r=w.getBoundingClientRect(), v=scView.getBoundingClientRect(); if(r.top<v.top+20 || r.bottom>v.bottom-60){ scView.scrollTo({top:scView.scrollTop+(r.top-v.top)-v.height*0.3, behavior:'smooth'}); } }
+  else if(R.mode==='scroll'){
+    /* keep the spoken word no lower than the middle of the screen; only the end of the book lets it go further down */
+    const r=w.getBoundingClientRect(), v=scView.getBoundingClientRect(), mid=v.top+v.height*0.5, wc=r.top+r.height/2;
+    if(wc>mid || r.top<v.top+8){ scView.scrollTo({top:scView.scrollTop+(wc-mid), behavior: Math.abs(wc-mid)>v.height*0.6?'auto':'smooth'}); }
+  }
   const now=performance.now(); if(now-ttsMoveT>800){ ttsMoveT=now; updateChrome(); if(now-R.lastSave>3000) saveProgress(); }
 }
 /* ---------- read-aloud controls ----------
@@ -1016,8 +1021,11 @@ function ttsModeOn(){
   if(R.mode==='speed') return;
   if(SC.auto) asStop(true);
   selClear(); TTS.mode=true; TTS.pick=null; setChrome(true); updateChrome(); asUI();
+  /* with "hide controls" on, the page normally runs under the controls; make room for them while they stay up */
+  if($('#v-reader').classList.contains('overlay')){ holdPlace(); $('#v-reader').classList.remove('overlay'); relayoutSoon(); }
 }
-function ttsModeOff(){ ttsStop(); ttsPickMark(null); TTS.mode=false; updateChrome(); asUI(); }
+function ttsModeOff(quiet){ ttsStop(); ttsPickMark(null); TTS.mode=false; updateChrome(); asUI();
+  if(!quiet && S.focus && R.mode && R.mode!=='speed' && !$('#v-reader').classList.contains('overlay')){ holdPlace(); $('#v-reader').classList.add('overlay'); relayoutSoon(); } }
 function ttsBarUI(){
   const b=$('#ttsBar'); b.hidden=!TTS.mode || R.mode==='speed'; $('#ttsHint').hidden=b.hidden || TTS.on || TTS.pick!=null; if(b.hidden) return;
   $('#ttsPlay').innerHTML=TTS.on?ICON.pause:ICON.play; $('#ttsPlay').setAttribute('aria-label',TTS.on?'Pause':'Play');
@@ -1072,11 +1080,20 @@ const pRange=(key,label,min,max,step,desc)=>`<div class="set"><div class="hd"><l
 const pToggle=(key,label,desc)=>`<div class="set"><div class="hd"><label for="o_${key}">${label}</label><input type="checkbox" class="switch" id="o_${key}" data-set="${key}" data-type="toggle"${S[key]?' checked':''}></div>${desc?`<div class="desc">${desc}</div>`:''}</div>`;
 const pSeg=(key,opts,label,desc)=>`<div class="set">${label?`<div class="hd"><label>${label}</label></div>`:''}<div class="seg" data-set="${key}" data-type="seg">${opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(S[key])===String(v)}">${l}</button>`).join('')}</div>${desc?`<div class="desc">${desc}</div>`:''}</div>`;
 function fontGrid(key){
-  key=key||'font'; const bookFont=R.text&&R.text.font?R.text.font.family:null;
+  key=key||'font';
+  /* "Book's font" appears only when this book brings its own font; otherwise "original" means Literata */
+  const fam=R.bookFamily||null, bookName=R.text&&R.text.font?R.text.font.family:null;
+  const cur=(S[key]==='original' && !fam)?'literata':S[key];
   const same=key==='speedFont'?`<button class="chip" type="button" data-v="same" aria-pressed="${S.speedFont==='same'}" style="font-family:${esc(fontCSS())}">Same<small>as reading font</small></button>`:'';
-  return `<div class="fontgrid" data-set="${key}" data-type="seg">${same}${Object.entries(FONTS).map(([k,f])=>`<button class="chip${k==='opendyslexic'?' wide':''}" type="button" data-v="${k}" aria-pressed="${S[key]===k}" style="font-family:${esc(k==='original'?fontCSS():f.css)}">${k==='original'?'Original':k==='opendyslexic'?'Open<wbr>Dyslexic':f.label}<small>${k==='original'?(bookFont?esc(bookFont.slice(0,18)):'Literata'):f.note}</small></button>`).join('')}</div>`;
+  const tiles=Object.entries(FONTS).filter(([k])=>k!=='original'||fam).map(([k,f])=>{
+    const css= k==='original'? `"${fam}",Georgia,serif` : f.css;
+    const label= k==='original'? 'Book’s font' : k==='opendyslexic'?'Open<wbr>Dyslexic':f.label;
+    const note= k==='original'? esc(String(bookName||fam).replace(/[-_]+/g,' ').slice(0,20)) : f.note;
+    return `<button class="chip${k==='opendyslexic'?' wide':''}" type="button" data-v="${k}" aria-pressed="${cur===k}" style="font-family:${esc(css)}">${label}<small>${note}</small></button>`;
+  });
+  return `<div class="fontgrid" data-set="${key}" data-type="seg">${same}${tiles.join('')}</div>`;
 }
-function panelHTML(){
+function panelHTML(){ /* the Aa menu: mode, theme and text; everything else is in Settings */
   const m=S.mode;
   const modeNote={pages:'Turn pages like a printed book: swipe or tap the edges.', scroll:'One long column you scroll through, with optional auto-scroll.', speed:'Words flash one at a time in the same spot.'}[m];
   const themeKeys=['auto',...Object.keys(THEMES)];
@@ -1087,8 +1104,7 @@ function panelHTML(){
       <div class="lbl">${themeKeys.map(k=>`<span>${k==='auto'?'Phone':THEMES[k].label}</span>`).join('')}</div></div>
     <div class="group">${pToggle('nightAuto','Switch theme at night')}
     ${S.nightAuto?`<div class="set"><div class="timerow">From <input class="input" type="time" data-set="nightFrom" data-type="text" value="${esc(S.nightFrom)}"> to <input class="input" type="time" data-set="nightTo" data-type="text" value="${esc(S.nightTo)}"></div>${pSeg('nightTheme',[['sepia','Sepia'],['gray','Gray'],['dark','Dark'],['black','Black']],'Night theme')}</div>`:''}</div>
-  </div>
-  <div class="panel-sec"><h3>Brightness</h3><div class="group">${pRange('dim','Dim',0,80,5,'Darkens the page beyond the phone’s lowest brightness.')}${pRange('warmth','Warmth',0,100,5,'Adds a warm tint for night reading.')}</div></div>`;
+  </div>`;
   if(m!=='speed'){
     h+=`<div class="panel-sec"><h3>Text</h3>${fontGrid()}
     <div class="group">
@@ -1102,23 +1118,31 @@ function panelHTML(){
       ${pToggle('wordStart','Word-start emphasis','Bolds the first part of each word to guide your eyes.')}
     </div></div>`;
   }
-  if(m==='pages'){
-    h+=`<div class="panel-sec"><h3>Pages</h3><div class="group">
+  if(m==='speed'){
+    h+=`<div class="panel-sec"><h3>Word display</h3>${fontGrid('speedFont')}<div class="group">
+      ${pRange('speedSize','Word size',24,72,2)}
+      <div class="set"><div class="hd"><label>Focus letter color</label></div><div class="chips" data-set="focusColor" data-type="seg" style="align-items:center">${COLORS.map(([n,c])=>`<button class="swatch" type="button" data-v="${c}" aria-label="${n}" aria-pressed="${S.focusColor.toLowerCase()===c.toLowerCase()}" style="background:${c}"></button>`).join('')}<label class="note" style="display:flex;align-items:center;gap:8px">Custom <input type="color" data-set="focusColor" data-type="text" value="${esc(S.focusColor)}"></label></div></div>
+      ${pToggle('context','Show the sentence when paused')}
+      ${pToggle('boldText','Bold text')}
+    </div></div>`;
+  }
+  h+=`<button class="btn block" type="button" data-act="more">More settings</button>`;
+  return h;
+}
+/* reading settings shown on the Settings page (and reached from Aa → More settings) */
+function readingSettingsHTML(){
+  let h=`<div class="panel-sec"><h3>Brightness</h3><div class="group">${pRange('dim','Dim',0,80,5,'Darkens the page beyond the phone’s lowest brightness.')}${pRange('warmth','Warmth',0,100,5,'Adds a warm tint for night reading.')}</div></div>`;
+    h+=`<div class="panel-sec"><h3>Pages mode</h3><div class="group">
       ${pSeg('turn',[['slide','Slide'],['fade','Fade'],['none','None']],'Page turn')}
       ${pSeg('tapZones',[['edges','Edges'],['anywhere','Anywhere']],'Tap to turn', S.tapZones==='edges'?'Tap the left or right edge to turn. Tap the middle to show or hide controls.':'Tap the left third to go back, anywhere else to go forward. Tap the top to show or hide controls.')}
       ${pToggle('twoCol','Two pages side by side when wide','On an iPad or a phone turned sideways.')}
-      ${pToggle('focus','Hide controls while reading','Tap the middle of the page to bring them back.')}
+      ${pToggle('focus','Hide controls while reading','In Pages and Scroll. Tap the middle of the page to bring them back.')}
     </div></div>`;
-  }
-  if(m==='scroll'){
-    h+=`<div class="panel-sec"><h3>Scrolling</h3><div class="group">
-      ${pToggle('focus','Hide controls while reading','Tap the page to bring them back.')}
+    h+=`<div class="panel-sec"><h3>Scroll mode</h3><div class="group">
       ${pToggle('autoScroll','Auto-scroll','Scrolls the text for you at a reading speed you set. Tap the page to pause or resume.')}
       ${S.autoScroll?pRange('scrollWpm','Speed',60,700,10)+pToggle('asRamp','Ease into speed','Starts slower and builds to full speed over a few seconds.')+pToggle('asPauses','Pause at pictures and headings','Holds for a moment so you can take them in.')+pToggle('adaptive','Adaptive pacing','Slows a little on long sentences and long words, speeds up on easy stretches.'):''}
     </div></div>`;
-  }
-  if(m==='speed'){
-    h+=`<div class="panel-sec"><h3>Speed reading</h3><div class="group">
+    h+=`<div class="panel-sec"><h3>Speed mode</h3><div class="group">
       ${pRange('wpm','Reading speed',100,1000,10)}
       ${pToggle('ramp','Speed ramp','Starts at 60% of your speed each time you press play and eases up.')}
       ${S.ramp?pRange('rampSecs','Ramp length',2,20,1):''}
@@ -1126,35 +1150,48 @@ function panelHTML(){
       ${S.multi?pRange('charBudget','Group width',8,24,1,'Most letters (with spaces) shown in one flash.'):''}
       ${pToggle('adaptive','Adaptive pacing','Slows a little on long sentences and long words, speeds up on easy stretches.')}
     </div></div>
-    <div class="panel-sec"><h3>Pauses</h3><div class="group">
+    <div class="panel-sec"><h3>Speed mode pauses</h3><div class="group">
       ${pRange('commaPause','After commas and dashes',1,4,0.1)}
       ${pRange('sentPause','At the end of a sentence',1,4,0.1)}
       ${pRange('paraPause','At the end of a paragraph',1,5,0.1)}
       ${pToggle('longWord','Extra time on long words','Words over 7 letters stay on screen a little longer.')}
       ${pRange('autoRewind','Rewind when resuming',0,10,1,'After a pause, play backs up this many words. Jumps never rewind.')}
-    </div></div>
-    <div class="panel-sec"><h3>Word display</h3>${fontGrid('speedFont')}<div class="group">
-      ${pRange('speedSize','Word size',24,72,2)}
-      <div class="set"><div class="hd"><label>Focus letter color</label></div><div class="chips" data-set="focusColor" data-type="seg" style="align-items:center">${COLORS.map(([n,c])=>`<button class="swatch" type="button" data-v="${c}" aria-label="${n}" aria-pressed="${S.focusColor.toLowerCase()===c.toLowerCase()}" style="background:${c}"></button>`).join('')}<label class="note" style="display:flex;align-items:center;gap:8px">Custom <input type="color" data-set="focusColor" data-type="text" value="${esc(S.focusColor)}"></label></div></div>
-      ${pToggle('context','Show the sentence when paused')}
-      ${pToggle('boldText','Bold text')}
     </div></div>`;
-  }
-  if(m!=='speed'){
-    const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase();
-    h+=voiceSectionHTML(lang);
-  }
+  const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase();
+  h+=voiceSectionHTML(lang);
   h+=`<button class="btn block" type="button" data-act="resetlook">Reset reading options</button>`;
   return h;
 }
+/* actions shared by the Aa menu and the reading section of Settings */
+const READ_ACTS={
+  vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') natPreview(); else voicePreview(); },
+  kokget:async()=>{ if(await natEnsure()){ toast('Natural voice is ready'); } natStateUI(); },
+  kokdel:async()=>{ if(TTS.on) ttsStop(); await natRemove(); toast('Voice download removed'); natStateUI(); },
+  resetlook:()=>{ resetReading(); refreshPanel(); toast('Reading options reset'); }
+};
 function openPanel(){
   if(R.mode==='speed' && R.playing) pause();
   if(SC.auto) asStop(true);
-  setTimeout(natStateUI,0);
-  openSheet('Reading options', panelHTML(), { vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') natPreview(); else voicePreview(); }, kokget:async()=>{ if(await natEnsure()){ toast('Natural voice is ready'); } natStateUI(); }, kokdel:async()=>{ if(TTS.on) ttsStop(); await natRemove(); toast('Natural voice download removed'); natStateUI(); }, resetlook:()=>{ resetReading(); refreshPanel(); toast('Reading options reset'); } }, 'short');
+  openSheet('Reading options', panelHTML(), Object.assign({ more:openSettingsFromReader }, READ_ACTS), 'short');
+  $('#sheet .sheet-body').dataset.aa='1';
   bindPanel();
 }
-function refreshPanel(){ const body=$('#sheet .sheet-body'); if(!body) return; const st=body.scrollTop; body.innerHTML=panelHTML(); bindPanel(); body.scrollTop=st; natStateUI(); }
+/* re-draw whichever reading controls are on screen (the Aa menu, the Settings page section) */
+function refreshPanel(){
+  const body=$('#sheet .sheet-body');
+  if(body && !$('#sheet').hidden && body.dataset.aa){ const st=body.scrollTop; body.innerHTML=panelHTML(); bindPanel(); body.scrollTop=st; }
+  const rs=$('#readSet'); if(rs && rs.offsetParent!==null){ rs.innerHTML=readingSettingsHTML(); natStateUI(); }
+}
+/* Aa → More settings: the Settings page over the book, with a way back */
+function openSettingsFromReader(){
+  closeSheet(); if(TTS.on) ttsStop();
+  R.inSet=true; for(const x of VIEWS) $('#v-'+x).hidden=(x!=='settings'); $('#v-reader').hidden=true; $('#tabs').hidden=true;
+  renderSettings(); requestAnimationFrame(()=>{ const r=$('#readHead'); if(r) r.scrollIntoView({block:'start'}); });
+}
+function backToBook(){
+  R.inSet=false; $('#v-settings').hidden=true; $('#v-reader').hidden=false; $('#tabs').hidden=true;
+  holdPlace(); applyLook(); relayoutSoon(); updateChrome();
+}
 function resetReading(){
   const keep={linkService:S.linkService, goalMins:S.goalMins, measuredWpm:S.measuredWpm, info:S.info};
   Object.assign(S, DEFAULTS, keep, {mode:S.mode}); saveSettings(); applyLook(); setWpm(S.wpm); asUI(); relayoutSoon();
@@ -1174,13 +1211,13 @@ function afterSet(key){
   if((key==='font'||key==='speedFont') && R.mode==='speed'){ document.fonts&&document.fonts.ready.then(()=>{ if(R.mode==='speed'){ showChunk(R.pos); syncScroll(true); } }); }
   if(key==='context' && R.mode==='speed') renderContext();
   if(LAYOUT_KEYS.has(key) && R.mode!=='speed') relayoutSoon();
-  if(key==='focus' && R.mode!=='speed'){ $('#v-reader').classList.toggle('overlay', !!S.focus); relayoutSoon(); }
+  if(key==='focus' && R.mode!=='speed'){ $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode); relayoutSoon(); }
   if(REPANEL_KEYS.has(key)) refreshPanel();
   if(key==='tapZones') refreshPanel();
   updateChrome();
 }
-function bindPanel(){
-  const body=$('#sheet .sheet-body'); if(!body || body.dataset.bound) return; body.dataset.bound='1';
+function bindPanel(root){
+  const body=root||$('#sheet .sheet-body'); if(!body || body.dataset.bound) return; body.dataset.bound='1';
   body.addEventListener('input',e=>{
     const t=e.target; const key=t.dataset.set; if(!key) return;
     if(t.dataset.type==='range'){ S[key]=+t.value; const v=body.querySelector(`[data-val="${key}"]`); if(v) v.textContent=FMT[key]?FMT[key](S[key]):S[key]; afterSet(key); }

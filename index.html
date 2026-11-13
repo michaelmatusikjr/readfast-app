@@ -370,6 +370,7 @@ code{font-family:var(--f-mono);font-size:.85em;background:var(--raise);padding:1
 
 /* Reading panel (Aa) */
 .panel-sec{display:flex;flex-direction:column;gap:10px}
+#readSet{display:flex;flex-direction:column;gap:18px;margin-bottom:8px}
 .panel-sec>h3{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:var(--f-ui);font-weight:700}
 .themes{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .themes button{aspect-ratio:1;max-width:100%;border-radius:12px;border:1px solid var(--line);cursor:pointer;font-family:Georgia,serif;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;padding:0}
@@ -664,7 +665,7 @@ const DEFAULTS = {
   turn:'slide', tapZones:'edges', twoCol:true, focus:true,
   autoScroll:false, scrollWpm:220, asRamp:true, asPauses:true,
   wpm:350, multi:false, charBudget:14, ramp:true, rampSecs:6, commaPause:1.6, sentPause:2.3, paraPause:3.0, longWord:true, autoRewind:3, speedSize:44, focusColor:'#E0303F', context:true,
-  speedFont:'same', adaptive:false, ttsRate:1, ttsVoice:'', ttsEngine:'natural', pipVoice:'en_US-lessac-medium', info:0, measuredWpm:0, goalMins:0, linkService:'', bkRemind:7, idleMins:5, yearGoal:0
+  speedFont:'same', adaptive:false, ttsRate:1, ttsVoice:'', ttsEngine:'natural', pipVoice:'en_US-lessac-medium', ttsWpm:0, info:0, measuredWpm:0, goalMins:0, linkService:'', bkRemind:7, idleMins:5, yearGoal:0
 };
 const S = (()=>{
   const saved=LS.get('settings',{})||{};
@@ -2023,7 +2024,7 @@ for(const t of ['gesturestart','gesturechange','gestureend']) document.addEventL
 document.addEventListener('touchmove',e=>{ if(e.touches.length>1) e.preventDefault(); },{passive:false});
 
 /* ---------- moving around ---------- */
-function setChrome(on){ R.chrome=on; $('#v-reader').classList.toggle('chrome-off',!on); }
+function setChrome(on){ if(TTS.mode) on=true; /* the audio controls stay on screen in voice mode */ R.chrome=on; $('#v-reader').classList.toggle('chrome-off',!on); }
 function toggleChrome(){ setChrome(!R.chrome); }
 function stopActivity(){ if(R.playing) pause(); if(SC.auto) asStop(true); if(TTS.on) ttsStop(); }
 function setBack(prev){ R.backPos=prev; $('#backPill').hidden=false; clearTimeout(R.backT); R.backT=setTimeout(()=>{ $('#backPill').hidden=true; }, 60000); }
@@ -2077,11 +2078,11 @@ const MODES={
 async function switchMode(m){
   if(!MODES[m]) m='pages'; R.anchor=null;
   if(m===R.mode) return;
-  if(TTS.mode) ttsModeOff();
+  if(TTS.mode) ttsModeOff(true);
   stopActivity(); selClear();
   if(R.mode) MODES[R.mode].leave();
   R.mode=m; S.mode=m; saveSettings();
-  $('#v-reader').dataset.mode=m; $('#v-reader').classList.toggle('overlay', !!S.focus); setChrome(true);
+  $('#v-reader').dataset.mode=m; $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode); setChrome(true);
   await MODES[m].enter(); updateChrome(); resetClock();
 }
 let relayT=null;
@@ -2122,7 +2123,7 @@ function noteProgress(){
   if(!quiet && !(R.mode==='scroll'&&SC.auto) && w>60 && w<1200){ S.measuredWpm=S.measuredWpm?Math.round(S.measuredWpm*0.85+w*0.15):Math.round(w); if(now-CLK.saveT>20000){ CLK.saveT=now; saveSettings(); } }
   resetClock();
 }
-function readWpm(){ return R.mode==='speed'?S.wpm : (R.mode==='scroll'&&S.autoScroll)?S.scrollWpm : (S.measuredWpm||230); }
+function readWpm(){ return TTS.mode&&R.mode!=='speed'? ttsWpmNow() : R.mode==='speed'?S.wpm : (R.mode==='scroll'&&S.autoScroll)?S.scrollWpm : (S.measuredWpm||230); }
 function chapterEnd(i){ const c=R.meta.chapters||[]; for(const ch of c){ if(ch.i>i) return ch.i; } return R.n; }
 function infoText(){
   const wpm=readWpm(), pct=Math.round(100*R.pos/Math.max(1,R.n-1));
@@ -2229,7 +2230,7 @@ function creditLastPage(){
   recordStats(creditFor(dt,dw,true), dw); resetClock();
 }
 function closeReader(quiet){
-  creditLastPage(); if(TTS.mode) ttsModeOff(); stopActivity(); noteProgress(); saveProgress(true); selClear();
+  creditLastPage(); if(TTS.mode) ttsModeOff(true); stopActivity(); noteProgress(); saveProgress(true); selClear();
   const m=R.meta;
   if(R.mode) MODES[R.mode].leave(); R.mode=null; R.meta=null; /* nothing may save a closed book's record again */
   const back=R.returnTo||'library'; R.returnTo=null;
@@ -2567,13 +2568,14 @@ function ttsRestart(){
 function ttsSpeakFrom(i, seq){
   if(!TTS.on || seq!==TTS.seq) return;
   if(i>=R.n){ ttsStop(); toast('Finished reading aloud'); return; }
-  let j=i, len=0; while(j<R.n && len<70){ j++; len++; if(len>=12 && isSentEnd(j-1)) break; }
-  let text='', map=[]; for(let k=i;k<j;k++){ map.push(text.length); if(R.wf && (R.wf[k]&F_N)) continue; if(k>i && !glued(k)) text+=' '; map[map.length-1]=text.length; text+=R.words[k]; }
+  const ch=speechChunk(i,70,12); const j=ch.j, text=ch.text, map=ch.map; i=ch.i;
+  if(!text){ if(j>=R.n){ ttsStop(); toast('Finished reading aloud'); return; } ttsSpeakFrom(j, seq); return; }
+  const t0=performance.now();
   const u=new SpeechSynthesisUtterance(text); u.rate=S.ttsRate;
   const v=TTS.voices.find(x=>x.voiceURI===S.ttsVoice); if(v){ u.voice=v; u.lang=v.lang; } else u.lang=document.documentElement.lang||'en';
   let lastMark=i;
   u.onboundary=(e)=>{ if(seq!==TTS.seq) return; if(e.name && e.name!=='word') return; const c=e.charIndex; let lo=0, hi=map.length-1; while(lo<hi){ const m=(lo+hi+1)>>1; if(map[m]<=c) lo=m; else hi=m-1; } lastMark=i+lo; ttsMark(lastMark); };
-  u.onend=()=>{ if(seq===TTS.seq && TTS.on){ recordStats(Math.max(500,(j-i)/(S.ttsRate*170)*60000), j-i); ttsSpeakFrom(j, seq); } };
+  u.onend=()=>{ if(seq===TTS.seq && TTS.on){ const ms=performance.now()-t0; recordStats(Math.max(500,ms), j-i); ttsLearn(j-i, ms); if(ch.pauseAfter) setTimeout(()=>{ if(seq===TTS.seq && TTS.on) ttsSpeakFrom(j, seq); }, ch.pauseAfter/(S.ttsRate||1)); else ttsSpeakFrom(j, seq); } };
   u.onerror=(e)=>{ if(seq!==TTS.seq) return; if(e.error==='interrupted'||e.error==='canceled') return; ttsStop(); toast('Read aloud stopped ('+(e.error||'error')+').'); };
   TTS.utt=u; ttsMark(i); speechSynthesis.speak(u);
 }
@@ -2587,7 +2589,11 @@ async function ttsMark(k){
   if(!w){ if(R.mode==='pages') await pgShow(k); else if(R.mode==='scroll') await scShow(k); w=wordEl(k); }
   if(!w) return; w.classList.add('tts');
   if(R.mode==='pages'){ const pg=pgPageOfEl(w); if(pg!==P.page){ pgSet(pg,true); } }
-  else if(R.mode==='scroll'){ const r=w.getBoundingClientRect(), v=scView.getBoundingClientRect(); if(r.top<v.top+20 || r.bottom>v.bottom-60){ scView.scrollTo({top:scView.scrollTop+(r.top-v.top)-v.height*0.3, behavior:'smooth'}); } }
+  else if(R.mode==='scroll'){
+    /* keep the spoken word no lower than the middle of the screen; only the end of the book lets it go further down */
+    const r=w.getBoundingClientRect(), v=scView.getBoundingClientRect(), mid=v.top+v.height*0.5, wc=r.top+r.height/2;
+    if(wc>mid || r.top<v.top+8){ scView.scrollTo({top:scView.scrollTop+(wc-mid), behavior: Math.abs(wc-mid)>v.height*0.6?'auto':'smooth'}); }
+  }
   const now=performance.now(); if(now-ttsMoveT>800){ ttsMoveT=now; updateChrome(); if(now-R.lastSave>3000) saveProgress(); }
 }
 /* ---------- read-aloud controls ----------
@@ -2597,8 +2603,11 @@ function ttsModeOn(){
   if(R.mode==='speed') return;
   if(SC.auto) asStop(true);
   selClear(); TTS.mode=true; TTS.pick=null; setChrome(true); updateChrome(); asUI();
+  /* with "hide controls" on, the page normally runs under the controls; make room for them while they stay up */
+  if($('#v-reader').classList.contains('overlay')){ holdPlace(); $('#v-reader').classList.remove('overlay'); relayoutSoon(); }
 }
-function ttsModeOff(){ ttsStop(); ttsPickMark(null); TTS.mode=false; updateChrome(); asUI(); }
+function ttsModeOff(quiet){ ttsStop(); ttsPickMark(null); TTS.mode=false; updateChrome(); asUI();
+  if(!quiet && S.focus && R.mode && R.mode!=='speed' && !$('#v-reader').classList.contains('overlay')){ holdPlace(); $('#v-reader').classList.add('overlay'); relayoutSoon(); } }
 function ttsBarUI(){
   const b=$('#ttsBar'); b.hidden=!TTS.mode || R.mode==='speed'; $('#ttsHint').hidden=b.hidden || TTS.on || TTS.pick!=null; if(b.hidden) return;
   $('#ttsPlay').innerHTML=TTS.on?ICON.pause:ICON.play; $('#ttsPlay').setAttribute('aria-label',TTS.on?'Pause':'Play');
@@ -2653,11 +2662,20 @@ const pRange=(key,label,min,max,step,desc)=>`<div class="set"><div class="hd"><l
 const pToggle=(key,label,desc)=>`<div class="set"><div class="hd"><label for="o_${key}">${label}</label><input type="checkbox" class="switch" id="o_${key}" data-set="${key}" data-type="toggle"${S[key]?' checked':''}></div>${desc?`<div class="desc">${desc}</div>`:''}</div>`;
 const pSeg=(key,opts,label,desc)=>`<div class="set">${label?`<div class="hd"><label>${label}</label></div>`:''}<div class="seg" data-set="${key}" data-type="seg">${opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(S[key])===String(v)}">${l}</button>`).join('')}</div>${desc?`<div class="desc">${desc}</div>`:''}</div>`;
 function fontGrid(key){
-  key=key||'font'; const bookFont=R.text&&R.text.font?R.text.font.family:null;
+  key=key||'font';
+  /* "Book's font" appears only when this book brings its own font; otherwise "original" means Literata */
+  const fam=R.bookFamily||null, bookName=R.text&&R.text.font?R.text.font.family:null;
+  const cur=(S[key]==='original' && !fam)?'literata':S[key];
   const same=key==='speedFont'?`<button class="chip" type="button" data-v="same" aria-pressed="${S.speedFont==='same'}" style="font-family:${esc(fontCSS())}">Same<small>as reading font</small></button>`:'';
-  return `<div class="fontgrid" data-set="${key}" data-type="seg">${same}${Object.entries(FONTS).map(([k,f])=>`<button class="chip${k==='opendyslexic'?' wide':''}" type="button" data-v="${k}" aria-pressed="${S[key]===k}" style="font-family:${esc(k==='original'?fontCSS():f.css)}">${k==='original'?'Original':k==='opendyslexic'?'Open<wbr>Dyslexic':f.label}<small>${k==='original'?(bookFont?esc(bookFont.slice(0,18)):'Literata'):f.note}</small></button>`).join('')}</div>`;
+  const tiles=Object.entries(FONTS).filter(([k])=>k!=='original'||fam).map(([k,f])=>{
+    const css= k==='original'? `"${fam}",Georgia,serif` : f.css;
+    const label= k==='original'? 'Book’s font' : k==='opendyslexic'?'Open<wbr>Dyslexic':f.label;
+    const note= k==='original'? esc(String(bookName||fam).replace(/[-_]+/g,' ').slice(0,20)) : f.note;
+    return `<button class="chip${k==='opendyslexic'?' wide':''}" type="button" data-v="${k}" aria-pressed="${cur===k}" style="font-family:${esc(css)}">${label}<small>${note}</small></button>`;
+  });
+  return `<div class="fontgrid" data-set="${key}" data-type="seg">${same}${tiles.join('')}</div>`;
 }
-function panelHTML(){
+function panelHTML(){ /* the Aa menu: mode, theme and text; everything else is in Settings */
   const m=S.mode;
   const modeNote={pages:'Turn pages like a printed book: swipe or tap the edges.', scroll:'One long column you scroll through, with optional auto-scroll.', speed:'Words flash one at a time in the same spot.'}[m];
   const themeKeys=['auto',...Object.keys(THEMES)];
@@ -2668,8 +2686,7 @@ function panelHTML(){
       <div class="lbl">${themeKeys.map(k=>`<span>${k==='auto'?'Phone':THEMES[k].label}</span>`).join('')}</div></div>
     <div class="group">${pToggle('nightAuto','Switch theme at night')}
     ${S.nightAuto?`<div class="set"><div class="timerow">From <input class="input" type="time" data-set="nightFrom" data-type="text" value="${esc(S.nightFrom)}"> to <input class="input" type="time" data-set="nightTo" data-type="text" value="${esc(S.nightTo)}"></div>${pSeg('nightTheme',[['sepia','Sepia'],['gray','Gray'],['dark','Dark'],['black','Black']],'Night theme')}</div>`:''}</div>
-  </div>
-  <div class="panel-sec"><h3>Brightness</h3><div class="group">${pRange('dim','Dim',0,80,5,'Darkens the page beyond the phone’s lowest brightness.')}${pRange('warmth','Warmth',0,100,5,'Adds a warm tint for night reading.')}</div></div>`;
+  </div>`;
   if(m!=='speed'){
     h+=`<div class="panel-sec"><h3>Text</h3>${fontGrid()}
     <div class="group">
@@ -2683,23 +2700,31 @@ function panelHTML(){
       ${pToggle('wordStart','Word-start emphasis','Bolds the first part of each word to guide your eyes.')}
     </div></div>`;
   }
-  if(m==='pages'){
-    h+=`<div class="panel-sec"><h3>Pages</h3><div class="group">
+  if(m==='speed'){
+    h+=`<div class="panel-sec"><h3>Word display</h3>${fontGrid('speedFont')}<div class="group">
+      ${pRange('speedSize','Word size',24,72,2)}
+      <div class="set"><div class="hd"><label>Focus letter color</label></div><div class="chips" data-set="focusColor" data-type="seg" style="align-items:center">${COLORS.map(([n,c])=>`<button class="swatch" type="button" data-v="${c}" aria-label="${n}" aria-pressed="${S.focusColor.toLowerCase()===c.toLowerCase()}" style="background:${c}"></button>`).join('')}<label class="note" style="display:flex;align-items:center;gap:8px">Custom <input type="color" data-set="focusColor" data-type="text" value="${esc(S.focusColor)}"></label></div></div>
+      ${pToggle('context','Show the sentence when paused')}
+      ${pToggle('boldText','Bold text')}
+    </div></div>`;
+  }
+  h+=`<button class="btn block" type="button" data-act="more">More settings</button>`;
+  return h;
+}
+/* reading settings shown on the Settings page (and reached from Aa → More settings) */
+function readingSettingsHTML(){
+  let h=`<div class="panel-sec"><h3>Brightness</h3><div class="group">${pRange('dim','Dim',0,80,5,'Darkens the page beyond the phone’s lowest brightness.')}${pRange('warmth','Warmth',0,100,5,'Adds a warm tint for night reading.')}</div></div>`;
+    h+=`<div class="panel-sec"><h3>Pages mode</h3><div class="group">
       ${pSeg('turn',[['slide','Slide'],['fade','Fade'],['none','None']],'Page turn')}
       ${pSeg('tapZones',[['edges','Edges'],['anywhere','Anywhere']],'Tap to turn', S.tapZones==='edges'?'Tap the left or right edge to turn. Tap the middle to show or hide controls.':'Tap the left third to go back, anywhere else to go forward. Tap the top to show or hide controls.')}
       ${pToggle('twoCol','Two pages side by side when wide','On an iPad or a phone turned sideways.')}
-      ${pToggle('focus','Hide controls while reading','Tap the middle of the page to bring them back.')}
+      ${pToggle('focus','Hide controls while reading','In Pages and Scroll. Tap the middle of the page to bring them back.')}
     </div></div>`;
-  }
-  if(m==='scroll'){
-    h+=`<div class="panel-sec"><h3>Scrolling</h3><div class="group">
-      ${pToggle('focus','Hide controls while reading','Tap the page to bring them back.')}
+    h+=`<div class="panel-sec"><h3>Scroll mode</h3><div class="group">
       ${pToggle('autoScroll','Auto-scroll','Scrolls the text for you at a reading speed you set. Tap the page to pause or resume.')}
       ${S.autoScroll?pRange('scrollWpm','Speed',60,700,10)+pToggle('asRamp','Ease into speed','Starts slower and builds to full speed over a few seconds.')+pToggle('asPauses','Pause at pictures and headings','Holds for a moment so you can take them in.')+pToggle('adaptive','Adaptive pacing','Slows a little on long sentences and long words, speeds up on easy stretches.'):''}
     </div></div>`;
-  }
-  if(m==='speed'){
-    h+=`<div class="panel-sec"><h3>Speed reading</h3><div class="group">
+    h+=`<div class="panel-sec"><h3>Speed mode</h3><div class="group">
       ${pRange('wpm','Reading speed',100,1000,10)}
       ${pToggle('ramp','Speed ramp','Starts at 60% of your speed each time you press play and eases up.')}
       ${S.ramp?pRange('rampSecs','Ramp length',2,20,1):''}
@@ -2707,35 +2732,48 @@ function panelHTML(){
       ${S.multi?pRange('charBudget','Group width',8,24,1,'Most letters (with spaces) shown in one flash.'):''}
       ${pToggle('adaptive','Adaptive pacing','Slows a little on long sentences and long words, speeds up on easy stretches.')}
     </div></div>
-    <div class="panel-sec"><h3>Pauses</h3><div class="group">
+    <div class="panel-sec"><h3>Speed mode pauses</h3><div class="group">
       ${pRange('commaPause','After commas and dashes',1,4,0.1)}
       ${pRange('sentPause','At the end of a sentence',1,4,0.1)}
       ${pRange('paraPause','At the end of a paragraph',1,5,0.1)}
       ${pToggle('longWord','Extra time on long words','Words over 7 letters stay on screen a little longer.')}
       ${pRange('autoRewind','Rewind when resuming',0,10,1,'After a pause, play backs up this many words. Jumps never rewind.')}
-    </div></div>
-    <div class="panel-sec"><h3>Word display</h3>${fontGrid('speedFont')}<div class="group">
-      ${pRange('speedSize','Word size',24,72,2)}
-      <div class="set"><div class="hd"><label>Focus letter color</label></div><div class="chips" data-set="focusColor" data-type="seg" style="align-items:center">${COLORS.map(([n,c])=>`<button class="swatch" type="button" data-v="${c}" aria-label="${n}" aria-pressed="${S.focusColor.toLowerCase()===c.toLowerCase()}" style="background:${c}"></button>`).join('')}<label class="note" style="display:flex;align-items:center;gap:8px">Custom <input type="color" data-set="focusColor" data-type="text" value="${esc(S.focusColor)}"></label></div></div>
-      ${pToggle('context','Show the sentence when paused')}
-      ${pToggle('boldText','Bold text')}
     </div></div>`;
-  }
-  if(m!=='speed'){
-    const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase();
-    h+=voiceSectionHTML(lang);
-  }
+  const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase();
+  h+=voiceSectionHTML(lang);
   h+=`<button class="btn block" type="button" data-act="resetlook">Reset reading options</button>`;
   return h;
 }
+/* actions shared by the Aa menu and the reading section of Settings */
+const READ_ACTS={
+  vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') natPreview(); else voicePreview(); },
+  kokget:async()=>{ if(await natEnsure()){ toast('Natural voice is ready'); } natStateUI(); },
+  kokdel:async()=>{ if(TTS.on) ttsStop(); await natRemove(); toast('Voice download removed'); natStateUI(); },
+  resetlook:()=>{ resetReading(); refreshPanel(); toast('Reading options reset'); }
+};
 function openPanel(){
   if(R.mode==='speed' && R.playing) pause();
   if(SC.auto) asStop(true);
-  setTimeout(natStateUI,0);
-  openSheet('Reading options', panelHTML(), { vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') natPreview(); else voicePreview(); }, kokget:async()=>{ if(await natEnsure()){ toast('Natural voice is ready'); } natStateUI(); }, kokdel:async()=>{ if(TTS.on) ttsStop(); await natRemove(); toast('Natural voice download removed'); natStateUI(); }, resetlook:()=>{ resetReading(); refreshPanel(); toast('Reading options reset'); } }, 'short');
+  openSheet('Reading options', panelHTML(), Object.assign({ more:openSettingsFromReader }, READ_ACTS), 'short');
+  $('#sheet .sheet-body').dataset.aa='1';
   bindPanel();
 }
-function refreshPanel(){ const body=$('#sheet .sheet-body'); if(!body) return; const st=body.scrollTop; body.innerHTML=panelHTML(); bindPanel(); body.scrollTop=st; natStateUI(); }
+/* re-draw whichever reading controls are on screen (the Aa menu, the Settings page section) */
+function refreshPanel(){
+  const body=$('#sheet .sheet-body');
+  if(body && !$('#sheet').hidden && body.dataset.aa){ const st=body.scrollTop; body.innerHTML=panelHTML(); bindPanel(); body.scrollTop=st; }
+  const rs=$('#readSet'); if(rs && rs.offsetParent!==null){ rs.innerHTML=readingSettingsHTML(); natStateUI(); }
+}
+/* Aa → More settings: the Settings page over the book, with a way back */
+function openSettingsFromReader(){
+  closeSheet(); if(TTS.on) ttsStop();
+  R.inSet=true; for(const x of VIEWS) $('#v-'+x).hidden=(x!=='settings'); $('#v-reader').hidden=true; $('#tabs').hidden=true;
+  renderSettings(); requestAnimationFrame(()=>{ const r=$('#readHead'); if(r) r.scrollIntoView({block:'start'}); });
+}
+function backToBook(){
+  R.inSet=false; $('#v-settings').hidden=true; $('#v-reader').hidden=false; $('#tabs').hidden=true;
+  holdPlace(); applyLook(); relayoutSoon(); updateChrome();
+}
 function resetReading(){
   const keep={linkService:S.linkService, goalMins:S.goalMins, measuredWpm:S.measuredWpm, info:S.info};
   Object.assign(S, DEFAULTS, keep, {mode:S.mode}); saveSettings(); applyLook(); setWpm(S.wpm); asUI(); relayoutSoon();
@@ -2755,13 +2793,13 @@ function afterSet(key){
   if((key==='font'||key==='speedFont') && R.mode==='speed'){ document.fonts&&document.fonts.ready.then(()=>{ if(R.mode==='speed'){ showChunk(R.pos); syncScroll(true); } }); }
   if(key==='context' && R.mode==='speed') renderContext();
   if(LAYOUT_KEYS.has(key) && R.mode!=='speed') relayoutSoon();
-  if(key==='focus' && R.mode!=='speed'){ $('#v-reader').classList.toggle('overlay', !!S.focus); relayoutSoon(); }
+  if(key==='focus' && R.mode!=='speed'){ $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode); relayoutSoon(); }
   if(REPANEL_KEYS.has(key)) refreshPanel();
   if(key==='tapZones') refreshPanel();
   updateChrome();
 }
-function bindPanel(){
-  const body=$('#sheet .sheet-body'); if(!body || body.dataset.bound) return; body.dataset.bound='1';
+function bindPanel(root){
+  const body=root||$('#sheet .sheet-body'); if(!body || body.dataset.bound) return; body.dataset.bound='1';
   body.addEventListener('input',e=>{
     const t=e.target; const key=t.dataset.set; if(!key) return;
     if(t.dataset.type==='range'){ S[key]=+t.value; const v=body.querySelector(`[data-val="${key}"]`); if(v) v.textContent=FMT[key]?FMT[key](S[key]):S[key]; afterSet(key); }
@@ -2788,6 +2826,99 @@ $('#markBtn').onclick=()=>openToc('marks');
 /* night theme switch and phone light/dark changes */
 setInterval(()=>{ if(S.nightAuto) applyLook(); },60000);
 try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>applyLook()); }catch(e){}
+
+/* ---------- what read-aloud says ----------
+   Builds the spoken text for a stretch of words: skips note markers and the notes themselves,
+   reads scripture references and common abbreviations in full, never says "colon",
+   and stops at the end of a paragraph so a pause can follow (longer before a heading). */
+const BIBLE_BOOKS=(()=>{
+  const full=['Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','Samuel','Kings','Chronicles','Ezra','Nehemiah','Esther','Job','Psalm','Psalms','Proverbs','Ecclesiastes','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','Corinthians','Galatians','Ephesians','Philippians','Colossians','Thessalonians','Timothy','Titus','Philemon','Hebrews','James','Peter','Jude','Revelation'];
+  const m={}; for(const b of full) m[b.toLowerCase()]=b==='Psalms'?'Psalm':b;
+  const ab={gen:'Genesis',gn:'Genesis',ex:'Exodus',exod:'Exodus',exo:'Exodus',lev:'Leviticus',lv:'Leviticus',num:'Numbers',nm:'Numbers',deut:'Deuteronomy',dt:'Deuteronomy',josh:'Joshua',jos:'Joshua',judg:'Judges',jdg:'Judges',ru:'Ruth',sam:'Samuel',sm:'Samuel',kgs:'Kings',ki:'Kings',chron:'Chronicles',chr:'Chronicles',neh:'Nehemiah',esth:'Esther',est:'Esther',ps:'Psalm',psa:'Psalm',pss:'Psalm',prov:'Proverbs',pr:'Proverbs',prv:'Proverbs',eccl:'Ecclesiastes',eccles:'Ecclesiastes',ecc:'Ecclesiastes',qoh:'Ecclesiastes',song:'Song of Songs',sos:'Song of Solomon',isa:'Isaiah',jer:'Jeremiah',lam:'Lamentations',ezek:'Ezekiel',eze:'Ezekiel',dan:'Daniel',hos:'Hosea',obad:'Obadiah',ob:'Obadiah',jon:'Jonah',mic:'Micah',nah:'Nahum',hab:'Habakkuk',zeph:'Zephaniah',hag:'Haggai',zech:'Zechariah',mal:'Malachi',matt:'Matthew',mt:'Matthew',mk:'Mark',mrk:'Mark',lk:'Luke',jn:'John',rom:'Romans',cor:'Corinthians',gal:'Galatians',eph:'Ephesians',phil:'Philippians',php:'Philippians',col:'Colossians',thess:'Thessalonians',thes:'Thessalonians',tim:'Timothy',tit:'Titus',philem:'Philemon',phlm:'Philemon',heb:'Hebrews',jas:'James',pet:'Peter',pt:'Peter',rev:'Revelation'};
+  return Object.assign(m,ab);
+})();
+const BOOK_ORD={1:'First',2:'Second',3:'Third',i:'First',ii:'Second',iii:'Third'};
+const ABBR={'e.g.':'for example','i.e.':'that is','etc.':'et cetera','cf.':'compare','vs.':'versus','viz.':'namely','Mr.':'Mister','Mrs.':'Missus','Ms.':'Miz','Dr.':'Doctor','Jr.':'Junior','Sr.':'Senior','Prof.':'Professor','pp.':'pages','ch.':'chapter','chap.':'chapter','chs.':'chapters','vol.':'volume','vols.':'volumes','vv.':'verses','ff.':'and following','ca.':'circa','approx.':'approximately','&':'and','A.D.':'A D','B.C.':'B C','a.m.':'A M','p.m.':'P M'};
+const REF_RE=/^(\d{1,3}):(\d{1,3})[a-c]?(?:[–—-](\d{1,3})(?::(\d{1,3}))?[a-c]?)?$/;
+const bookKey=w=>w.replace(/^[(\[“"‘']+/,'').replace(/[.,;:)\]”"’']+$/,'').toLowerCase();
+function refPhrase(m, book){
+  const [,c,v,x,y]=m; const ch=book==='Psalm'?`${c}`:`chapter ${c}`;
+  if(x && y) return `${ch} verse ${v} through ${book==='Psalm'?'':'chapter '}${x} verse ${y}`;
+  if(x) return `${ch} verses ${v} through ${x}`;
+  return `${ch} verse ${v}`;
+}
+/* spoken form of each word from i to j (exclusive); '' means silent */
+function spokenWords(i, j){
+  const out=new Array(j-i).fill(null);
+  let book=null, bookAt=-99;
+  for(let k=i;k<j;k++){
+    const raw=R.words[k]||''; const lead=(raw.match(/^[(\[“"‘']+/)||[''])[0], trail=(raw.match(/[.,;:!?)\]”"’']+$/)||[''])[0];
+    const core=raw.slice(lead.length, raw.length-trail.length||undefined);
+    const pausePunct=trail.replace(/[)\]”"’']/g,'').replace(/:/g,',');
+    /* chapter:verse */
+    const m=REF_RE.exec(core);
+    if(m){
+      const bk=BIBLE_BOOKS[bookKey(R.words[k-1]||'')];
+      if(k-1>=i && bk){
+        book=bk; bookAt=k;
+        const n=bookKey(R.words[k-2]||''); const ord=k-2>=i? BOOK_ORD[n] : null;
+        out[k-1-i]=(ord?ord+' ':'')+bk; if(ord) out[k-2-i]='';
+        out[k-i]=refPhrase(m,bk)+pausePunct; continue;
+      }
+      if(book && k-bookAt<=6){ bookAt=k; out[k-i]=refPhrase(m,book)+pausePunct; continue; }
+      out[k-i]=`${m[1]} ${m[2]}`+(m[3]?` to ${m[3]}`:'')+pausePunct; continue;
+    }
+    /* v. 6 / vv. 6–8 */
+    if((core==='v' && trail.startsWith('.')) || core==='vv'){ out[k-i]=core==='v'?'verse':'verses'; continue; }
+    const ab=ABBR[core+trail.slice(0,1)]||ABBR[raw.replace(/[,;)]+$/,'')]||ABBR[core];
+    if(ab){ out[k-i]=ab+(trail.length>1?trail.slice(1).replace(/[)\]”"’':]/g,''):''); continue; }
+    if(/^(St|Mt)\.$/.test(raw)){ const nx=R.words[k+1]||''; out[k-i]= /^[A-Z]/.test(nx)? (raw[0]==='S'?'Saint':'Mount') : (raw[0]==='S'?'Street':'Mount'); continue; }
+    if(raw==='Rev.' && !REF_RE.test(bookKey(R.words[k+1]||''))){ out[k-i]='Reverend'; continue; }
+    if(/^(no|No)\.$/.test(raw) && /^\d/.test(R.words[k+1]||'')){ out[k-i]='number'; continue; }
+    if(/^p\.$/.test(raw) && /^\d/.test(R.words[k+1]||'')){ out[k-i]='page'; continue; }
+    out[k-i]=null; /* unchanged */
+  }
+  return out;
+}
+/* blocks that hold the text of footnotes/endnotes (read-aloud skips them) */
+function noteBlocks(){
+  if(R._nb && R._nbFor===R.meta) return R._nb;
+  const s=new Set(); if(R.notes && R.blocks) for(const [ref,t] of R.notes){ if(t>ref) s.add(blockAt(t)); }
+  R._nb=s; R._nbFor=R.meta; return s;
+}
+const isHeadBlock=b=>!!b && /^h\d/.test(b.t||'');
+/* the next stretch to speak from word i: up to max words, ending at a sentence end (after min words) or the end of the paragraph */
+function speechChunk(i, max, min){
+  const NB=noteBlocks();
+  /* skip whole note blocks */
+  let bi=blockAt(i);
+  while(i<R.n && NB.has(bi)){ i=R.blocks[bi].e; bi=blockAt(i); }
+  if(i>=R.n) return {i, j:R.n, text:'', cum:[], map:[], pauseAfter:0};
+  const bEnd=R.blocks[bi]? R.blocks[bi].e : R.n;
+  let j=i, len=0; while(j<R.n && j<bEnd && len<max){ j++; len++; if(len>=min && isSentEnd(j-1) && j<bEnd) break; }
+  const sp=spokenWords(i,j);
+  let text=''; const wt=[], map=[];
+  for(let k=i;k<j;k++){
+    map.push(text.length);
+    if(R.wf && (R.wf[k]&F_N)){ wt.push(0); continue; }
+    let w=sp[k-i]; if(w===''){ wt.push(0); continue; }
+    if(w==null) w=R.words[k];
+    w=w.replace(/:(?=\s|$)/g,',').replace(/:/g,' ');
+    if(k>i && !glued(k) && text) text+=' ';
+    map[map.length-1]=text.length; text+=w;
+    wt.push(w.replace(/[^\p{L}\p{N} ]/gu,'').length+1 + (/[,;—–]$/.test(w)?3:0) + (/[.!?]["”’)]*$/.test(w)?6:0));
+  }
+  const tot=wt.reduce((a,b)=>a+b,0)||1; let acc=0; const cum=wt.map(x=>{ const c=acc/tot; acc+=x; return c; });
+  let pauseAfter=0;
+  if(j>=bEnd){ const cur=R.blocks[bi], nx=R.blocks[bi+1]; pauseAfter= isHeadBlock(nx)? 1100 : isHeadBlock(cur)? 700 : 350; }
+  return {i, j, text:text.trim(), cum, map, pauseAfter};
+}
+/* listening speed, for "time left" while read-aloud is on (words per minute at normal speed, learned as you listen) */
+function ttsLearn(words, ms){
+  if(words<4 || ms<800) return; const w=words/(ms/60000)/(S.ttsRate||1); if(w<60||w>400) return;
+  S.ttsWpm=S.ttsWpm?Math.round(S.ttsWpm*0.8+w*0.2):Math.round(w); saveSettings();
+}
+const ttsWpmNow=()=>(S.ttsWpm||165)*(S.ttsRate||1);
 
 /* ---------- natural voices (Piper, run on the phone) ----------
    Speech is made in a background worker (piper-worker.js) so the page stays responsive; the next sentences are
@@ -2845,8 +2976,11 @@ async function pipDownloaded(voice){
   try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper'); await dir.getFileHandle(voice+'.onnx'); return true; }catch(e){ return false; }
 }
 async function pipRemove(voice){
-  try{ await pipCall({type:'remove', voice}); }catch(e){}
-  LS.set('pipReady.'+voice,false); if(PIP.ready===voice) PIP.ready=null;
+  /* close the voice first so its file isn't in use, then delete it here (Safari doesn't support the library's own delete) */
+  if(PIP.ready===voice || PIP.lvoice===voice) pipReset();
+  try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper');
+    for(const name of [voice+'.onnx', voice+'.onnx.json']){ try{ await dir.removeEntry(name); }catch(e){} } }catch(e){}
+  LS.set('pipReady.'+voice,false);
 }
 function wavInfo(buf){ const v=new DataView(buf); const sr=v.getUint32(24,true)||22050; return {sr, dur:Math.max(0,(buf.byteLength-44)/2/sr)}; }
 function progPct(prog){ let a=0,t=0; for(const k in prog){ a+=prog[k][0]; t+=prog[k][1]; } return t? {pct:Math.min(100,Math.round(100*a/t)), a, t} : {pct:0,a:0,t:0}; }
@@ -2887,7 +3021,7 @@ async function natEnsure(){
   if(natReady()) return true;
   const had=await natDownloaded();
   /* in the Reading options panel, show the download right there; elsewhere use a small sheet */
-  const inline=!!$('#kokState') && !$('#sheet').hidden;
+  const inline=!!$('#kokState') && $('#kokState').offsetParent!==null;
   let ui=null; const prog=p=>{ if(had) return; if(inline){ const el=$('#kokState'); if(el) el.innerHTML=`Downloading the voice (${natSize()})… ${p.t?p.pct+'% · '+fmtBytes(p.a)+' of '+fmtBytes(p.t):''}<div class="goalbar"><i style="width:${p.pct}%"></i></div>`; return; } if(!ui) ui=natProgressUI(); ui(p); };
   if(had) toast('Starting the natural voice…');
   try{ await natLoad(prog); if(ui && $('#kokBar')) closeSheet(); if(inline) natStateUI(); return true; }
@@ -2895,21 +3029,10 @@ async function natEnsure(){
     toast('The natural voice couldn’t load ('+String(e.message||e).replace(/\.+$/,'')+'). Check your connection and try again.', null, 7000); return false; }
 }
 /* chunks: one or two sentences, with each word's share of the audio by length (plus a little for pauses) */
-function natChunkAt(i){
-  let j=i, len=0; while(j<R.n && len<55){ j++; len++; if(len>=6 && isSentEnd(j-1)) break; }
-  let text=''; const wt=[];
-  for(let k=i;k<j;k++){
-    if(R.wf && (R.wf[k]&F_N)){ wt.push(0); continue; }
-    if(k>i && !glued(k)) text+=' ';
-    const w=R.words[k]; text+=w;
-    wt.push(w.replace(/[^\p{L}\p{N}]/gu,'').length+1 + (/[,;:—–]$/.test(w)?3:0) + (/[.!?]["”’)]*$/.test(w)?6:0));
-  }
-  const tot=wt.reduce((a,b)=>a+b,0)||1; let acc=0; const cum=wt.map(x=>{ const c=acc/tot; acc+=x; return c; });
-  return {i,j,text:text.trim(),cum};
-}
+function natChunkAt(i){ return speechChunk(i,55,6); }
 function natFill(seq){
   while(TTS.on && seq===TTS.seq && TTS.kq.length<3 && TTS.knext<R.n){
-    const c=natChunkAt(TTS.knext); TTS.knext=c.j;
+    const c=natChunkAt(TTS.knext); TTS.knext=c.j; if(c.j<=c.i) break;
     c.p= !c.text ? Promise.resolve(c) : natGen(c.text).then(r=>{ c.url=r.url; c.dur=r.dur; return c; });
     c.p.catch(()=>{});
     TTS.kq.push(c);
@@ -2942,7 +3065,7 @@ async function natPlayNext(seq){
     if(R.wf && (R.wf[c.i+k]&F_N)) return;
     if(c.i+k!==TTS.cur) ttsMark(c.i+k);
   },100);
-  a.onended=()=>{ clearInterval(TTS.kt); URL.revokeObjectURL(c.url); if(seq===TTS.seq && TTS.on){ recordStats(Math.max(300,c.dur*1000/natRate()), c.j-c.i); natPlayNext(seq); } };
+  a.onended=()=>{ clearInterval(TTS.kt); URL.revokeObjectURL(c.url); if(seq===TTS.seq && TTS.on){ const ms=c.dur*1000/natRate(); recordStats(Math.max(300,ms), c.j-c.i); ttsLearn(c.j-c.i, ms); if(c.pauseAfter) setTimeout(()=>natPlayNext(seq), c.pauseAfter/natRate()); else natPlayNext(seq); } };
   try{ await a.play(); }catch(e){ if(seq===TTS.seq){ ttsStop(); toast('Couldn’t play the voice. Tap the speaker to try again.'); } }
 }
 async function natStart(){
@@ -3009,11 +3132,14 @@ async function natStateUI(){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.3';
+const APP_VERSION='2026.11.13.4';
 const WHATSNEW=[
-  ['Audio controls','Tap the speaker to open the audio controls. Tap a word to choose where to start, then press play. Skip back or forward a sentence and change the speed while it plays.'],
-  ['Natural voices','Read aloud uses natural-sounding voices that run on your phone. Each voice downloads once (about 60 MB) and then works offline. The slower Premium voices have been removed, along with their downloads.'],
-  ['Free up space','Settings → Storage has a new button to remove every downloaded voice at once.']
+  ['A simpler Aa menu','Aa now has just the mode, theme and text. Everything else is in Settings; tap <b>More settings</b> at the bottom of Aa to get there and back.'],
+  ['Read aloud reads better','Bible references are read in full (“Matthew chapter 5 verse 6”), abbreviations like e.g. are read as words, colons aren’t spoken, footnotes are skipped, and there’s a longer pause before headings.'],
+  ['Easier to follow along','The audio controls stay on screen while read aloud is on. In Scroll, the spoken word stays near the middle of the screen.'],
+  ['Book’s font','If a book comes with its own font, you can choose it in Aa as <b>Book’s font</b>.'],
+  ['Backups include settings','Backups now save your reading and app settings too, and restoring can bring them back.'],
+  ['Fixes','The time left in a chapter is right while listening, and removing a voice download updates straight away.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -3307,16 +3433,16 @@ function renderStats(){
   $('#goalChips').addEventListener('click',e=>{ const b=e.target.closest('[data-goal]'); if(!b) return; S.goalMins=+b.dataset.goal; saveSettings(); renderStats(); });
 }
 
-/* ---------- app settings (reading options live in the reader's Aa panel) ---------- */
+/* ---------- app settings (the Aa panel has mode, theme and text; the other reading options are here) ---------- */
 function renderSettings(){
   $('#settingsBody').innerHTML=`
+    ${R.inSet?`<button class="btn" type="button" id="backToBook" style="margin-bottom:10px">‹ Back to the book</button>`:''}
     <div class="topbar"><div><div class="eyebrow">Tooz eReader</div><h1>Settings</h1></div></div>
-    <h2>Reading options</h2>
+    <h2 id="readHead">Reading options</h2>
+    <p class="note" style="margin:-4px 0 10px">The mode, theme and text are in the <b>Aa</b> button inside any book. Everything here applies to every book.</p>
+    <div id="readSet">${readingSettingsHTML()}</div>
+    <h2>Reading time</h2>
     <div class="group"><div class="set">
-      <div class="desc" style="color:var(--ink)">Themes, fonts, layout, page turns, auto-scroll, speed reading and read aloud are in the <b>Aa</b> button inside any book. They apply to every book.</div>
-      <button class="btn" type="button" id="resetBtn">Reset reading options</button>
-    </div>
-    <div class="set">
       <div class="hd"><b>Stop counting reading time after</b></div>
       <div class="seg" id="idleSeg">${[3,5,10].map(v=>`<button type="button" data-v="${v}" aria-pressed="${(S.idleMins||5)===v}">${v} min</button>`).join('')}</div>
       <div class="desc">If you don’t turn a page, scroll or touch the screen for this long, Tooz assumes you stepped away and counts only the time that stretch of text usually takes you.</div>
@@ -3340,7 +3466,7 @@ function renderSettings(){
     </div></div>
     <h2>Your library</h2>
     <div class="group"><div class="set">
-      <div class="desc">Your library lives on this device, inside this browser. A backup keeps your books, highlights, notes, bookmarks, saved words and reading log safe if browser data is cleared.</div>
+      <div class="desc">Your library lives on this device, inside this browser. A backup keeps your books, highlights, notes, bookmarks, saved words, archive, reading log and settings safe if browser data is cleared.</div>
       <div class="row"><button class="btn" type="button" id="backupBtn">Save backup</button><button class="btn" type="button" id="restoreBtn">Restore backup</button></div>
       <div class="desc" id="bkLast"></div>
       <div class="desc" id="storeNote"></div>
@@ -3404,7 +3530,10 @@ function renderSettings(){
   if($('#bkOff')) $('#bkOff').onclick=async()=>{ BK.dir=null; await kvSet('backupDir',null); bkSettingsUI(); toast('Automatic backups turned off'); };
   if($('#bkRemind')) $('#bkRemind').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.bkRemind=+b.dataset.v; saveSettings(); $('#bkRemind').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); };
   $('#restoreBtn').onclick=()=>{ $('#restoreIn').value=''; $('#restoreIn').click(); };
-  $('#resetBtn').onclick=()=>{ resetReading(); toast('Reading options reset'); };
+  bindPanel($('#readSet'));
+  $('#readSet').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const fn=READ_ACTS[b.dataset.act]; if(fn) fn(b,e); });
+  setTimeout(natStateUI,0);
+  if($('#backToBook')) $('#backToBook').onclick=backToBook;
 }
 
 /* ---------- backup / restore ---------- */
@@ -3429,7 +3558,7 @@ async function buildBackup(){
     parts.push(j);
   }
   for(const k of [...BK.cache.keys()]) if(!ids.has(k)) BK.cache.delete(k);
-  const head=JSON.stringify({app:'Tooz', version:2, savedAt:new Date().toISOString(), meta, words:WORDS, stats:LS.get('stats',{}), archive:ARCH.list()});
+  const head=JSON.stringify({app:'Tooz', version:2, savedAt:new Date().toISOString(), meta, words:WORDS, stats:LS.get('stats',{}), archive:ARCH.list(), settings:S, prefs:{libSort:LS.get('libSort',null), qstyle:LS.get('qstyle',null), notesSeg:LS.get('notesSeg',null)}});
   return head.slice(0,-1)+',"texts":['+parts.join(',')+']}';
 }
 function backupDone(){ LS.set('bk.at',Date.now()); LS.set('bk.sig',librarySig()); if($('#bkLast')) bkSettingsUI(); }
@@ -3453,8 +3582,9 @@ async function backup(){
 $('#restoreIn').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f) return;
   let b; try{ b=JSON.parse(await f.text()); if(!b||!/^(ReadFast|Tooz)$/.test(b.app)||!Array.isArray(b.meta)||!Array.isArray(b.texts)) throw 0; b.words=Array.isArray(b.words)?b.words:[]; b.stats=(b.stats&&typeof b.stats==='object')?b.stats:{}; }catch(err){ toast('That file isn’t a Tooz backup, or it’s incomplete.', null, 6000); return; }
-  openSheet('Restore backup', `<p class="note">This backup from ${esc(new Date(b.savedAt).toLocaleString())} has ${b.meta.length} document${b.meta.length===1?'':'s'} and ${b.words.length} saved word${b.words.length===1?'':'s'}. They’ll be added to what’s here now. Documents already on this phone are replaced by their backed-up copy.</p><button class="btn primary block" type="button" data-act="go">Restore</button>`,{
+  openSheet('Restore backup', `<p class="note">This backup from ${esc(new Date(b.savedAt).toLocaleString())} has ${b.meta.length} document${b.meta.length===1?'':'s'} and ${b.words.length} saved word${b.words.length===1?'':'s'}. They’ll be added to what’s here now. Documents already on this phone are replaced by their backed-up copy.</p>${b.settings&&typeof b.settings==='object'?`<label class="set" style="display:flex;gap:10px;align-items:center;margin:0 0 12px"><input type="checkbox" id="rsSettings" checked> <span>Also restore reading and app settings</span></label>`:''}<button class="btn primary block" type="button" data-act="go">Restore</button>`,{
     go:async()=>{
+      const withSettings=!!($('#rsSettings')&&$('#rsSettings').checked);
       closeSheet(); if(R.meta && !R.mode) R.meta=null;
       try{
         let k=0; const tot=b.texts.length+b.meta.length;
@@ -3466,7 +3596,9 @@ $('#restoreIn').addEventListener('change',async e=>{
         if(Array.isArray(b.archive)){ const have=new Set(ARCH.list().map(a=>a.id+'|'+a.archivedAt)); for(const a of b.archive) if(!have.has(a.id+'|'+a.archivedAt)) ARCH.list().push(a); ARCH.list().sort((x,y)=>y.archivedAt-x.archivedAt); ARCH.save(); }
         migrateTags();
         const st=LS.get('stats',{}); for(const k in b.stats){ if(!st[k]||(st[k].ms||0)<(b.stats[k].ms||0)) st[k]=b.stats[k]; } LS.set('stats',st);
-        renderLibrary(); renderWords(); toast('Backup restored');
+        if(withSettings){ for(const k in b.settings){ if(k in DEFAULTS && typeof b.settings[k]===typeof DEFAULTS[k]) S[k]=b.settings[k]; } saveSettings(); applyLook();
+          const pf=b.prefs||{}; for(const k of ['libSort','qstyle','notesSeg']) if(pf[k]!=null) LS.set(k,pf[k]); }
+        renderLibrary(); renderWords(); if(!$('#v-settings').hidden) renderSettings(); toast('Backup restored');
       }catch(err){ console.error(err); toast('The backup couldn’t be fully restored'+(err&&err.name==='QuotaExceededError'?' because the phone’s storage for Tooz is full':'')+'.', null, 8000); try{ LIB=await Store.all('meta'); renderLibrary(); }catch(_){} }
     }});
 });
@@ -4274,7 +4406,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=11;
+const SAMPLE_V=12;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -4285,15 +4417,16 @@ const SAMPLE_HTML=`
 <ul><li><strong>Pages</strong> turns pages like a printed book.</li><li><strong>Scroll</strong> gives you one long column to scroll through.</li><li><strong>Speed</strong> flashes the words one at a time in the same spot, so your eyes never have to move.</li></ul>
 <p>All three share your place, down to the word. Switch in the middle of a sentence and you carry on <em>exactly</em> where you were.</p>
 <h2>Auto-scroll</h2>
-<p>In Scroll, open Aa and turn on <strong>Auto-scroll</strong>. A play button and a speed slider appear at the bottom. The text then moves by itself at the words per minute you set, easing in gently when it starts. Tap the page to pause. After that, a tap simply shows or hides the controls so you can read at your own pace; press the play button when you want it to move again.</p>
+<p>In Scroll, turn on <strong>Auto-scroll</strong> in Settings (or Aa → <strong>More settings</strong>). A play button and a speed slider appear at the bottom. The text then moves by itself at the words per minute you set, easing in gently when it starts. Tap the page to pause. After that, a tap simply shows or hides the controls so you can read at your own pace; press the play button when you want it to move again.</p>
 <p>It can also pause for a moment at pictures and headings, so you have time to take them in.</p>
 <h2>Speed reading</h2>
 <p>In Speed, press play and keep your eyes on the coloured letter. Tap anywhere to pause, and the whole sentence appears so you can find your place. The buttons step back or forward by a word or a sentence, and the slider sets your speed.</p>
-<p>Every speed setting is in Aa while you are in Speed: pauses at commas and full stops, a gentle ramp up to speed, two or three words at once, and the colour of the focus letter.</p>
+<p>Every speed setting is in Settings under Speed mode (or Aa → <strong>More settings</strong>): pauses at commas and full stops, a gentle ramp up to speed, two or three words at once, and the colour of the focus letter.</p>
 <p>Hyphenated words like well-known and twenty-five stay on screen a little longer. A dash joins the word before it—like this—and gets the same short pause as a comma.</p>
 <h2>Make it yours</h2>
-<p>Aa only shows the options for the mode you are in. For Pages and Scroll you can change:</p>
-<ul><li>The theme, from white through sepia to black, with a night theme that can switch on by itself.</li><li>The font (including the dyslexia-friendly Lexend and OpenDyslexic), text size, line spacing and margins.</li><li>Paragraphs: indented, spaced, or spaced and indented.</li><li>Brightness and warmth, for reading in the dark.</li><li>How pages turn, and where you tap to turn them.</li></ul>
+<p>Tap <strong>Aa</strong> for the things you change most:</p>
+<ul><li>The mode: Pages, Scroll or Speed.</li><li>The theme, from white through sepia to black, with a night theme that can switch on by itself.</li><li>The font (including the dyslexia-friendly Lexend and OpenDyslexic), text size, line spacing and margins. If a book comes with its own font, a <strong>Book’s font</strong> choice appears too.</li><li>Paragraphs: indented, spaced, or spaced and indented.</li></ul>
+<p>Everything else is in <strong>Settings</strong>, or tap <strong>More settings</strong> at the bottom of Aa: brightness and warmth, how pages turn and where you tap, auto-scroll, speed reading and read aloud.</p>
 <p>Change any of these, or turn your phone sideways, and the page keeps the word you were reading in view.</p>
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>
@@ -4311,8 +4444,9 @@ const SAMPLE_HTML=`
 <p>The list icon at the top opens the contents. The note icon beside it opens this book’s highlights, notes and bookmarks. In very long books, like the Bible, the contents show the books first; tap one to see its chapters. The magnifying glass searches the whole book. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book.</p>
 <p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
 <h2>Read aloud</h2>
-<p>Tap the speaker at the bottom to open the audio controls. Nothing plays yet: tap a word to choose where to start, then press <strong>play</strong>. Each word is marked as it is spoken and the page turns by itself. Tap another word while it plays to jump there. The arrows go back or forward a sentence, and the slider sets the speed. Tap the speaker again to close the controls.</p>
-<p>There are two kinds of voice, in Aa → Read aloud. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
+<p>Tap the speaker at the bottom to open the audio controls. Nothing plays yet: tap a word to choose where to start, then press <strong>play</strong>. Each word is marked as it is spoken and the page turns by itself. Tap another word while it plays to jump there. The arrows go back or forward a sentence, and the slider sets the speed. The controls stay on screen until you tap the speaker again to close them.</p>
+<p>Read aloud skips footnote numbers and the notes themselves, pauses a little longer before a new heading, and reads Bible references in full: Rom. 8:28 is read as “Romans chapter 8 verse 28”, and 1 Cor. 10:31 as “First Corinthians chapter 10 verse 31”. Abbreviations like e.g. and Dr. are read as words. While it reads in Scroll, the page moves so the spoken word stays near the middle of the screen.</p>
+<p>There are two kinds of voice, in Settings → Read aloud. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
 <h2>Helpful extras</h2>
 <ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li><li><strong>Your year in books</strong>, also on Stats, lists the books you finished each year, your longest streak, and a goal for how many books to finish this year.</li></ul>
 <h2>How reading time is counted</h2>
@@ -4333,7 +4467,7 @@ const SAMPLE_HTML=`
 <p>You can also archive a book from its three dots at any time. Unless you have reached the very end, Tooz asks whether you finished it; if not, it is kept as <em>Did not finish</em>. Archived books live in <strong>Settings → Archived books</strong>, where you can read your notes, add a book back to your library with everything you kept, or delete it for good.</p>
 <p><strong>Start over from the beginning</strong>, also in the three dots, puts a book back to <em>Not started</em>.</p>
 <h2>Keeping your library safe</h2>
-<p>In Settings, <strong>Save backup</strong> keeps everything in one file, including your archive. <strong>Storage</strong> shows how much space Tooz uses and which books take the most. If you ever want a clean slate, <strong>Erase all data</strong> removes every book, note and setting from this device.</p>
+<p>In Settings, <strong>Save backup</strong> keeps everything in one file, including your archive and your settings. <strong>Storage</strong> shows how much space Tooz uses and which books take the most. If you ever want a clean slate, <strong>Erase all data</strong> removes every book, note and setting from this device.</p>
 <p>When Tooz is updated, a short <em>What’s new</em> note appears the next time you open it. You can read it again, and see the version number, in <strong>Settings → About</strong>.</p>
 <p>That’s the tour. Close this book with the back arrow whenever you’re ready.</p>
 <h2>Notes</h2>
