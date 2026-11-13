@@ -165,7 +165,9 @@ function natFill(seq){
 function natRateChanged(){
   clearTimeout(NAT.rt);
   NAT.rt=setTimeout(()=>{
-    if(!TTS.on || !TTS.nat || !TTS.kq) return;
+    if(!TTS.on || !TTS.nat) return;
+    if(TTS.ab){ if(NAT.audio){ NAT.audio.preservesPitch=true; NAT.audio.defaultPlaybackRate=NAT.audio.playbackRate=natRate(); } return; }   /* saved audio: just play it faster */
+    if(!TTS.kq) return;
     const rate=natRate(); if(!TTS.kq.length) return;
     const first=TTS.kq[0];
     for(const c of TTS.kq) if(c.url) URL.revokeObjectURL(c.url);
@@ -182,12 +184,28 @@ function natClear(){
   const a=NAT.audio; if(a){ a.onended=null; try{ a.pause(); }catch(e){} }
 }
 function natSpeakFrom(i, seq){
-  natClear(); TTS.knext=i; natFill(seq); natPlayNext(seq);
+  natClear();
+  if(abPlayFrom(i, seq)) return;   /* this part of the book is downloaded: play the saved audio */
+  TTS.ab=false; TTS.knext=i; natFill(seq); natPlayNext(seq);
+}
+/* lock-screen and headphone controls */
+function natMedia(sub){
+  if(!('mediaSession' in navigator) || !R.meta) return;
+  try{
+    const ch=currentChapter(R.pos);
+    navigator.mediaSession.metadata=new MediaMetadata({title:(ch&&ch.t)||R.meta.title, artist:R.meta.author||'', album:R.meta.title});
+    if(!NAT.msSet){ NAT.msSet=true;
+      const h={play:()=>{ if(!TTS.on && TTS.mode) ttsPlayPause(); }, pause:()=>{ if(TTS.on) ttsPlayPause(); },
+        previoustrack:()=>ttsSkip(-1), nexttrack:()=>ttsSkip(1), seekbackward:()=>ttsSkip(-1), seekforward:()=>ttsSkip(1)};
+      for(const k in h) try{ navigator.mediaSession.setActionHandler(k,h[k]); }catch(e){}
+    }
+  }catch(e){}
 }
 async function natPlayNext(seq){
   if(!TTS.on || seq!==TTS.seq) return;
   const c=TTS.kq[0];
   if(!c){ ttsStop(); toast('Finished reading aloud'); return; }
+  if(abPartAt(c.i)){ natSpeakFrom(c.i, seq); return; }   /* reached a downloaded part */
   if(!c.url && c.text) ttsMark(c.i);
   try{ await c.p; }catch(e){
     if(e.message==='cancelled' || e.message==='stopped'){ if(seq===TTS.seq && TTS.on && TTS.kq[0]!==c) natPlayNext(seq); return; }   /* replaced after a speed change */
@@ -196,7 +214,7 @@ async function natPlayNext(seq){
   if(TTS.kq[0]!==c){ if(c.url) URL.revokeObjectURL(c.url); natPlayNext(seq); return; }
   TTS.kq.shift(); natFill(seq);
   if(!c.url){ natPlayNext(seq); return; }
-  const a=natAudio(); a.src=c.url; a.defaultPlaybackRate=a.playbackRate=1; ttsMark(c.i);
+  const a=natAudio(); a.src=c.url; a.defaultPlaybackRate=a.playbackRate=1; ttsMark(c.i); natMedia();
   clearInterval(TTS.kt);
   TTS.kt=setInterval(()=>{
     if(seq!==TTS.seq){ clearInterval(TTS.kt); return; }
@@ -210,7 +228,8 @@ async function natPlayNext(seq){
 async function natStart(){
   natUnlock(); /* must happen during the tap */
   const seq=TTS.seq;
-  if(!natReady()){ const ok=await natEnsure(); if(!ok){ if(TTS.on) ttsStop(); return; } }
+  await abManifest();
+  if(!abPartAt(R.pos) && !natReady()){ const ok=await natEnsure(); if(!ok){ if(TTS.on) ttsStop(); return; } }
   if(!TTS.on) return;
   TTS.seq++; natSpeakFrom(R.pos, TTS.seq);
 }

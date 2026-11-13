@@ -90,6 +90,7 @@ function renderSettings(){
       <div class="desc" id="storeUse" style="color:var(--ink)">Checking…</div>
       <button class="btn" type="button" id="storeBooks">Show space used by each book</button>
       <button class="btn" type="button" id="rmVoices" style="margin-top:8px">Remove all downloaded voices</button>
+      <button class="btn" type="button" id="rmAudio" style="margin-top:8px">Remove all saved book audio</button><div class="desc" id="abUse"></div>
     </div></div>
     <h2>Library</h2>
     <div class="group"><div class="set"><div class="hd"><b>Tags</b></div></div><div class="set" id="tagSet">${(()=>{ const n=tagCounts().length; return n? `<details class="tdet" id="tagDet"${TAGS_OPEN?' open':''}><summary>${n} tag${n===1?'':'s'} <span>· tap to ${TAGS_OPEN?'hide':'show'}</span></summary>${tagsSettingsHTML()}</details>` : tagsSettingsHTML(); })()}</div></div>
@@ -133,6 +134,10 @@ function renderSettings(){
   $('#storeNote').textContent=Store.db?'':'Storage is unavailable in this view, so documents will disappear when you close the app.';
   $('#sLinkSvc').addEventListener('change',e=>{ S.linkService=e.target.value.trim(); saveSettings(); toast(S.linkService?'Reader service saved':'Reader service cleared'); });
   $('#backupBtn').onclick=backup;
+  abTotalSize().then(n=>{ const el=$('#abUse'); if(el) el.textContent= n? 'Saved book audio uses '+fmtBytes(n)+'.' : 'No book audio is saved.'; });
+  $('#rmAudio').onclick=()=>openSheet('Remove all saved book audio?', `<p class="note" style="margin-top:0">This deletes the read-aloud audio saved for every book. Your books, places and notes stay.</p>
+    <button class="btn danger block" type="button" data-act="yes">Remove all saved audio</button><button class="btn block" type="button" data-act="no">Cancel</button>`, { no:closeSheet, yes:async()=>{
+      closeSheet(); if(TTS.on && TTS.ab) ttsStop(); const n=await abDeleteAll(); toast(n? 'Saved audio removed for '+n+' book'+(n===1?'':'s') : 'No saved audio to remove'); const el=$('#abUse'); if(el) el.textContent='No book audio is saved.'; } });
   $('#storeBooks').onclick=storageSheet; $('#rmVoices').onclick=()=>openSheet('Remove all downloaded voices?', `<p class="note" style="margin-top:0">This deletes every read-aloud voice saved on this phone. Your books, notes and settings stay. A voice downloads again the next time you use it.</p>
     <button class="btn danger block" type="button" data-act="yes">Remove all voices</button><button class="btn block" type="button" data-act="no">Cancel</button>`, { no:closeSheet, yes:async()=>{
       closeSheet(); if(TTS.on) ttsStop();
@@ -525,7 +530,7 @@ function startOver(d){ d.pos=0; d.finished=false; d.lastRead=0; d.keepFinished=f
 async function removeBook(id){
   if(R.meta&&R.meta.id===id){ if(R.mode) closeReader(true); R.meta=null; }
   try{ localStorage.removeItem('rf.pos.'+id); }catch(e){}
-  await Store.del('meta',id).catch(()=>{}); await Store.del('texts',id).catch(()=>{}); LIB=LIB.filter(x=>x.id!==id); BK.cache.delete(id);
+  await Store.del('meta',id).catch(()=>{}); await Store.del('texts',id).catch(()=>{}); abDelete(id).catch(()=>{}); LIB=LIB.filter(x=>x.id!==id); BK.cache.delete(id);
 }
 
 /* ---------- tag suggestions: keywords in the book's own text ---------- */
@@ -1026,7 +1031,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=14;
+const SAMPLE_V=15;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1068,6 +1073,7 @@ const SAMPLE_HTML=`
 <p>Tap the speaker at the bottom to open the audio controls. Nothing plays yet: tap a word to choose where to start, then press <strong>play</strong>. Each word is marked as it is spoken and the page turns by itself. Tap another word while it plays to jump there. The arrows go back or forward a sentence, and the slider sets the speed. The controls stay on screen until you tap the speaker again to close them.</p>
 <p>Read aloud skips footnote numbers and the notes themselves, pauses a little longer before a new heading, and reads Bible references in full: Rom. 8:28 is read as “Romans chapter 8 verse 28”, and 1 Cor. 10:31 as “First Corinthians chapter 10 verse 31”. Abbreviations like e.g. and Dr. are read as words. While it reads in Scroll, the page moves so the spoken word stays near the middle of the screen.</p>
 <p>Tap the <strong>voice</strong> button on the audio controls to choose a voice. There are two kinds. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
+<p>To listen with the screen locked, open the voice settings and tap <strong>Download this book’s audio</strong> under <strong>Listen offline</strong>. Tooz makes the audio while the app is open and saves it on your phone, then plays it from the saved copy with the screen locked, with play, pause and skip on the lock screen. <strong>Save as audio files</strong> exports one MP3 per chapter, so you can play the book in the Files app or another audio app even with Tooz closed.</p>
 <h2>Helpful extras</h2>
 <ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li><li><strong>Your year in books</strong>, also on Stats, lists the books you finished each year, your longest streak, and a goal for how many books to finish this year.</li></ul>
 <h2>How reading time is counted</h2>
