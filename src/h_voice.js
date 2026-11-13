@@ -5,7 +5,11 @@
    while the current one plays. Audio plays through an <audio> element so it isn't silenced by the ring switch. */
 const KOK_URL='https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
 const KOK_MODEL='onnx-community/Kokoro-82M-v1.0-ONNX';
-const KOK_SIZE='about 90 MB';
+/* two engines: the phone's processor (small download) or its graphics chip via WebGPU (bigger download, usually much faster) */
+const KOK_ENG={ wasm:{dtype:'q8', size:'about 90 MB', file:'model_quantized', name:'Standard'}, webgpu:{dtype:'fp32', size:'about 330 MB', file:'onnx/model.onnx', name:'Faster'} };
+const kokDev=()=> S.kokDevice==='webgpu' && hasGPU() ? 'webgpu' : 'wasm';
+const kokSize=()=>KOK_ENG[kokDev()].size;
+function hasGPU(){ return !!(navigator.gpu); }
 const KOK_VOICES=[
   ['Best',[['af_heart','Heart','US · female'],['af_bella','Bella','US · female']]],
   ['Very good',[['af_nicole','Nicole','US · female, soft'],['bf_emma','Emma','UK · female'],['am_michael','Michael','US · male'],['am_fenrir','Fenrir','US · male'],['am_puck','Puck','US · male'],['af_aoede','Aoede','US · female'],['af_kore','Kore','US · female'],['af_sarah','Sarah','US · female']]],
@@ -30,7 +34,7 @@ self.onmessage=async e=>{
   const m=e.data;
   if(m.type==='load'){
     try{
-      if(!tts) tts=await KokoroTTS.from_pretrained('${KOK_MODEL}',{dtype:'q8',device:'wasm',
+      if(!tts) tts=await KokoroTTS.from_pretrained('${KOK_MODEL}',{dtype:m.dtype,device:m.device,
         progress_callback:p=>post({type:'progress',p:{status:p.status,file:p.file,loaded:p.loaded,total:p.total}})});
       post({type:'ready'});
     }catch(err){ post({type:'loaderror',msg:String(err&&err.message||err)}); }
@@ -43,7 +47,7 @@ function kokWorker(){
   w.onmessage=e=>{
     const m=e.data;
     if(m.type==='progress'){ if(m.p.file&&m.p.total){ KOK.prog[m.p.file]=[m.p.loaded||0,m.p.total]; } if(KOK.onprog) KOK.onprog(kokPct()); }
-    else if(m.type==='ready'){ KOK.ready=true; LS.set('kokReady',true); const r=KOK.lres; KOK.lres=KOK.lrej=null; r&&r(); }
+    else if(m.type==='ready'){ KOK.ready=true; LS.set('kokReady.'+KOK.dev,true); const r=KOK.lres; KOK.lres=KOK.lrej=null; r&&r(); }
     else if(m.type==='loaderror'){ const r=KOK.lrej; kokReset(); r&&r(new Error(m.msg)); }
     else if(m.id!=null){ const c=KOK.cb.get(m.id); if(!c) return; KOK.cb.delete(m.id); if(m.type==='error') c.rej(new Error(m.msg)); else c.res(m); }
   };
@@ -59,18 +63,19 @@ function kokLoad(onprog){
   KOK.prog={};
   KOK.loading=new Promise((res,rej)=>{ KOK.lres=res; KOK.lrej=rej; });
   KOK.loading.catch(()=>{});
-  try{ kokWorker().postMessage({type:'load'}); }catch(e){ const r=KOK.lrej; kokReset(); r&&r(e); }
+  KOK.dev=kokDev();
+  try{ kokWorker().postMessage({type:'load', device:KOK.dev, dtype:KOK_ENG[KOK.dev].dtype}); }catch(e){ const r=KOK.lrej; kokReset(); r&&r(e); }
   return KOK.loading;
 }
 function kokGen(text, voice, speed){
   return new Promise((res,rej)=>{ const id=++KOK.id; KOK.cb.set(id,{res,rej}); kokWorker().postMessage({type:'gen',id,text,voice,speed}); });
 }
 async function kokDownloaded(){
-  if(LS.get('kokReady',false)) return true;
-  try{ const c=await caches.open('transformers-cache'); const ks=await c.keys(); return ks.some(r=>r.url.includes('Kokoro-82M')&&r.url.includes('model_quantized')); }catch(e){ return false; }
+  const d=kokDev(); if(LS.get('kokReady.'+d,false) || (d==='wasm' && LS.get('kokReady',false))) return true;
+  try{ const c=await caches.open('transformers-cache'); const ks=await c.keys(); return ks.some(r=>r.url.includes('Kokoro-82M')&&r.url.includes(KOK_ENG[d].file)); }catch(e){ return false; }
 }
 async function kokRemove(){
-  kokReset(); LS.set('kokReady',false);
+  kokReset(); for(const k of ['kokReady','kokReady.wasm','kokReady.webgpu']) LS.set(k,false);
   try{ const c=await caches.open('transformers-cache'); for(const r of await c.keys()) if(r.url.includes('Kokoro-82M')) await c.delete(r); }catch(e){}
   try{ await caches.delete('kokoro-voices'); }catch(e){}
 }
@@ -93,7 +98,7 @@ function wavURL(f32, sr){
 function kokProgressUI(){
   let shown=false, last=-1;
   return p=>{
-    if(!shown){ shown=true; openSheet('Getting the natural voice ready', `<p class="note" style="margin-top:0">Downloading the voice to this phone (${KOK_SIZE}). This happens once; after that it works offline.</p>
+    if(!shown){ shown=true; openSheet('Getting the natural voice ready', `<p class="note" style="margin-top:0">Downloading the voice to this phone (${kokSize()}). This happens once; after that it works offline.</p>
       <div class="goalbar"><i id="kokBar" style="width:0%"></i></div><p class="note" id="kokTxt">Starting…</p>
       <button class="btn block" type="button" data-act="bg">Keep going in the background</button>`, { bg:closeSheet }); }
     if(p.pct===last) return; last=p.pct;
@@ -108,7 +113,9 @@ async function kokEnsure(){
   let ui=null; const prog=p=>{ if(!had && !ui) ui=kokProgressUI(); if(ui) ui(p); };
   if(had) toast('Starting the natural voice…');
   try{ await kokLoad(prog); if(ui && $('#kokBar')) closeSheet(); return true; }
-  catch(e){ if(ui && $('#kokBar')) closeSheet(); toast('The natural voice couldn’t load ('+String(e.message||e).replace(/\.+$/,'')+'). Check your connection and try again.', null, 7000); return false; }
+  catch(e){ if(ui && $('#kokBar')) closeSheet();
+    if(kokDev()==='webgpu'){ S.kokDevice='wasm'; saveSettings(); toast('The faster engine didn’t work on this phone ('+String(e.message||e).replace(/\.+$/,'').slice(0,80)+'), so Tooz switched back to Standard. Tap play to try again.', null, 9000); return false; }
+    toast('The natural voice couldn’t load ('+String(e.message||e).replace(/\.+$/,'')+'). Check your connection and try again.', null, 7000); return false; }
 }
 /* chunks: one or two sentences, with each word's share of the audio by length (plus a little for pauses) */
 function kokChunkAt(i){
@@ -177,7 +184,7 @@ async function kokPreview(){
     const r=await kokGen('This is how your books will sound when Tooz reads them aloud.', S.kokVoice||'af_heart', S.ttsRate||1);
     const dur=r.audio.length/r.sr, url=wavURL(r.audio,r.sr), a=kokAudio(); a.onended=()=>URL.revokeObjectURL(url); a.src=url; a.play().catch(()=>{});
     const x=dur/(r.ms/1000);
-    const el=$('#kokSpeed'); if(el) el.textContent=`Made ${dur.toFixed(1)} seconds of speech in ${(r.ms/1000).toFixed(1)} seconds — ${x>=1.3?'fast enough for smooth reading.':x>=0.9?'just about fast enough; expect an occasional short pause.':'slower than real time on this phone, so there will be pauses between sentences.'}`;
+    const el=$('#kokSpeed'); if(el) el.textContent=`Made ${dur.toFixed(1)} seconds of speech in ${(r.ms/1000).toFixed(1)} seconds — ${x>=1.3?'fast enough for smooth reading.':x>=0.9?'just about fast enough; expect an occasional short pause.':'slower than real time on this phone, so there will be pauses between sentences.'+(kokDev()==='wasm'&&hasGPU()?' Try the Faster engine below.':'')}` + (KOK.dev==='webgpu'?' (Faster engine)':' (Standard engine)');
   }catch(e){ const el=$('#kokSpeed'); if(el) el.textContent='Couldn’t make a sample: '+e.message; }
 }
 /* iPhone voices, without the duplicates: one entry per voice name (the same voice is often listed once per region) */
@@ -197,12 +204,15 @@ function voiceSectionHTML(lang){
   let h=`<div class="panel-sec"><h3>Read aloud</h3><div class="group">
     <div class="set"><div class="hd"><label>Voice type</label></div><div class="seg" data-set="ttsEngine" data-type="seg">
       <button type="button" data-v="kokoro" aria-pressed="${nat}">Natural</button><button type="button" data-v="system" aria-pressed="${!nat}">iPhone</button></div>
-      <div class="desc">${nat?`Natural voices run on this phone after a one-time download (${KOK_SIZE}). They sound much more like a person reading.`:'The voices your iPhone lets web apps use. They start instantly but sound more robotic.'}</div></div>
+      <div class="desc">${nat?`Natural voices run on this phone after a one-time download (${kokSize()}). They sound much more like a person reading.`:'The voices your iPhone lets web apps use. They start instantly but sound more robotic.'}</div></div>
     ${pRange('ttsRate','Speaking speed',0.5,2,0.05)}`;
   if(nat){
     h+=`<div class="set"><div class="hd"><label for="o_kvoice">Voice</label></div><select class="input" id="o_kvoice" data-set="kokVoice" data-type="text">${KOK_VOICES.map(([g,L])=>`<optgroup label="${g}">${L.map(([id,n,d])=>`<option value="${id}"${(S.kokVoice||'af_heart')===id?' selected':''}>${n} — ${d}</option>`).join('')}</optgroup>`).join('')}</select>
       <button class="btn" type="button" data-act="vprev" style="margin-top:8px">${ICON.speaker} Hear this voice</button>
       <div class="desc" id="kokSpeed">The first sample also shows how quickly this phone can make speech.</div>
+      ${hasGPU()?`<div class="hd" style="margin-top:12px"><label>Engine</label></div><div class="seg" data-set="kokDevice" data-type="seg">
+        <button type="button" data-v="wasm" aria-pressed="${kokDev()==='wasm'}">Standard</button><button type="button" data-v="webgpu" aria-pressed="${kokDev()==='webgpu'}">Faster</button></div>
+      <div class="desc">${kokDev()==='webgpu'?'Uses the phone’s graphics chip, which is usually several times faster. Bigger one-time download (about 330 MB).':'Uses the phone’s processor. Smaller download (about 90 MB) but may be too slow for smooth reading. Try <b>Faster</b> if the sample says so.'}</div>`:''}
       <div class="desc" id="kokState"></div></div>`;
   } else {
     const vs=systemVoices(lang);
