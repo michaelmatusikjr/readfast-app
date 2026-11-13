@@ -24,9 +24,9 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   ok('position, highlight, bookmark kept on the same words', res.before.pos===res.after.pos && res.after.hl[0]==='me—' && res.after.hl[1]==='live' && res.before.bm===res.after.bm, res);
   ok('display joins split words without a space', await pg.evaluate(()=>/Isaiah 26:8—“Yes,/.test((document.querySelector('#pagesView')||document.body).textContent.replace(/\s+/g,' '))));
   const sp=await pg.evaluate(()=>{ const k=R.words.indexOf('Isaiah'); return speechChunk(Math.max(0,k-3),40,60).text; });
-  ok('reads Isaiah chapter 26 verse 8 with a pause', /Isaiah chapter 26 verse 8\.\.\.$/.test(sp), sp);
+  ok('reads Isaiah chapter 26 verse 8 with a pause', /Isaiah chapter 26 verse 8, “Yes, Lord/.test(sp), sp);
   const ch=await pg.evaluate(()=>{ const out=[]; let i=R.words.indexOf('created'); for(let n=0;n<3;n++){ const c=speechChunk(i,55,6); out.push([c.text,c.pauseAfter]); i=c.j; } return out; });
-  ok('dash ends a stretch with a pause', ch[0][0].endsWith('me...') && ch[0][1]===450 && ch[1][0]==='and you...' && ch[1][1]===450, ch);
+  ok('dashes pause like commas, semicolons like periods', /created me, and you, to live/.test(ch[0][0]), ch);
   const sel=await pg.evaluate(()=>{ const a=R.words.indexOf('Isaiah'), b=a+1; tsSet(a,b); const w=wordEl(b); return {t:textOf(TS.a,TS.b), w:w.textContent, d:dashOf(w)&&dashOf(w).textContent, dsel:dashOf(w).classList.contains('tsel')}; });
   ok('selection stops before the dash', sel.t==='Isaiah 26:8' && sel.w==='26:8' && sel.d==='—' && !sel.dsel, sel);
   const mid=await pg.evaluate(()=>{ const a=R.words.indexOf('me—'); const w=wordEl(a); return [w.textContent, dashOf(w).classList.contains('hl2')]; });
