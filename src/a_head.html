@@ -120,7 +120,7 @@ details.yr{margin-top:10px}
 @font-face{font-family:'OpenDyslexic';src:url('fonts/OpenDyslexic-Bold-Italic.woff2') format('woff2');font-weight:700;font-style:italic;font-display:swap}
  /* on touch screens Tooz does its own selection in a book, so the phone's Copy / Look Up menu stays out of the way */
 @media (hover:none),(pointer:coarse){ #pagesView,#scFlow{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none} }
-.book w.tsel{--hc:color-mix(in srgb,var(--accent) 32%,transparent)}
+.book w.tsel,.book wd.tsel{--hc:color-mix(in srgb,var(--accent) 32%,transparent)}
 .tsdrag #selBar{opacity:0;pointer-events:none}
 .tsh{position:fixed;z-index:13;width:32px;height:calc(var(--stem,22px) + 16px);margin-left:-16px;touch-action:none;cursor:grab}
 .tsh::before{content:"";position:absolute;left:15px;width:2px;height:var(--stem,22px);background:var(--accent)}
@@ -219,13 +219,13 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 .book hr.brk{border:0;margin:1em 0;text-align:center;height:1.2em}
 .book hr.brk::after{content:"⁂";color:var(--page-muted)}
 w{cursor:text}
-w.i{font-style:italic} w.b{font-weight:var(--bwb)} w.c{font-family:var(--f-mono);font-size:.86em} w.u{text-decoration:underline}
+w.i,wd.i{font-style:italic} w.b,wd.b{font-weight:var(--bwb)} w.c{font-family:var(--f-mono);font-size:.86em} w.u{text-decoration:underline}
 w.p,w.s{font-size:.7em;line-height:0} w.p{vertical-align:super} w.s{vertical-align:sub}
 w.n{color:var(--page-link);font-size:.72em;vertical-align:super;line-height:0;cursor:pointer;padding:0 .12em;font-weight:var(--bwb)}
 b.ws{font-weight:var(--bwb)}
-w.hl1{--hc:var(--hl1)} w.hl2{--hc:var(--hl2)} w.hl3{--hc:var(--hl3)} w.hl4{--hc:var(--hl4)}
+w.hl1,wd.hl1{--hc:var(--hl1)} w.hl2,wd.hl2{--hc:var(--hl2)} w.hl3,wd.hl3{--hc:var(--hl3)} w.hl4,wd.hl4{--hc:var(--hl4)}
 /* highlight colour is a band no taller than one line, so tall fonts don't spill onto the lines above and below */
-w.hl1,w.hl2,w.hl3,w.hl4,.book w.tsel{background:linear-gradient(var(--hc),var(--hc)) center/100% min(100%,calc(var(--blh,1.5)*1em - .14em)) no-repeat;border-radius:2px}
+w.hl1,w.hl2,w.hl3,w.hl4,.book w.tsel,wd.hl1,wd.hl2,wd.hl3,wd.hl4,.book wd.tsel{background:linear-gradient(var(--hc),var(--hc)) center/100% min(100%,calc(var(--blh,1.5)*1em - .14em)) no-repeat;border-radius:2px}
 w.hl1,w.hl2,w.hl3,w.hl4{color:var(--hl-ink,inherit);cursor:pointer}
 w.hn{text-decoration:underline dotted;text-decoration-thickness:2px;text-underline-offset:3px}
 w.tts{background:var(--tts);color:#1B1B1B;border-radius:3px}

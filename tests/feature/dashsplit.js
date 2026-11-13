@@ -27,7 +27,10 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   ok('reads Isaiah chapter 26 verse 8 with a pause', /Isaiah chapter 26 verse 8\.\.\.$/.test(sp), sp);
   const ch=await pg.evaluate(()=>{ const out=[]; let i=R.words.indexOf('created'); for(let n=0;n<3;n++){ const c=speechChunk(i,55,6); out.push([c.text,c.pauseAfter]); i=c.j; } return out; });
   ok('dash ends a stretch with a pause', ch[0][0].endsWith('me...') && ch[0][1]===450 && ch[1][0]==='and you...' && ch[1][1]===450, ch);
-  ok('can select up to the dash', await pg.evaluate(()=>{ const a=R.words.indexOf('Isaiah'), b=a+1; tsSet(a,b); return textOf(TS.a,TS.b); })==='Isaiah 26:8—');
+  const sel=await pg.evaluate(()=>{ const a=R.words.indexOf('Isaiah'), b=a+1; tsSet(a,b); const w=wordEl(b); return {t:textOf(TS.a,TS.b), w:w.textContent, d:dashOf(w)&&dashOf(w).textContent, dsel:dashOf(w).classList.contains('tsel')}; });
+  ok('selection stops before the dash', sel.t==='Isaiah 26:8' && sel.w==='26:8' && sel.d==='—' && !sel.dsel, sel);
+  const mid=await pg.evaluate(()=>{ const a=R.words.indexOf('me—'); const w=wordEl(a); return [w.textContent, dashOf(w).classList.contains('hl2')]; });
+  ok('dash inside a highlight is highlighted', mid[0]==='me' && mid[1]===true, mid);
   ok('second open does not convert again', await pg.evaluate(async()=>{ const n=R.n; await openDoc('dashtest'); return R.n===n; }));
   ok('no page errors', errs.length===0, errs);
   await b.close();
