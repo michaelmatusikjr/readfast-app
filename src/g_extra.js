@@ -1,10 +1,8 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.7';
+const APP_VERSION='2026.11.13.8';
 const WHATSNEW=[
-  ['Settings, simplified','Aa now shows just the mode, text size, theme and a few fonts. Tap a heading underneath for more text options and page settings.'],
-  ['Options where you use them','Choose a voice with the new voice button on the audio controls. In Scroll, auto-scroll has its own button at the bottom, with its options under ⋯. In Speed, the gear next to the speed slider holds the speed-reading options.'],
-  ['App settings in one place','Settings now holds only app-wide things: light (dim, warmth and the night theme), reading stats, what the bottom line shows, backups, storage, tags and help.'],
-  ['Taller bottom bars','The bars at the bottom of the screen are taller and reach the bottom edge, like other iPhone apps.']
+  ['Highlight up to a dash','Words joined by a dash, like “me—and”, are now separate words, so a highlight can stop right at the dash. Books you already have update the first time you open them; your place, highlights and bookmarks stay put.'],
+  ['References before a dash','Read aloud now says “Isaiah chapter 26 verse 8” even when the reference is followed straight away by a dash.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
