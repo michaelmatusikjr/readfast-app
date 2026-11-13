@@ -122,12 +122,12 @@ function pieces(text, max = 300) {
   return out;
 }
 function gauss(n) { const a = new Float32Array(n); for (let i = 0; i < n; i += 2) { const u = Math.max(1e-4, Math.random()), v = Math.random(), r = Math.sqrt(-2 * Math.log(u)); a[i] = r * Math.cos(2 * Math.PI * v); if (i + 1 < n) a[i + 1] = r * Math.sin(2 * Math.PI * v); } return a; }
-async function synth(text) {
+async function synth(text, rate) {
   const t = prep(text), L = [...t].length, ids = new BigInt64Array(L); let k = 0;
   for (const ch of t) { const cp = ch.codePointAt(0); ids[k++] = BigInt(cp < M.indexer.length ? M.indexer[cp] : -1); }
   const idsT = new ort.Tensor('int64', ids, [1, L]);
   const maskT = new ort.Tensor('float32', new Float32Array(L).fill(1), [1, 1, L]);
-  const dur = (await M.dp.run({ text_ids: idsT, style_dp: style.dp, text_mask: maskT })).duration.data[0] / SPEED;
+  const dur = (await M.dp.run({ text_ids: idsT, style_dp: style.dp, text_mask: maskT })).duration.data[0] / (SPEED * (rate || 1));
   const emb = (await M.te.run({ text_ids: idsT, style_ttl: style.ttl, text_mask: maskT })).text_emb;
   const sr = M.cfg.ae.sample_rate, chunk = M.cfg.ae.base_chunk_size * M.cfg.ttl.chunk_compress_factor;
   const D = M.cfg.ttl.latent_dim * M.cfg.ttl.chunk_compress_factor, wavLen = Math.floor(dur * sr), T = Math.max(1, Math.ceil(wavLen / chunk));
@@ -156,7 +156,7 @@ async function run() {
     try {
       await load(j.voice);
       const t0 = performance.now(); const parts = []; let sr = 44100;
-      for (const p of pieces(j.text)) { const r = await synth(p); parts.push(r.wav); sr = r.sr; }
+      for (const p of pieces(j.text)) { const r = await synth(p, j.rate); parts.push(r.wav); sr = r.sr; }
       const buf = toWav(parts, sr, 0.15);
       /* keep up with playback: fewer steps when making speech takes more than ~80% of its length */
       let n = 0; for (const p of parts) n += p.length; const rtf = (performance.now() - t0) / 1000 / Math.max(0.5, n / sr);

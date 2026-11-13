@@ -1,6 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.18';
+const APP_VERSION='2026.11.13.19';
 const WHATSNEW=[
+  ['Smoother reading aloud','Natural voices now read one sentence at a time with even pauses: the same short pause after every sentence, a longer one between paragraphs and around headings. Long sentences break at a comma instead of mid-phrase, and the speed setting is given to the voice itself, so faster reading still sounds natural.'],
   ['Try the Supertonic voices','A test: ten new natural voices, listed under Supertonic (test) in the voice list. They share one download of about 100 MB (if you tried them before, they download again: the first copy sounded garbled). Tap Hear this voice to compare them with the others; it also shows whether this phone makes speech fast enough.'],
   ['Abbreviations read letter by letter','Read aloud now spells out initials like NIV, KJV, ESV, NASB, FBI and CIA, while words like NASA and FEMA are still said as words.'],
   ['Highlight up to a dash','Words joined by a dash, like “me—and”, are now separate words, and a highlight can stop just before the dash. Books you already have update the first time you open them; your place, highlights and bookmarks stay put.'],

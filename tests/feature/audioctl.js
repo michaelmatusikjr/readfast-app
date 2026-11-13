@@ -38,7 +38,7 @@ const fs=require('fs');
   ok('tap word while playing jumps there', await pg.evaluate(j=>TTS.on && TTS.cur>=j && TTS.cur<j+40, jump), [jump, await pg.evaluate(()=>TTS.cur)]);
   // speed live
   await pg.evaluate(()=>{ $('#ttsSpeed').value='1.1'; $('#ttsSpeed').dispatchEvent(new Event('input')); }); await sleep(200);
-  ok('speed up applies live', await pg.evaluate(()=>Math.abs(S.ttsRate-1.1)<1e-9 && Math.abs(NAT.audio.playbackRate-1.1)<1e-6 && $('#ttsLabel').textContent==='1.1×'), await pg.evaluate(()=>[S.ttsRate,NAT.audio.playbackRate,$('#ttsLabel').textContent]));
+  ok('speed up applies live', await pg.evaluate(()=>Math.abs(S.ttsRate-1.1)<1e-9 && NAT.audio.playbackRate===1 && $('#ttsLabel').textContent==='1.1×'), await pg.evaluate(()=>[S.ttsRate,NAT.audio.playbackRate,$('#ttsLabel').textContent]));
   await pg.evaluate(()=>{ $('#ttsSpeed').value='1'; $('#ttsSpeed').dispatchEvent(new Event('input')); });
   // next sentence
   const c0=await pg.evaluate(()=>TTS.cur); await pg.evaluate(()=>$('#ttsNext').click()); await sleep(1200);
