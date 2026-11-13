@@ -1,9 +1,12 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.3';
+const APP_VERSION='2026.11.13.4';
 const WHATSNEW=[
-  ['Audio controls','Tap the speaker to open the audio controls. Tap a word to choose where to start, then press play. Skip back or forward a sentence and change the speed while it plays.'],
-  ['Natural voices','Read aloud uses natural-sounding voices that run on your phone. Each voice downloads once (about 60 MB) and then works offline. The slower Premium voices have been removed, along with their downloads.'],
-  ['Free up space','Settings → Storage has a new button to remove every downloaded voice at once.']
+  ['A simpler Aa menu','Aa now has just the mode, theme and text. Everything else is in Settings; tap <b>More settings</b> at the bottom of Aa to get there and back.'],
+  ['Read aloud reads better','Bible references are read in full (“Matthew chapter 5 verse 6”), abbreviations like e.g. are read as words, colons aren’t spoken, footnotes are skipped, and there’s a longer pause before headings.'],
+  ['Easier to follow along','The audio controls stay on screen while read aloud is on. In Scroll, the spoken word stays near the middle of the screen.'],
+  ['Book’s font','If a book comes with its own font, you can choose it in Aa as <b>Book’s font</b>.'],
+  ['Backups include settings','Backups now save your reading and app settings too, and restoring can bring them back.'],
+  ['Fixes','The time left in a chapter is right while listening, and removing a voice download updates straight away.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

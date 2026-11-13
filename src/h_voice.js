@@ -54,8 +54,11 @@ async function pipDownloaded(voice){
   try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper'); await dir.getFileHandle(voice+'.onnx'); return true; }catch(e){ return false; }
 }
 async function pipRemove(voice){
-  try{ await pipCall({type:'remove', voice}); }catch(e){}
-  LS.set('pipReady.'+voice,false); if(PIP.ready===voice) PIP.ready=null;
+  /* close the voice first so its file isn't in use, then delete it here (Safari doesn't support the library's own delete) */
+  if(PIP.ready===voice || PIP.lvoice===voice) pipReset();
+  try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper');
+    for(const name of [voice+'.onnx', voice+'.onnx.json']){ try{ await dir.removeEntry(name); }catch(e){} } }catch(e){}
+  LS.set('pipReady.'+voice,false);
 }
 function wavInfo(buf){ const v=new DataView(buf); const sr=v.getUint32(24,true)||22050; return {sr, dur:Math.max(0,(buf.byteLength-44)/2/sr)}; }
 function progPct(prog){ let a=0,t=0; for(const k in prog){ a+=prog[k][0]; t+=prog[k][1]; } return t? {pct:Math.min(100,Math.round(100*a/t)), a, t} : {pct:0,a:0,t:0}; }
@@ -96,7 +99,7 @@ async function natEnsure(){
   if(natReady()) return true;
   const had=await natDownloaded();
   /* in the Reading options panel, show the download right there; elsewhere use a small sheet */
-  const inline=!!$('#kokState') && !$('#sheet').hidden;
+  const inline=!!$('#kokState') && $('#kokState').offsetParent!==null;
   let ui=null; const prog=p=>{ if(had) return; if(inline){ const el=$('#kokState'); if(el) el.innerHTML=`Downloading the voice (${natSize()})… ${p.t?p.pct+'% · '+fmtBytes(p.a)+' of '+fmtBytes(p.t):''}<div class="goalbar"><i style="width:${p.pct}%"></i></div>`; return; } if(!ui) ui=natProgressUI(); ui(p); };
   if(had) toast('Starting the natural voice…');
   try{ await natLoad(prog); if(ui && $('#kokBar')) closeSheet(); if(inline) natStateUI(); return true; }
@@ -104,21 +107,10 @@ async function natEnsure(){
     toast('The natural voice couldn’t load ('+String(e.message||e).replace(/\.+$/,'')+'). Check your connection and try again.', null, 7000); return false; }
 }
 /* chunks: one or two sentences, with each word's share of the audio by length (plus a little for pauses) */
-function natChunkAt(i){
-  let j=i, len=0; while(j<R.n && len<55){ j++; len++; if(len>=6 && isSentEnd(j-1)) break; }
-  let text=''; const wt=[];
-  for(let k=i;k<j;k++){
-    if(R.wf && (R.wf[k]&F_N)){ wt.push(0); continue; }
-    if(k>i && !glued(k)) text+=' ';
-    const w=R.words[k]; text+=w;
-    wt.push(w.replace(/[^\p{L}\p{N}]/gu,'').length+1 + (/[,;:—–]$/.test(w)?3:0) + (/[.!?]["”’)]*$/.test(w)?6:0));
-  }
-  const tot=wt.reduce((a,b)=>a+b,0)||1; let acc=0; const cum=wt.map(x=>{ const c=acc/tot; acc+=x; return c; });
-  return {i,j,text:text.trim(),cum};
-}
+function natChunkAt(i){ return speechChunk(i,55,6); }
 function natFill(seq){
   while(TTS.on && seq===TTS.seq && TTS.kq.length<3 && TTS.knext<R.n){
-    const c=natChunkAt(TTS.knext); TTS.knext=c.j;
+    const c=natChunkAt(TTS.knext); TTS.knext=c.j; if(c.j<=c.i) break;
     c.p= !c.text ? Promise.resolve(c) : natGen(c.text).then(r=>{ c.url=r.url; c.dur=r.dur; return c; });
     c.p.catch(()=>{});
     TTS.kq.push(c);
@@ -151,7 +143,7 @@ async function natPlayNext(seq){
     if(R.wf && (R.wf[c.i+k]&F_N)) return;
     if(c.i+k!==TTS.cur) ttsMark(c.i+k);
   },100);
-  a.onended=()=>{ clearInterval(TTS.kt); URL.revokeObjectURL(c.url); if(seq===TTS.seq && TTS.on){ recordStats(Math.max(300,c.dur*1000/natRate()), c.j-c.i); natPlayNext(seq); } };
+  a.onended=()=>{ clearInterval(TTS.kt); URL.revokeObjectURL(c.url); if(seq===TTS.seq && TTS.on){ const ms=c.dur*1000/natRate(); recordStats(Math.max(300,ms), c.j-c.i); ttsLearn(c.j-c.i, ms); if(c.pauseAfter) setTimeout(()=>natPlayNext(seq), c.pauseAfter/natRate()); else natPlayNext(seq); } };
   try{ await a.play(); }catch(e){ if(seq===TTS.seq){ ttsStop(); toast('Couldn’t play the voice. Tap the speaker to try again.'); } }
 }
 async function natStart(){
