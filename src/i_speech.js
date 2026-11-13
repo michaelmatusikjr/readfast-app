@@ -94,13 +94,15 @@ function speechChunk(i, max, min){
     let w=sp[k-i]; if(w===''){ wt.push(0); continue; }
     if(w==null) w=R.words[k];
     w=w.replace(/:(?=\s|$)/g,',').replace(/:/g,' ');
+    /* dashes: a pause for an en dash, a longer one for an em dash (hyphens don't pause); number ranges read "to" */
+    w=w.replace(/(\d)\s*[–-]\s*(\d)/g,'$1 to $2').replace(/\s*—\s*/g,'... ').replace(/\s*–\s*/g,', ').replace(/\s+$/,'');
     /* a short pause before "(" and after ")" */
     const raw=R.words[k]||'';
     if(/^[(\[]/.test(raw) && text && !/[,;:.!?—–]$/.test(text)) text+=',';
     if(/[)\]]["”’]*$/.test(raw) && !/[,;:.!?]$/.test(w)) w+=',';
     if(k>i && !glued(k) && text) text+=' ';
     map[map.length-1]=text.length; text+=w;
-    wt.push(w.replace(/[^\p{L}\p{N} ]/gu,'').length+1 + (/[,;—–]$/.test(w)?3:0) + (/[.!?]["”’)]*$/.test(w)?6:0));
+    wt.push(w.replace(/[^\p{L}\p{N} ]/gu,'').length+1 + (/[,;]/.test(w)?3:0) + (/\.\.\./.test(w)?5:0) + (/[.!?]["”’)]*$/.test(w)?6:0));
   }
   const tot=wt.reduce((a,b)=>a+b,0)||1; let acc=0; const cum=wt.map(x=>{ const c=acc/tot; acc+=x; return c; });
   let pauseAfter=0;
