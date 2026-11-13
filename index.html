@@ -2989,8 +2989,33 @@ function spokenWords(i, j){
     if(raw==='Rev.'){ out[k-i]='Reverend'; continue; }
     if(/^(no|No)\.$/.test(raw) && /^\d/.test(R.words[k+1]||'')){ out[k-i]='number'; continue; }
     if(/^p\.$/.test(raw) && /^\d/.test(R.words[k+1]||'')){ out[k-i]='page'; continue; }
+    /* initialisms read letter by letter ("NIV" → N.I.V); acronyms said as words (NASA, FEMA) are left alone */
+    const ac=acronymSpoken(raw); if(ac){ out[k-i]=ac; continue; }
   }
   return out;
+}
+/* Capitals with a vowel are read as a word (NASA, FEMA, LORD, I AM) unless listed in SPELL_OUT;
+   capitals with no vowel (KJV, NSA, LSB) are always spelled, except Roman numerals and a few sounds. */
+const SPELL_OUT=new Set(('NIV NIRV NASB NASB95 ESV ASV RSV NRSV NRSVUE NKJV KJV AKJV CSB HCSB NLT NET NAB NABRE NJB JB TEV GNT CEV CEB ISV WEB YLT LEB NCV ICB ERV MEV AMPC BSB LSB NEB REB TLB TPT '+
+  'CIA FBI NSA IRS USA US UK EU UN UAE USSR KGB DOJ DOD DOE DOT DHS EPA FDA CDC NIH NIEHS OSHA? FAA FCC FTC SEC FEC ATF DEA ICE? TSA USPS UPS IBM HP AT&T CEO CFO COO CTO VP HR PR IT? '+
+  'ATM PIN? PDF USB URL HTML CSS API AI IQ EQ ID? IOU UFO DIY FAQ ETA EST CST MST PST GMT UTC AM? PM? BC BCE AD CE OT NT LXX '+
+  'YMCA YWCA NAACP NCAA NFL NBA MLB NHL NASCAR? ESPN CNN BBC NPR PBS ABC CBS NBC HBO MSNBC FOX? MIT UCLA USC LSU UCF TCU SMU BYU NYU UNC UVA UGA OSU ASU '+
+  'MBA MD DDS RN LPN CPA PHD THD DMIN MDIV THM BA BS MA MS JD LLC INC? GPA SAT ACT? PTA PTSD ADHD OCD HIV DNA RNA ICU ER? EMT CPR IV? MRI CT ADA '+
+  'USAF USMC USN ROTC POW MIA AWOL? GI VA VFW NATO? WWI WWII TV DVD CD PC OK? VIP RSVP ASAP? PS PPS NB IVP SBC PCA PCUSA ELCA LCMS UMC AME CMA EFCA OPC ARP BBQ').split(' ').filter(x=>!x.endsWith('?')));
+const SAY_AS_WORD=new Set('NASA FEMA PETA NATO UNESCO UNICEF OPEC AIDS SCUBA LASER RADAR NASCAR SWAT GIF JPEG ZIP COVID POTUS SCOTUS FLOTUS NAFTA OSHA HUD CAPTCHA RAM ROM DOS MIDI WASP YOLO NIMBY AWOL ASAP IKEA LEGO FIFA ISIS NOAA DARPA SALT START ESL TESOL GAAP OPSEC HAZMAT SONAR WAC AMEN'.split(' '));
+const NO_SPELL=new Set('MR MRS DR ST JR SR MT HMM HMMM SHH SHHH PSST BRR TSK GRR ZZZ PFFT MMM MM'.split(' '));
+function acronymSpoken(raw){
+  const m=/^[(\[“"‘']*([A-Z][A-Z&]*[A-Z](?:95)?|NIrV|PhD|ThD|ThM|DMin|MDiv)(['’]s|s)?([.,;:!?)\]”"’'—–]*)$/.exec(raw);
+  if(!m) return null;
+  const a=m[1], up=a.toUpperCase();
+  if(SAY_AS_WORD.has(up) || NO_SPELL.has(up)) return null;
+  let spell=SPELL_OUT.has(up);
+  if(!spell && !/[AEIOUY]/.test(up) && !/^[MDCLXVI]+$/.test(up) && up.length<=6) spell=true;
+  if(!spell) return null;
+  const letters=up.replace('&',' and ').replace(/95$/,' 95');
+  const said=letters.replace(/[A-Z]{2,}/g,x=>x.split('').join('.'));
+  const tail=m[3]||'';
+  return said+(m[2]? (m[2]==='s'?'s':"'s") : '')+tail.replace(/[)\]”"’']/g,'');
 }
 /* blocks that hold the text of footnotes/endnotes (read-aloud skips them) */
 function noteBlocks(){
@@ -3067,41 +3092,59 @@ function natUnlock(){ const a=natAudio(); try{ a.src=SILENT_WAV; const p=a.play(
    from Hugging Face (about 60 MB) and is kept in the phone's private file storage, so it works offline. */
 const PIP_VOICES=[
   ['American',[['en_US-lessac-medium','Lessac','female, clear'],['en_US-amy-medium','Amy','female'],['en_US-kristin-medium','Kristin','female'],['en_US-hfc_female-medium','Hannah','female'],['en_US-ryan-medium','Ryan','male'],['en_US-joe-medium','Joe','male'],['en_US-john-medium','John','male'],['en_US-norman-medium','Norman','male, deep'],['en_US-bryce-medium','Bryce','male'],['en_US-hfc_male-medium','Henry','male']]],
-  ['British',[['en_GB-jenny_dioco-medium','Jenny','female'],['en_GB-cori-medium','Cori','female'],['en_GB-alba-medium','Alba','female, Scottish'],['en_GB-alan-medium','Alan','male'],['en_GB-northern_english_male-medium','Northern','male']]]
+  ['British',[['en_GB-jenny_dioco-medium','Jenny','female'],['en_GB-cori-medium','Cori','female'],['en_GB-alba-medium','Alba','female, Scottish'],['en_GB-alan-medium','Alan','male'],['en_GB-northern_english_male-medium','Northern','male']]],
+  /* Supertonic 3 (test, Nov 2026): one shared model (about 100 MB) plus a tiny file per voice; see src/supertonic */
+  ['Supertonic (test)',[1,2,3,4,5].map(n=>['st-F'+n,'Supertonic '+n,'female']).concat([1,2,3,4,5].map(n=>['st-M'+n,'Supertonic '+(n+5),'male']))]
 ];
 const pipVoice=()=>S.pipVoice||'en_US-lessac-medium';
-const PIP={w:null, ready:null, loading:null, lvoice:null, id:0, cb:new Map(), prog:{}, onprog:null};
-function pipWorker(){
-  if(PIP.w) return PIP.w;
-  const w=new Worker('piper-worker.js',{type:'module'});
+/* one manager per voice engine; both workers answer the same messages (load, gen, cancel) */
+const vmake=file=>({file, w:null, ready:null, loading:null, lvoice:null, id:0, cb:new Map(), prog:{}, onprog:null});
+const PIP=vmake('piper-worker.js'), STV=vmake('supertonic-worker.js');
+const isST=v=>/^st-/.test(v||'');
+const VM=v=>isST(v)?STV:PIP;
+const engVoice=v=>isST(v)?v.slice(3):v;   /* the name the worker knows the voice by */
+function pipWorker(M){
+  M=M||PIP;
+  if(M.w) return M.w;
+  const w=new Worker(M.file,{type:'module'});
   w.onmessage=e=>{
     const m=e.data;
-    if(m.type==='progress'){ const f=m.p.file||''; if(f.startsWith('http') && m.p.total){ PIP.prog[f]=[m.p.loaded||0,m.p.total]; if(PIP.onprog) PIP.onprog(progPct(PIP.prog)); } }
-    else if(m.type==='ready'){ PIP.ready=m.voice; LS.set('pipReady.'+m.voice,true); const r=PIP.lres; PIP.loading=null; PIP.lres=PIP.lrej=null; r&&r(); }
-    else if(m.type==='loaderror'){ const r=PIP.lrej; pipReset(); r&&r(new Error(m.msg)); }
-    else if(m.id!=null){ const c=PIP.cb.get(m.id); if(!c) return; PIP.cb.delete(m.id); if(m.type==='error') c.rej(new Error(m.msg)); else c.res(m); }
+    if(m.type==='progress'){ const f=m.p.file||''; if(f.startsWith('http') && m.p.total){ M.prog[f]=[m.p.loaded||0,m.p.total]; if(M.onprog) M.onprog(progPct(M.prog)); } }
+    else if(m.type==='ready'){ const v=M.lvoice; M.ready=v; LS.set('pipReady.'+v,true); const r=M.lres; M.loading=null; M.lres=M.lrej=null; r&&r(); }
+    else if(m.type==='loaderror'){ const r=M.lrej; pipReset(M); r&&r(new Error(m.msg)); }
+    else if(m.id!=null){ const c=M.cb.get(m.id); if(!c) return; M.cb.delete(m.id); if(m.type==='error') c.rej(new Error(m.msg)); else c.res(m); }
   };
-  w.onerror=e=>{ const r=PIP.lrej; pipReset(); r&&r(new Error(e.message||'The voice couldn’t start on this device.')); };
-  PIP.w=w; return w;
+  w.onerror=e=>{ const r=M.lrej; pipReset(M); r&&r(new Error(e.message||'The voice couldn’t start on this device.')); };
+  M.w=w; return w;
 }
-function pipReset(){ try{ PIP.w&&PIP.w.terminate(); }catch(e){} PIP.w=null; PIP.ready=null; PIP.loading=null; PIP.lres=PIP.lrej=null; for(const c of PIP.cb.values()) c.rej(new Error('stopped')); PIP.cb.clear(); }
+function pipReset(M){ M=M||PIP; try{ M.w&&M.w.terminate(); }catch(e){} M.w=null; M.ready=null; M.loading=null; M.lres=M.lrej=null; for(const c of M.cb.values()) c.rej(new Error('stopped')); M.cb.clear(); }
 function pipLoad(voice, onprog){
-  PIP.onprog=onprog||null;
-  if(PIP.ready===voice) return Promise.resolve();
-  if(PIP.loading && PIP.lvoice===voice) return PIP.loading;
-  PIP.prog={}; PIP.lvoice=voice; PIP.ready=null;
-  PIP.loading=new Promise((res,rej)=>{ PIP.lres=res; PIP.lrej=rej; }); PIP.loading.catch(()=>{});
-  try{ pipWorker().postMessage({type:'load', voice}); }catch(e){ const r=PIP.lrej; pipReset(); r&&r(e); }
-  return PIP.loading;
+  const M=VM(voice);
+  M.onprog=onprog||null;
+  if(M.ready===voice) return Promise.resolve();
+  if(M.loading && M.lvoice===voice) return M.loading;
+  M.prog={}; M.lvoice=voice; M.ready=null;
+  M.loading=new Promise((res,rej)=>{ M.lres=res; M.lrej=rej; }); M.loading.catch(()=>{});
+  try{ pipWorker(M).postMessage({type:'load', voice:engVoice(voice)}); }catch(e){ const r=M.lrej; pipReset(M); r&&r(e); }
+  return M.loading;
 }
-function pipCall(msg){ return new Promise((res,rej)=>{ const id=++PIP.id; PIP.cb.set(id,{res,rej}); pipWorker().postMessage(Object.assign({id},msg)); }); }
+function pipCall(msg){ const M=VM(msg.voice); return new Promise((res,rej)=>{ const id=++M.id; M.cb.set(id,{res,rej}); pipWorker(M).postMessage(Object.assign({id},msg,{voice:engVoice(msg.voice)})); }); }
 async function pipDownloaded(voice){
   if(LS.get('pipReady.'+voice,false)) return true;
-  try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper'); await dir.getFileHandle(voice+'.onnx'); return true; }catch(e){ return false; }
+  try{ const root=await navigator.storage.getDirectory();
+    if(isST(voice)){ const dir=await root.getDirectoryHandle('supertonic'); await dir.getFileHandle('onnx__vocoder.onnx'); await dir.getFileHandle('voice_styles__'+engVoice(voice)+'.json'); return true; }
+    const dir=await root.getDirectoryHandle('piper'); await dir.getFileHandle(voice+'.onnx'); return true; }catch(e){ return false; }
 }
+function stClearReady(){ try{ for(let k=localStorage.length-1;k>=0;k--){ const key=localStorage.key(k); if(key && key.startsWith('rf.pipReady.st-')) localStorage.removeItem(key); } }catch(e){} }
 async function pipRemove(voice){
   /* close the voice first so its file isn't in use, then delete it here (Safari doesn't support the library's own delete) */
-  if(PIP.ready===voice || PIP.lvoice===voice) pipReset();
+  if(isST(voice)){
+    /* Supertonic voices share one model, so removing the download removes the model and every Supertonic voice */
+    pipReset(STV);
+    try{ const root=await navigator.storage.getDirectory(); await root.removeEntry('supertonic',{recursive:true}); }catch(e){}
+    stClearReady(); return;
+  }
+  if(PIP.ready===voice || PIP.lvoice===voice) pipReset(PIP);
   try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper');
     for(const name of [voice+'.onnx', voice+'.onnx.json']){ try{ await dir.removeEntry(name); }catch(e){} } }catch(e){}
   LS.set('pipReady.'+voice,false);
@@ -3109,8 +3152,8 @@ async function pipRemove(voice){
 function wavInfo(buf){ const v=new DataView(buf); const sr=v.getUint32(24,true)||22050; return {sr, dur:Math.max(0,(buf.byteLength-44)/2/sr)}; }
 function progPct(prog){ let a=0,t=0; for(const k in prog){ a+=prog[k][0]; t+=prog[k][1]; } return t? {pct:Math.min(100,Math.round(100*a/t)), a, t} : {pct:0,a:0,t:0}; }
 
-const natSize=()=>'about 60 MB';
-const natReady=()=> PIP.ready===pipVoice();
+const natSize=()=> isST(pipVoice())? 'about 100 MB, shared by all Supertonic voices' : 'about 60 MB';
+const natReady=()=> VM(pipVoice()).ready===pipVoice();
 async function natDownloaded(){ return pipDownloaded(pipVoice()); }
 function natLoad(prog){ return pipLoad(pipVoice(), prog); }
 async function natGen(text){
@@ -3122,8 +3165,10 @@ async function natRemove(){ await pipRemove(pipVoice()); }
 /* removes every downloaded voice; returns how many */
 async function natRemoveAll(){
   let n=0; try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper'); for await (const [name] of dir.entries()) if(name.endsWith('.onnx')) n++; }catch(e){}
-  pipReset();
+  try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('supertonic'); for await (const [name] of dir.entries()) if(name.startsWith('voice_styles__')) n++; }catch(e){}
+  pipReset(PIP); pipReset(STV);
   try{ const root=await navigator.storage.getDirectory(); await root.removeEntry('piper',{recursive:true}); }catch(e){}
+  try{ const root=await navigator.storage.getDirectory(); await root.removeEntry('supertonic',{recursive:true}); }catch(e){}
   try{ for(let k=localStorage.length-1;k>=0;k--){ const key=localStorage.key(k); if(key && key.startsWith('rf.pipReady.')) localStorage.removeItem(key); } }catch(e){}
   return n;
 }
@@ -3166,7 +3211,7 @@ function natClear(){
   clearInterval(TTS.kt); TTS.kt=0;
   for(const c of TTS.kq||[]) if(c.url) URL.revokeObjectURL(c.url);
   TTS.kq=[];
-  try{ PIP.w && PIP.w.postMessage({type:'cancel'}); }catch(e){}
+  for(const M of [PIP,STV]) try{ M.w && M.w.postMessage({type:'cancel'}); }catch(e){}
   const a=NAT.audio; if(a){ a.onended=null; try{ a.pause(); }catch(e){} }
 }
 function natSpeakFrom(i, seq){
@@ -3225,7 +3270,7 @@ function systemVoices(lang){
 }
 function voiceSectionHTML(lang){
   const e=S.ttsEngine==='system'?'system':'natural';
-  const DESC={natural:'Natural-sounding voices that run on this phone. Each voice downloads once (about 60 MB), then works offline.',
+  const DESC={natural:'Natural-sounding voices that run on this phone. Each voice downloads once (about 60 MB), then works offline. Supertonic voices (by Supertone, OpenRAIL-M license) are a test: they share one larger download (about 100 MB).',
     system:'The voices your iPhone lets web apps use. They start instantly but sound more robotic.'};
   let h=`<div class="panel-sec"><div class="group">
     <div class="set"><div class="hd"><label>Voice type</label></div><div class="seg" data-set="ttsEngine" data-type="seg">
@@ -3256,8 +3301,10 @@ async function natStateUI(){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.11';
+const APP_VERSION='2026.11.13.12';
 const WHATSNEW=[
+  ['Try the Supertonic voices','A test: ten new natural voices, listed under Supertonic (test) in the voice list. They share one download of about 100 MB. Tap Hear this voice to compare them with the others; it also shows whether this phone makes speech fast enough.'],
+  ['Abbreviations read letter by letter','Read aloud now spells out initials like NIV, KJV, ESV, NASB, FBI and CIA, while words like NASA and FEMA are still said as words.'],
   ['Highlight up to a dash','Words joined by a dash, like “me—and”, are now separate words, and a highlight can stop just before the dash. Books you already have update the first time you open them; your place, highlights and bookmarks stay put.'],
   ['Pauses at dashes','Read aloud now leaves a real silence at every dash — a little longer for an em dash (—) than an en dash (–) — whichever voice you use.'],
   ['References before a dash','Read aloud now says “Isaiah chapter 26 verse 8” even when the reference is followed straight away by a dash.']

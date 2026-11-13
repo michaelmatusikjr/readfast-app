@@ -65,8 +65,33 @@ function spokenWords(i, j){
     if(raw==='Rev.'){ out[k-i]='Reverend'; continue; }
     if(/^(no|No)\.$/.test(raw) && /^\d/.test(R.words[k+1]||'')){ out[k-i]='number'; continue; }
     if(/^p\.$/.test(raw) && /^\d/.test(R.words[k+1]||'')){ out[k-i]='page'; continue; }
+    /* initialisms read letter by letter ("NIV" → N.I.V); acronyms said as words (NASA, FEMA) are left alone */
+    const ac=acronymSpoken(raw); if(ac){ out[k-i]=ac; continue; }
   }
   return out;
+}
+/* Capitals with a vowel are read as a word (NASA, FEMA, LORD, I AM) unless listed in SPELL_OUT;
+   capitals with no vowel (KJV, NSA, LSB) are always spelled, except Roman numerals and a few sounds. */
+const SPELL_OUT=new Set(('NIV NIRV NASB NASB95 ESV ASV RSV NRSV NRSVUE NKJV KJV AKJV CSB HCSB NLT NET NAB NABRE NJB JB TEV GNT CEV CEB ISV WEB YLT LEB NCV ICB ERV MEV AMPC BSB LSB NEB REB TLB TPT '+
+  'CIA FBI NSA IRS USA US UK EU UN UAE USSR KGB DOJ DOD DOE DOT DHS EPA FDA CDC NIH NIEHS OSHA? FAA FCC FTC SEC FEC ATF DEA ICE? TSA USPS UPS IBM HP AT&T CEO CFO COO CTO VP HR PR IT? '+
+  'ATM PIN? PDF USB URL HTML CSS API AI IQ EQ ID? IOU UFO DIY FAQ ETA EST CST MST PST GMT UTC AM? PM? BC BCE AD CE OT NT LXX '+
+  'YMCA YWCA NAACP NCAA NFL NBA MLB NHL NASCAR? ESPN CNN BBC NPR PBS ABC CBS NBC HBO MSNBC FOX? MIT UCLA USC LSU UCF TCU SMU BYU NYU UNC UVA UGA OSU ASU '+
+  'MBA MD DDS RN LPN CPA PHD THD DMIN MDIV THM BA BS MA MS JD LLC INC? GPA SAT ACT? PTA PTSD ADHD OCD HIV DNA RNA ICU ER? EMT CPR IV? MRI CT ADA '+
+  'USAF USMC USN ROTC POW MIA AWOL? GI VA VFW NATO? WWI WWII TV DVD CD PC OK? VIP RSVP ASAP? PS PPS NB IVP SBC PCA PCUSA ELCA LCMS UMC AME CMA EFCA OPC ARP BBQ').split(' ').filter(x=>!x.endsWith('?')));
+const SAY_AS_WORD=new Set('NASA FEMA PETA NATO UNESCO UNICEF OPEC AIDS SCUBA LASER RADAR NASCAR SWAT GIF JPEG ZIP COVID POTUS SCOTUS FLOTUS NAFTA OSHA HUD CAPTCHA RAM ROM DOS MIDI WASP YOLO NIMBY AWOL ASAP IKEA LEGO FIFA ISIS NOAA DARPA SALT START ESL TESOL GAAP OPSEC HAZMAT SONAR WAC AMEN'.split(' '));
+const NO_SPELL=new Set('MR MRS DR ST JR SR MT HMM HMMM SHH SHHH PSST BRR TSK GRR ZZZ PFFT MMM MM'.split(' '));
+function acronymSpoken(raw){
+  const m=/^[(\[“"‘']*([A-Z][A-Z&]*[A-Z](?:95)?|NIrV|PhD|ThD|ThM|DMin|MDiv)(['’]s|s)?([.,;:!?)\]”"’'—–]*)$/.exec(raw);
+  if(!m) return null;
+  const a=m[1], up=a.toUpperCase();
+  if(SAY_AS_WORD.has(up) || NO_SPELL.has(up)) return null;
+  let spell=SPELL_OUT.has(up);
+  if(!spell && !/[AEIOUY]/.test(up) && !/^[MDCLXVI]+$/.test(up) && up.length<=6) spell=true;
+  if(!spell) return null;
+  const letters=up.replace('&',' and ').replace(/95$/,' 95');
+  const said=letters.replace(/[A-Z]{2,}/g,x=>x.split('').join('.'));
+  const tail=m[3]||'';
+  return said+(m[2]? (m[2]==='s'?'s':"'s") : '')+tail.replace(/[)\]”"’']/g,'');
 }
 /* blocks that hold the text of footnotes/endnotes (read-aloud skips them) */
 function noteBlocks(){
