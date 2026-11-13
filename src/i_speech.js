@@ -83,7 +83,9 @@ function speechChunk(i, max, min){
   while(i<R.n && NB.has(bi)){ i=R.blocks[bi].e; bi=blockAt(i); }
   if(i>=R.n) return {i, j:R.n, text:'', cum:[], map:[], pauseAfter:0};
   const bEnd=R.blocks[bi]? R.blocks[bi].e : R.n;
-  let j=i, len=0; while(j<R.n && j<bEnd && len<max){ j++; len++; if(len>=min && isSentEnd(j-1) && !noBreakAfter(j-1) && j<bEnd) break; }
+  /* a word ending in a dash ends the stretch too, so the pause is a real silence whatever the voice does with the dash */
+  const dashEnd=k=>/(?:[—–]|-{2,})["”’)\]]*$/.test(R.words[k]||'');
+  let j=i, len=0; while(j<R.n && j<bEnd && len<max){ j++; len++; if(j<bEnd && dashEnd(j-1)) break; if(len>=min && isSentEnd(j-1) && !noBreakAfter(j-1) && j<bEnd) break; }
   /* never end a stretch on a book name or abbreviation that belongs with the next word */
   while(j<bEnd && j<R.n && noBreakAfter(j-1) && j-i<max+8) j++;
   const sp=spokenWords(i,j);
@@ -108,6 +110,7 @@ function speechChunk(i, max, min){
   const tot=wt.reduce((a,b)=>a+b,0)||1; let acc=0; const cum=wt.map(x=>{ const c=acc/tot; acc+=x; return c; });
   let pauseAfter=0;
   if(j>=bEnd){ const cur=R.blocks[bi], nx=R.blocks[bi+1]; pauseAfter= isHeadBlock(nx)? 1100 : isHeadBlock(cur)? 700 : 350; }
+  else if(j>i && dashEnd(j-1)) pauseAfter= /—|-{2,}/.test(R.words[j-1])? 450 : 250;   /* em dash pauses longer than en dash */
   return {i, j, text:text.trim(), cum, map, pauseAfter};
 }
 /* listening speed, for "time left" while read-aloud is on (words per minute at normal speed, learned as you listen) */
