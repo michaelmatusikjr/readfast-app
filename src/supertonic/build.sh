@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds ../../supertonic-worker.js. Needs: npm i onnxruntime-web@1.18.0 esbuild@0.24.0
+# Builds ../../supertonic-worker.js. Needs: npm i onnxruntime-web@1.31.1 esbuild@0.24.0
 # (run from a folder that has those in node_modules; pass that folder as $1)
 set -e
 NM=${1:-.}
