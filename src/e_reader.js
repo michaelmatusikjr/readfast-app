@@ -1111,6 +1111,7 @@ function afterSet(key){
   if(key==='scrollWpm'||key==='autoScroll'){ if(!S.autoScroll && SC.auto) asStop(true); asUI(); }
   if(key==='focus') setChrome(true);
   if(key==='ttsEngine'){ if(TTS.on) ttsStop(); refreshPanel(); return; }
+  if(key==='kokDevice'){ if(TTS.on) ttsStop(); kokReset(); refreshPanel(); return; }
   if((key==='kokVoice'||key==='ttsVoice'||key==='ttsRate') && TTS.on){ clearTimeout(TTS.restartT); TTS.restartT=setTimeout(()=>{ if(TTS.on) ttsRestart(); },400); }
   applyLook();
   if(key==='speedSize'||key==='focusColor'||key==='boldText'){ if(R.mode==='speed') showChunk(R.pos); }

@@ -26,7 +26,7 @@ const DEFAULTS = {
   turn:'slide', tapZones:'edges', twoCol:true, focus:true,
   autoScroll:false, scrollWpm:220, asRamp:true, asPauses:true,
   wpm:350, multi:false, charBudget:14, ramp:true, rampSecs:6, commaPause:1.6, sentPause:2.3, paraPause:3.0, longWord:true, autoRewind:3, speedSize:44, focusColor:'#E0303F', context:true,
-  speedFont:'same', adaptive:false, ttsRate:1, ttsVoice:'', ttsEngine:'kokoro', kokVoice:'af_heart', info:0, measuredWpm:0, goalMins:0, linkService:'', bkRemind:7, idleMins:5, yearGoal:0
+  speedFont:'same', adaptive:false, ttsRate:1, ttsVoice:'', ttsEngine:'kokoro', kokVoice:'af_heart', kokDevice:'webgpu', info:0, measuredWpm:0, goalMins:0, linkService:'', bkRemind:7, idleMins:5, yearGoal:0
 };
 const S = (()=>{
   const saved=LS.get('settings',{})||{};
