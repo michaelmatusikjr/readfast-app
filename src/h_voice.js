@@ -21,41 +21,59 @@ function natUnlock(){ const a=natAudio(); try{ a.src=SILENT_WAV; const p=a.play(
    from Hugging Face (about 60 MB) and is kept in the phone's private file storage, so it works offline. */
 const PIP_VOICES=[
   ['American',[['en_US-lessac-medium','Lessac','female, clear'],['en_US-amy-medium','Amy','female'],['en_US-kristin-medium','Kristin','female'],['en_US-hfc_female-medium','Hannah','female'],['en_US-ryan-medium','Ryan','male'],['en_US-joe-medium','Joe','male'],['en_US-john-medium','John','male'],['en_US-norman-medium','Norman','male, deep'],['en_US-bryce-medium','Bryce','male'],['en_US-hfc_male-medium','Henry','male']]],
-  ['British',[['en_GB-jenny_dioco-medium','Jenny','female'],['en_GB-cori-medium','Cori','female'],['en_GB-alba-medium','Alba','female, Scottish'],['en_GB-alan-medium','Alan','male'],['en_GB-northern_english_male-medium','Northern','male']]]
+  ['British',[['en_GB-jenny_dioco-medium','Jenny','female'],['en_GB-cori-medium','Cori','female'],['en_GB-alba-medium','Alba','female, Scottish'],['en_GB-alan-medium','Alan','male'],['en_GB-northern_english_male-medium','Northern','male']]],
+  /* Supertonic 3 (test, Nov 2026): one shared model (about 100 MB) plus a tiny file per voice; see src/supertonic */
+  ['Supertonic (test)',[1,2,3,4,5].map(n=>['st-F'+n,'Supertonic '+n,'female']).concat([1,2,3,4,5].map(n=>['st-M'+n,'Supertonic '+(n+5),'male']))]
 ];
 const pipVoice=()=>S.pipVoice||'en_US-lessac-medium';
-const PIP={w:null, ready:null, loading:null, lvoice:null, id:0, cb:new Map(), prog:{}, onprog:null};
-function pipWorker(){
-  if(PIP.w) return PIP.w;
-  const w=new Worker('piper-worker.js',{type:'module'});
+/* one manager per voice engine; both workers answer the same messages (load, gen, cancel) */
+const vmake=file=>({file, w:null, ready:null, loading:null, lvoice:null, id:0, cb:new Map(), prog:{}, onprog:null});
+const PIP=vmake('piper-worker.js'), STV=vmake('supertonic-worker.js');
+const isST=v=>/^st-/.test(v||'');
+const VM=v=>isST(v)?STV:PIP;
+const engVoice=v=>isST(v)?v.slice(3):v;   /* the name the worker knows the voice by */
+function pipWorker(M){
+  M=M||PIP;
+  if(M.w) return M.w;
+  const w=new Worker(M.file,{type:'module'});
   w.onmessage=e=>{
     const m=e.data;
-    if(m.type==='progress'){ const f=m.p.file||''; if(f.startsWith('http') && m.p.total){ PIP.prog[f]=[m.p.loaded||0,m.p.total]; if(PIP.onprog) PIP.onprog(progPct(PIP.prog)); } }
-    else if(m.type==='ready'){ PIP.ready=m.voice; LS.set('pipReady.'+m.voice,true); const r=PIP.lres; PIP.loading=null; PIP.lres=PIP.lrej=null; r&&r(); }
-    else if(m.type==='loaderror'){ const r=PIP.lrej; pipReset(); r&&r(new Error(m.msg)); }
-    else if(m.id!=null){ const c=PIP.cb.get(m.id); if(!c) return; PIP.cb.delete(m.id); if(m.type==='error') c.rej(new Error(m.msg)); else c.res(m); }
+    if(m.type==='progress'){ const f=m.p.file||''; if(f.startsWith('http') && m.p.total){ M.prog[f]=[m.p.loaded||0,m.p.total]; if(M.onprog) M.onprog(progPct(M.prog)); } }
+    else if(m.type==='ready'){ const v=M.lvoice; M.ready=v; LS.set('pipReady.'+v,true); const r=M.lres; M.loading=null; M.lres=M.lrej=null; r&&r(); }
+    else if(m.type==='loaderror'){ const r=M.lrej; pipReset(M); r&&r(new Error(m.msg)); }
+    else if(m.id!=null){ const c=M.cb.get(m.id); if(!c) return; M.cb.delete(m.id); if(m.type==='error') c.rej(new Error(m.msg)); else c.res(m); }
   };
-  w.onerror=e=>{ const r=PIP.lrej; pipReset(); r&&r(new Error(e.message||'The voice couldn’t start on this device.')); };
-  PIP.w=w; return w;
+  w.onerror=e=>{ const r=M.lrej; pipReset(M); r&&r(new Error(e.message||'The voice couldn’t start on this device.')); };
+  M.w=w; return w;
 }
-function pipReset(){ try{ PIP.w&&PIP.w.terminate(); }catch(e){} PIP.w=null; PIP.ready=null; PIP.loading=null; PIP.lres=PIP.lrej=null; for(const c of PIP.cb.values()) c.rej(new Error('stopped')); PIP.cb.clear(); }
+function pipReset(M){ M=M||PIP; try{ M.w&&M.w.terminate(); }catch(e){} M.w=null; M.ready=null; M.loading=null; M.lres=M.lrej=null; for(const c of M.cb.values()) c.rej(new Error('stopped')); M.cb.clear(); }
 function pipLoad(voice, onprog){
-  PIP.onprog=onprog||null;
-  if(PIP.ready===voice) return Promise.resolve();
-  if(PIP.loading && PIP.lvoice===voice) return PIP.loading;
-  PIP.prog={}; PIP.lvoice=voice; PIP.ready=null;
-  PIP.loading=new Promise((res,rej)=>{ PIP.lres=res; PIP.lrej=rej; }); PIP.loading.catch(()=>{});
-  try{ pipWorker().postMessage({type:'load', voice}); }catch(e){ const r=PIP.lrej; pipReset(); r&&r(e); }
-  return PIP.loading;
+  const M=VM(voice);
+  M.onprog=onprog||null;
+  if(M.ready===voice) return Promise.resolve();
+  if(M.loading && M.lvoice===voice) return M.loading;
+  M.prog={}; M.lvoice=voice; M.ready=null;
+  M.loading=new Promise((res,rej)=>{ M.lres=res; M.lrej=rej; }); M.loading.catch(()=>{});
+  try{ pipWorker(M).postMessage({type:'load', voice:engVoice(voice)}); }catch(e){ const r=M.lrej; pipReset(M); r&&r(e); }
+  return M.loading;
 }
-function pipCall(msg){ return new Promise((res,rej)=>{ const id=++PIP.id; PIP.cb.set(id,{res,rej}); pipWorker().postMessage(Object.assign({id},msg)); }); }
+function pipCall(msg){ const M=VM(msg.voice); return new Promise((res,rej)=>{ const id=++M.id; M.cb.set(id,{res,rej}); pipWorker(M).postMessage(Object.assign({id},msg,{voice:engVoice(msg.voice)})); }); }
 async function pipDownloaded(voice){
   if(LS.get('pipReady.'+voice,false)) return true;
-  try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper'); await dir.getFileHandle(voice+'.onnx'); return true; }catch(e){ return false; }
+  try{ const root=await navigator.storage.getDirectory();
+    if(isST(voice)){ const dir=await root.getDirectoryHandle('supertonic'); await dir.getFileHandle('onnx__vocoder.onnx'); await dir.getFileHandle('voice_styles__'+engVoice(voice)+'.json'); return true; }
+    const dir=await root.getDirectoryHandle('piper'); await dir.getFileHandle(voice+'.onnx'); return true; }catch(e){ return false; }
 }
+function stClearReady(){ try{ for(let k=localStorage.length-1;k>=0;k--){ const key=localStorage.key(k); if(key && key.startsWith('rf.pipReady.st-')) localStorage.removeItem(key); } }catch(e){} }
 async function pipRemove(voice){
   /* close the voice first so its file isn't in use, then delete it here (Safari doesn't support the library's own delete) */
-  if(PIP.ready===voice || PIP.lvoice===voice) pipReset();
+  if(isST(voice)){
+    /* Supertonic voices share one model, so removing the download removes the model and every Supertonic voice */
+    pipReset(STV);
+    try{ const root=await navigator.storage.getDirectory(); await root.removeEntry('supertonic',{recursive:true}); }catch(e){}
+    stClearReady(); return;
+  }
+  if(PIP.ready===voice || PIP.lvoice===voice) pipReset(PIP);
   try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper');
     for(const name of [voice+'.onnx', voice+'.onnx.json']){ try{ await dir.removeEntry(name); }catch(e){} } }catch(e){}
   LS.set('pipReady.'+voice,false);
@@ -63,8 +81,8 @@ async function pipRemove(voice){
 function wavInfo(buf){ const v=new DataView(buf); const sr=v.getUint32(24,true)||22050; return {sr, dur:Math.max(0,(buf.byteLength-44)/2/sr)}; }
 function progPct(prog){ let a=0,t=0; for(const k in prog){ a+=prog[k][0]; t+=prog[k][1]; } return t? {pct:Math.min(100,Math.round(100*a/t)), a, t} : {pct:0,a:0,t:0}; }
 
-const natSize=()=>'about 60 MB';
-const natReady=()=> PIP.ready===pipVoice();
+const natSize=()=> isST(pipVoice())? 'about 100 MB, shared by all Supertonic voices' : 'about 60 MB';
+const natReady=()=> VM(pipVoice()).ready===pipVoice();
 async function natDownloaded(){ return pipDownloaded(pipVoice()); }
 function natLoad(prog){ return pipLoad(pipVoice(), prog); }
 async function natGen(text){
@@ -76,8 +94,10 @@ async function natRemove(){ await pipRemove(pipVoice()); }
 /* removes every downloaded voice; returns how many */
 async function natRemoveAll(){
   let n=0; try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper'); for await (const [name] of dir.entries()) if(name.endsWith('.onnx')) n++; }catch(e){}
-  pipReset();
+  try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('supertonic'); for await (const [name] of dir.entries()) if(name.startsWith('voice_styles__')) n++; }catch(e){}
+  pipReset(PIP); pipReset(STV);
   try{ const root=await navigator.storage.getDirectory(); await root.removeEntry('piper',{recursive:true}); }catch(e){}
+  try{ const root=await navigator.storage.getDirectory(); await root.removeEntry('supertonic',{recursive:true}); }catch(e){}
   try{ for(let k=localStorage.length-1;k>=0;k--){ const key=localStorage.key(k); if(key && key.startsWith('rf.pipReady.')) localStorage.removeItem(key); } }catch(e){}
   return n;
 }
@@ -120,7 +140,7 @@ function natClear(){
   clearInterval(TTS.kt); TTS.kt=0;
   for(const c of TTS.kq||[]) if(c.url) URL.revokeObjectURL(c.url);
   TTS.kq=[];
-  try{ PIP.w && PIP.w.postMessage({type:'cancel'}); }catch(e){}
+  for(const M of [PIP,STV]) try{ M.w && M.w.postMessage({type:'cancel'}); }catch(e){}
   const a=NAT.audio; if(a){ a.onended=null; try{ a.pause(); }catch(e){} }
 }
 function natSpeakFrom(i, seq){
@@ -179,7 +199,7 @@ function systemVoices(lang){
 }
 function voiceSectionHTML(lang){
   const e=S.ttsEngine==='system'?'system':'natural';
-  const DESC={natural:'Natural-sounding voices that run on this phone. Each voice downloads once (about 60 MB), then works offline.',
+  const DESC={natural:'Natural-sounding voices that run on this phone. Each voice downloads once (about 60 MB), then works offline. Supertonic voices (by Supertone, OpenRAIL-M license) are a test: they share one larger download (about 100 MB).',
     system:'The voices your iPhone lets web apps use. They start instantly but sound more robotic.'};
   let h=`<div class="panel-sec"><div class="group">
     <div class="set"><div class="hd"><label>Voice type</label></div><div class="seg" data-set="ttsEngine" data-type="seg">
