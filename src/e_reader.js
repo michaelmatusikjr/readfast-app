@@ -604,7 +604,9 @@ async function loadBookFont(text){
    bookmark, chapter, paragraph, note and picture is moved to its new word number. */
 function splitDashWord(w){
   if(!w || !/[^—–\s-](?:[—–]+|-{2,})[^—–\s-]/.test(w)) return null;
-  const p=w.match(/.*?(?:[—–]+|-{2,})(?=[^—–-])|.+$/g).filter(Boolean);
+  const p0=w.match(/.*?(?:[—–]+|-{2,})(?=[^—–-])|.+$/g).filter(Boolean);
+  /* keep number ranges whole ("3:7–8", "1990–2000") */
+  const p=[]; for(const x of p0){ if(p.length && /\d[–-]$/.test(p[p.length-1]) && /^\d/.test(x)) p[p.length-1]+=x; else p.push(x); }
   return p.length>1? p : null;
 }
 function dashSplitText(text, meta){

@@ -2203,7 +2203,9 @@ async function loadBookFont(text){
    bookmark, chapter, paragraph, note and picture is moved to its new word number. */
 function splitDashWord(w){
   if(!w || !/[^—–\s-](?:[—–]+|-{2,})[^—–\s-]/.test(w)) return null;
-  const p=w.match(/.*?(?:[—–]+|-{2,})(?=[^—–-])|.+$/g).filter(Boolean);
+  const p0=w.match(/.*?(?:[—–]+|-{2,})(?=[^—–-])|.+$/g).filter(Boolean);
+  /* keep number ranges whole ("3:7–8", "1990–2000") */
+  const p=[]; for(const x of p0){ if(p.length && /\d[–-]$/.test(p[p.length-1]) && /^\d/.test(x)) p[p.length-1]+=x; else p.push(x); }
   return p.length>1? p : null;
 }
 function dashSplitText(text, meta){
@@ -2942,6 +2944,8 @@ function refPhrase(m, book){
   if(x) return `${ch} verses ${v} through ${x}`;
   return `${ch} verse ${v}`;
 }
+/* "3:7–" + "8": a number range that an earlier version split at the dash (books opened Nov 13); spoken as one */
+const rangeJoin=k=>/\d[–-]$/.test(R.words[k]||'') && glued(k+1) && /^\d/.test(R.words[k+1]||'');
 const coreOf=w=>String(w||'').replace(/^[(\[“"‘']+/,'').replace(/[.,;:!?)\]”"’'—–]+$/,'');
 const isRef=w=>REF_RE.test(coreOf(w));
 /* a book name (or abbreviation) that is followed by chapter:verse */
@@ -2962,8 +2966,12 @@ function spokenWords(i, j){
   /* a reference list that started before this stretch ("Rom. 8:28; 12:1") */
   let book=null, bookAt=-99;
   for(let k=Math.max(0,i-8);k<i;k++){ if(isRef(R.words[k])){ const b=BIBLE_BOOKS[bookKey(R.words[k-1]||'')]; if(b){ book=b; bookAt=k; } else if(book && k-bookAt<=6) bookAt=k; } }
+  let skip=false;
   for(let k=i;k<j;k++){
-    const raw=R.words[k]||''; const trail=(raw.match(/[.,;:!?)\]”"’'—–]+$/)||[''])[0];
+    if(skip){ skip=false; continue; }
+    const join=k+1<j && rangeJoin(k);
+    const raw=(R.words[k]||'')+(join? R.words[k+1] : '');
+    if(join){ out[k+1-i]=''; out[k-i]=raw; skip=true; } const trail=(raw.match(/[.,;:!?)\]”"’'—–]+$/)||[''])[0];
     const core=coreOf(raw);
     const pausePunct=trail.replace(/[)\]”"’']/g,'').replace(/:/g,',');
     /* book name before chapter:verse ("Isa.", "1 Cor.") */
@@ -3033,7 +3041,7 @@ function speechChunk(i, max, min){
   if(i>=R.n) return {i, j:R.n, text:'', cum:[], map:[], pauseAfter:0};
   const bEnd=R.blocks[bi]? R.blocks[bi].e : R.n;
   /* a word ending in a dash ends the stretch too, so the pause is a real silence whatever the voice does with the dash */
-  const dashEnd=k=>/(?:[—–]|-{2,})["”’)\]]*$/.test(R.words[k]||'');
+  const dashEnd=k=>/(?:[—–]|-{2,})["”’)\]]*$/.test(R.words[k]||'') && !rangeJoin(k);
   let j=i, len=0; while(j<R.n && j<bEnd && len<max){ j++; len++; if(j<bEnd && dashEnd(j-1)) break; if(len>=min && isSentEnd(j-1) && !noBreakAfter(j-1) && j<bEnd) break; }
   /* never end a stretch on a book name or abbreviation that belongs with the next word */
   while(j<bEnd && j<R.n && noBreakAfter(j-1) && j-i<max+8) j++;
@@ -3303,12 +3311,13 @@ async function natStateUI(){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.15';
+const APP_VERSION='2026.11.13.16';
 const WHATSNEW=[
   ['Try the Supertonic voices','A test: ten new natural voices, listed under Supertonic (test) in the voice list. They share one download of about 100 MB (if you tried them before, they download again: the first copy sounded garbled). Tap Hear this voice to compare them with the others; it also shows whether this phone makes speech fast enough.'],
   ['Abbreviations read letter by letter','Read aloud now spells out initials like NIV, KJV, ESV, NASB, FBI and CIA, while words like NASA and FEMA are still said as words.'],
   ['Highlight up to a dash','Words joined by a dash, like “me—and”, are now separate words, and a highlight can stop just before the dash. Books you already have update the first time you open them; your place, highlights and bookmarks stay put.'],
   ['Pauses at dashes','Read aloud now leaves a real silence at every dash — a little longer for an em dash (—) than an en dash (–) — whichever voice you use.'],
+  ['Verse ranges','“Phil. 3:7–8” is read as “Philippians chapter 3 verses 7 through 8” again; number ranges are no longer split at the dash.'],
   ['References before a dash','Read aloud now says “Isaiah chapter 26 verse 8” even when the reference is followed straight away by a dash.']
 ];
 function whatsNewSheet(){
