@@ -1053,7 +1053,7 @@ function ttsStart(){
 function ttsStop(){ if(!TTS.on) return; TTS.on=false; TTS.seq++; if(TTS.nat) natClear(); try{ speechSynthesis.cancel(); }catch(e){} ttsMark(-1); releaseWake(); resetClock(); updateChrome(); }
 /* start reading again from the current word (after a jump or a voice change) */
 function ttsRestart(){
-  if(TTS.nat){ if(!natReady()){ natClear(); natStart(); return; } TTS.seq++; natSpeakFrom(R.pos, TTS.seq); return; }
+  if(TTS.nat){ if(!natReady() && !abPartAt(R.pos)){ natClear(); natStart(); return; } TTS.seq++; natSpeakFrom(R.pos, TTS.seq); return; }
   TTS.seq++; try{ speechSynthesis.cancel(); }catch(e){} ttsSpeakFrom(R.pos, TTS.seq);
 }
 function ttsSpeakFrom(i, seq){
@@ -1260,8 +1260,8 @@ function asOptsHTML(){ return `<div class="group">
   </div>`; }
 function openAsOpts(){ openSheet('Auto-scroll options', asOptsHTML(), {}); $('#sheet .sheet-body').dataset.sheet='as'; bindPanel(); }
 /* audio controls → voice button */
-function voiceSheetHTML(){ const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase(); return voiceSectionHTML(lang); }
-function openVoiceSheet(){ openSheet('Voice', voiceSheetHTML(), READ_ACTS); $('#sheet .sheet-body').dataset.sheet='voice'; bindPanel(); setTimeout(natStateUI,0); }
+function voiceSheetHTML(){ const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase(); return voiceSectionHTML(lang)+(R.meta?abSectionHTML():''); }
+function openVoiceSheet(){ openSheet('Voice', voiceSheetHTML(), Object.assign({},READ_ACTS,AB_ACTS)); $('#sheet .sheet-body').dataset.sheet='voice'; bindPanel(); setTimeout(()=>{ natStateUI(); abUI(); },0); }
 /* actions shared by the Aa menu and the reading section of Settings */
 const READ_ACTS={
   vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') natPreview(); else voicePreview(); },
@@ -1282,7 +1282,7 @@ function refreshPanel(){
   const body=$('#sheet .sheet-body'); if(!body || $('#sheet').hidden) return;
   const html= body.dataset.aa? panelHTML() : body.dataset.sheet==='speed'? speedOptsHTML() : body.dataset.sheet==='as'? asOptsHTML() : body.dataset.sheet==='voice'? voiceSheetHTML() : null;
   if(html==null) return;
-  const st=body.scrollTop; body.innerHTML=html; body.scrollTop=st; if(body.dataset.sheet==='voice') natStateUI();
+  const st=body.scrollTop; body.innerHTML=html; body.scrollTop=st; if(body.dataset.sheet==='voice'){ natStateUI(); abUI(); }
 }
 /* Aa → More settings: the Settings page over the book, with a way back */
 function openSettingsFromReader(){

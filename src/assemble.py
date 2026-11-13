@@ -116,6 +116,7 @@ parts.append('\n/* ---------- library ---------- */\n'+d.split('/* ---------- li
 parts.append(open(D+'e_reader.js',encoding='utf-8').read())
 parts.append(open(D+'i_speech.js',encoding='utf-8').read())
 parts.append(open(D+'h_voice.js',encoding='utf-8').read())
+parts.append(open(D+'j_audiobook.js',encoding='utf-8').read())
 parts.append(open(D+'g_extra.js',encoding='utf-8').read())
 parts.append(open(D+'f_js3.js',encoding='utf-8').read())
 out=fill('\n'.join(parts))
