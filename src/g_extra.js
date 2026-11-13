@@ -1,7 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.10';
+const APP_VERSION='2026.11.13.11';
 const WHATSNEW=[
-  ['Highlight up to a dash','Words joined by a dash, like “me—and”, are now separate words, so a highlight can stop right at the dash. Books you already have update the first time you open them; your place, highlights and bookmarks stay put.'],
+  ['Highlight up to a dash','Words joined by a dash, like “me—and”, are now separate words, and a highlight can stop just before the dash. Books you already have update the first time you open them; your place, highlights and bookmarks stay put.'],
   ['Pauses at dashes','Read aloud now leaves a real silence at every dash — a little longer for an em dash (—) than an en dash (–) — whichever voice you use.'],
   ['References before a dash','Read aloud now says “Isaiah chapter 26 verse 8” even when the reference is followed straight away by a dash.']
 ];

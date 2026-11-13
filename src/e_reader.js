@@ -79,7 +79,7 @@ function dashParts(k){
 function speedText(s,e,first){ let t=''; for(let k=s;k<=e&&k<R.n;k++){ if(k>s && !glued(k) && !isDashTok(k)) t+=' '; t+= (k===s&&first!=null)? first : R.words[k]; } return t; }
 /* hyphenated words get a little longer on screen */
 function hyphenSlow(w){ const n=(w.match(/\p{L}-(?=\p{L})/gu)||[]).length; return n? Math.min(.8, .35+.15*(n-1)) : 0; }
-function textOf(s,e){ let t=''; for(let k=s;k<=e&&k<R.n;k++){ if(k>s && !(R.wf && (R.wf[k]&F_GLUE))) t+=' '; t+=R.words[k]; } return t; }
+function textOf(s,e){ let t=''; for(let k=s;k<=e&&k<R.n;k++){ if(k>s && !(R.wf && (R.wf[k]&F_GLUE))) t+=' '; t+=R.words[k]; } return t.replace(/(?:[—–]|-{2,})$/,''); }   /* a highlight ends before a trailing dash */
 
 /* ---------- rendering a section as book text ---------- */
 function figHTML(idx){ const a=R.imgList[idx]; const src=R.imgUrls[a.f]; if(!src) return ''; return `<figure data-img="${idx}"><img src="${src}" alt="${esc(a.alt||'Illustration')}"></figure>`; }
@@ -98,7 +98,10 @@ function blockHTML(blk,s,e){
     if(f){ if(f&F_I)c+=' i'; if(f&F_B)c+=' b'; if(f&F_C)c+=' c'; if(f&F_U)c+=' u'; if(f&F_N)c+=' n'; else { if(f&F_P)c+=' p'; if(f&F_S)c+=' s'; } }
     if(R.back && R.back.has(k) && !(f&F_N)) c+=' nb';
     const sp=(k<e-1 && !(wf && (wf[k+1]&F_GLUE)))?' ':'';
-    h+=(c?'<w class="'+c.slice(1)+'">':'<w>')+(ws&&!(f&(F_C|F_N|F_P|F_S))?wsHTML(W[k]):esc(W[k]))+sp+'</w>';
+    /* a dash at the end of a word sits just outside the word, so a highlight can stop before it */
+    const dm=(f&(F_C|F_N|F_P|F_S))?null:/^(.*[^—–\-\s])((?:[—–]|-{2,})["”’)\]]*)$/.exec(W[k]);
+    const core=dm?dm[1]:W[k];
+    h+=(c?'<w class="'+c.slice(1)+'">':'<w>')+(ws&&!(f&(F_C|F_N|F_P|F_S))?wsHTML(core):esc(core))+(dm?'':sp)+'</w>'+(dm?'<wd'+(c?' class="'+c.slice(1)+'"':'')+'>'+esc(dm[2])+sp+'</wd>':'');
   }
   return h+'</'+tag+'>';
 }
@@ -133,16 +136,18 @@ async function renderSec(container, k, where, scrollEl){
 function hostEl(){ return R.mode==='pages'?pgFlow : R.mode==='scroll'?scFlow : null; }
 function wordEl(i){ const h=hostEl(); if(!h) return null; for(const sec of h.children){ if(i>=sec._a && i<sec._b) return sec._ws[i-sec._a]||null; } return null; }
 function idxOf(node){ const w=node&&node.closest?node.closest('w'):null; if(!w) return null; const sec=w.closest('.sec'); if(!sec||!sec._ws) return null; const k=Array.prototype.indexOf.call(sec._ws, w); return k<0?null:sec._a+k; }
+/* the dash shown after a word: highlighted only when the highlight carries on past it */
+function dashOf(w){ const d=w&&w.nextElementSibling; return d&&d.tagName==='WD'?d:null; }
 function decorate(sec){
-  sec.querySelectorAll('w.hl1,w.hl2,w.hl3,w.hl4,w.hn').forEach(x=>x.classList.remove('hl1','hl2','hl3','hl4','hn'));
+  sec.querySelectorAll('w.hl1,w.hl2,w.hl3,w.hl4,w.hn,wd.hl1,wd.hl2,wd.hl3,wd.hl4,wd.hn,wd.tsel').forEach(x=>x.classList.remove('hl1','hl2','hl3','hl4','hn','tsel'));
   const a=sec._a, b=sec._b;
   for(const h of (R.meta.highlights||[])){
     if(h.e<a || h.s>=b) continue;
-    for(let k=Math.max(h.s,a); k<=Math.min(h.e,b-1); k++){ const w=sec._ws[k-a]; if(w){ w.classList.add('hl'+h.c); if(h.note) w.classList.add('hn'); } }
+    for(let k=Math.max(h.s,a); k<=Math.min(h.e,b-1); k++){ const w=sec._ws[k-a]; if(w){ w.classList.add('hl'+h.c); if(h.note) w.classList.add('hn'); const d=k<h.e&&dashOf(w); if(d){ d.classList.add('hl'+h.c); if(h.note) d.classList.add('hn'); } } }
   }
   if(TTS.on && TTS.cur>=a && TTS.cur<b){ const w=sec._ws[TTS.cur-a]; if(w) w.classList.add('tts'); }
   if(TTS.pick!=null && TTS.pick>=a && TTS.pick<b){ const w=sec._ws[TTS.pick-a]; if(w) w.classList.add('ttspick'); }
-  if(typeof TS!=='undefined' && TS.on) for(let k=Math.max(TS.a,a); k<=Math.min(TS.b,b-1); k++){ const w=sec._ws[k-a]; if(w) w.classList.add('tsel'); }
+  if(typeof TS!=='undefined' && TS.on) for(let k=Math.max(TS.a,a); k<=Math.min(TS.b,b-1); k++){ const w=sec._ws[k-a]; if(w){ w.classList.add('tsel'); const d=k<TS.b&&dashOf(w); if(d) d.classList.add('tsel'); } }
 }
 function redecorate(){ const h=hostEl(); if(h) for(const sec of h.children) if(sec._ws) decorate(sec); }
 
@@ -777,10 +782,10 @@ async function copyQuote(s,e){
 const TS={on:false, a:0, b:0, timer:0, start:null, drag:null, extending:false};
 const coarse=()=>{ try{ return matchMedia('(hover:none),(pointer:coarse)').matches; }catch(e){ return false; } };
 function tsPaint(){
-  document.querySelectorAll('w.tsel').forEach(w=>w.classList.remove('tsel'));
+  document.querySelectorAll('w.tsel,wd.tsel').forEach(w=>w.classList.remove('tsel'));
   const A=$('#tsA'), B=$('#tsB');
   if(!TS.on){ A.hidden=B.hidden=true; return; }
-  for(let k=TS.a;k<=TS.b;k++){ const w=wordEl(k); if(w) w.classList.add('tsel'); }
+  for(let k=TS.a;k<=TS.b;k++){ const w=wordEl(k); if(w){ w.classList.add('tsel'); const d=k<TS.b&&dashOf(w); if(d) d.classList.add('tsel'); } }
   const wa=wordEl(TS.a), wb=wordEl(TS.b);
   if(wa){ const b=bandOf(wa, wa.getClientRects()[0]||wa.getBoundingClientRect()); A.style.setProperty('--stem',b.h+'px'); A.style.left=b.l+'px'; A.style.top=(b.top-13)+'px'; A.hidden=false; } else A.hidden=true;
   if(wb){ const rs=wb.getClientRects(); const b=bandOf(wb, rs[rs.length-1]||wb.getBoundingClientRect()); B.style.setProperty('--stem',b.h+'px'); B.style.left=b.r+'px'; B.style.top=b.top+'px'; B.hidden=false; } else B.hidden=true;
