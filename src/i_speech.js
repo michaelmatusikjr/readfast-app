@@ -100,7 +100,8 @@ function speechChunk(i, max, min){
     const raw=R.words[k]||'';
     if(/^[(\[]/.test(raw) && text && !/[,;:.!?—–]$/.test(text)) text+=',';
     if(/[)\]]["”’]*$/.test(raw) && !/[,;:.!?]$/.test(w)) w+=',';
-    if(k>i && !glued(k) && text) text+=' ';
+    /* a word split off after a dash still needs a space, or the pause is lost ("me...and") */
+    if(k>i && text && (!glued(k) || /(\.\.\.|,)$/.test(text))) text+=' ';
     map[map.length-1]=text.length; text+=w;
     wt.push(w.replace(/[^\p{L}\p{N} ]/gu,'').length+1 + (/[,;]/.test(w)?3:0) + (/\.\.\./.test(w)?5:0) + (/[.!?]["”’)]*$/.test(w)?6:0));
   }

@@ -1,7 +1,8 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.8';
+const APP_VERSION='2026.11.13.9';
 const WHATSNEW=[
   ['Highlight up to a dash','Words joined by a dash, like “me—and”, are now separate words, so a highlight can stop right at the dash. Books you already have update the first time you open them; your place, highlights and bookmarks stay put.'],
+  ['Pauses at dashes','Read aloud pauses at dashes again in books that were updated to split words at dashes.'],
   ['References before a dash','Read aloud now says “Isaiah chapter 26 verse 8” even when the reference is followed straight away by a dash.']
 ];
 function whatsNewSheet(){
