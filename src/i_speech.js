@@ -107,6 +107,12 @@ function noteBlocks(){
 }
 const isHeadBlock=b=>!!b && /^h\d/.test(b.t||'');
 /* the next stretch to speak from word i: up to max words, ending at a sentence end (after min words) or the end of the paragraph */
+/* a word that is only dots or an ellipsis (". . ." is stored as three such words) */
+const dotTok=k=>/^[.…]+["”’)\]]*$/.test(R.words[k]||'');
+/* an ellipsis, however it's typed (..., . . ., …), is one pause: a full stop before a capital or the end, else a comma */
+function ellipsisPause(k){ let n=k+1; while(n<R.n && dotTok(n)) n++; const nx=R.words[n]||''; return (n>=R.n || /^["“‘(]*[A-Z]/.test(nx) || R.ends.has(k))? '.' : ','; }
+/* an ellipsis followed by more of the same sentence keeps going in the same stretch */
+const midEllipsis=k=>(dotTok(k) || /(?:\.\.|…)["”’)\]]*$/.test(R.words[k]||'')) && ellipsisPause(k)===',';
 function speechChunk(i, max, min){
   const NB=noteBlocks();
   /* skip whole note blocks */
@@ -114,7 +120,8 @@ function speechChunk(i, max, min){
   while(i<R.n && NB.has(bi)){ i=R.blocks[bi].e; bi=blockAt(i); }
   if(i>=R.n) return {i, j:R.n, text:'', cum:[], map:[], pauseAfter:0};
   const bEnd=R.blocks[bi]? R.blocks[bi].e : R.n;
-  let j=i, len=0, ends='cap'; while(j<R.n && j<bEnd && len<max){ j++; len++; if(len>=min && isSentEnd(j-1) && !noBreakAfter(j-1) && j<bEnd){ ends='sent'; break; } }
+  /* ". . ." written as separate dots is one pause: never end a stretch before a lone dot */
+  let j=i, len=0, ends='cap'; while(j<R.n && j<bEnd && len<max){ j++; len++; if(len>=min && isSentEnd(j-1) && !noBreakAfter(j-1) && !dotTok(j) && !midEllipsis(j-1) && j<bEnd){ ends='sent'; break; } }
   if(j>=bEnd || j>=R.n) ends='block';
   /* a sentence too long for one stretch is cut at its last comma, semicolon, colon or dash, not mid-phrase */
   if(ends==='cap'){ for(let k=j-1;k>i+Math.max(3,min);k--){ if(/[,;:—–]["”’)\]]*$/.test(R.words[k]||'') && !rangeJoin(k) && !noBreakAfter(k)){ j=k+1; ends='clause'; break; } } }
@@ -127,6 +134,8 @@ function speechChunk(i, max, min){
     if(R.wf && (R.wf[k]&F_N)){ wt.push(0); continue; }
     let w=sp[k-i]; if(w===''){ wt.push(0); continue; }
     if(w==null) w=R.words[k];
+    if(dotTok(k)){ if(k>0 && (dotTok(k-1) || /(?:\.|…)["”’)\]]*$/.test(R.words[k-1]||''))){ wt.push(0); continue; } w=ellipsisPause(k); }
+    else w=w.replace(/(?:\.\s*){2,}|…/g, ()=>ellipsisPause(k));
     w=w.replace(/:(?=\s|$)/g,',').replace(/:/g,' ');
     /* dashes pause like a comma and semicolons like a period (Nov 13); hyphens don't pause; number ranges read "to" */
     w=w.replace(/(\d)\s*[–-]\s*(\d)/g,'$1 to $2').replace(/\s*(?:[—–]|-{2,})\s*/g,', ').replace(/;/g,'.').replace(/\s+$/,'');
@@ -135,7 +144,7 @@ function speechChunk(i, max, min){
     if(/^[(\[]/.test(raw) && text && !/[,;:.!?—–]$/.test(text)) text+=',';
     if(/[)\]]["”’]*$/.test(raw) && !/[,;:.!?]$/.test(w)) w+=',';
     /* a word split off after a dash still needs a space, or the pause is lost ("me...and") */
-    if(k>i && text && (!glued(k) || /(\.\.\.|,)$/.test(text))) text+=' ';
+    if(k>i && text && (!glued(k) || /(\.\.\.|,)$/.test(text)) && !/^[.,]$/.test(w)) text+=' ';
     map[map.length-1]=text.length; text+=w;
     wt.push(w.replace(/[^\p{L}\p{N} ]/gu,'').length+1 + (/[,;]/.test(w)?3:0) + (/\.\.\./.test(w)?5:0) + (/[.!?]["”’)]*$/.test(w)?6:0));
   }

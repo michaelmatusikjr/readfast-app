@@ -1,6 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.24';
+const APP_VERSION='2026.11.13.25';
 const WHATSNEW=[
+  ['One pause for an ellipsis','Three dots in a row (..., . . . or …) are read as a single pause instead of three.'],
   ['Delete bookmarks with a swipe','In Notes → Bookmarks, swipe a bookmark to the left and tap Delete. Undo brings it back.'],
   ['Shorter pauses between sentences','When a natural voice reads live, the only pause between sentences is the moment it takes to move to the next one. Saved audio (Listen offline) keeps a short, even pause.'],
   ['Supertonic voices removed','The Supertonic test voices were too slow on iPhone, so they’re gone and their download is deleted. The natural voices are the Piper voices again.'],
