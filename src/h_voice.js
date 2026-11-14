@@ -88,6 +88,10 @@ async function natGen(text, padMs){
 const natRate=()=> S.ttsRate||1;   /* speed is given to the voice when it makes the speech (Nov 13), so its timing stays natural */
 /* pauses between stretches at normal speed (ms); the voice's own silence at each end is trimmed off first, so every gap is exact */
 const NAT_PAUSE={sent:180, clause:120, cap:80, para:550, headBefore:1000, headAfter:700};   /* sentence pause shortened from 350 ms (Nov 13) */
+/* live reading: switching from one sentence's clip to the next already leaves a short gap on iPhone, so no pause is added
+   between sentences there (Nov 13); saved audio (Listen offline) plays as one file and keeps the full pauses */
+const NAT_LIVE_CUT=180;
+function natLivePause(c){ return Math.max(0, natPauseFor(c)-NAT_LIVE_CUT); }
 function natPauseFor(c){
   if(c.ends==='block'){ return c.pauseAfter>=1100? NAT_PAUSE.headBefore : c.pauseAfter>=700? NAT_PAUSE.headAfter : NAT_PAUSE.para; }
   return NAT_PAUSE[c.ends]||NAT_PAUSE.sent;
@@ -146,7 +150,7 @@ function natChunkAt(i){ return speechChunk(i,40,1); }
 function natFill(seq){
   while(TTS.on && seq===TTS.seq && TTS.kq.length<4 && TTS.knext<R.n){
     const c=natChunkAt(TTS.knext); TTS.knext=c.j; if(c.j<=c.i) break;
-    c.p= !c.text ? Promise.resolve(c) : natGen(c.text, natPauseFor(c)).then(r=>{ c.url=r.url; c.dur=r.dur; c.sdur=r.sdur; return c; });
+    c.p= !c.text ? Promise.resolve(c) : natGen(c.text, natLivePause(c)).then(r=>{ c.url=r.url; c.dur=r.dur; c.sdur=r.sdur; return c; });
     c.p.catch(()=>{});
     TTS.kq.push(c);
   }
