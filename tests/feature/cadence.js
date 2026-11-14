@@ -18,13 +18,13 @@ const fs=require('fs');
   const r=await pg.evaluate(async()=>{
     await natEnsure();
     const t='The first statement of the Declaration says, because I was created by God and for His glory, I will magnify Him.';
-    S.ttsRate=1; const a=await natGen(t,350); S.ttsRate=1.5; const c=await natGen(t,350); S.ttsRate=1;
+    S.ttsRate=1; const a=await natGen(t,180); S.ttsRate=1.5; const c=await natGen(t,180); S.ttsRate=1;
     const save=async g=>Array.from(new Uint8Array(await (await fetch(g.url)).arrayBuffer()));
     return {a:{raw:a.raw,dur:a.dur,sdur:a.sdur}, c:{raw:c.raw,dur:c.dur,sdur:c.sdur}, wa:await save(a), wc:await save(c)};
   });
   fs.writeFileSync(S+'st/piper_r1.wav',Buffer.from(r.wa)); fs.writeFileSync(S+'st/piper_r15.wav',Buffer.from(r.wc));
   ok('1.5x is made faster by the voice', r.c.sdur < r.a.sdur*0.8 && r.c.sdur > r.a.sdur*0.55, [r.a, r.c]);
-  ok('silence trimmed, exact pause added', Math.abs((r.a.dur-r.a.sdur)-0.35)<0.01 && Math.abs((r.c.dur-r.c.sdur)-0.35/1.5)<0.01 && r.a.sdur < r.a.raw);
+  ok('silence trimmed, exact pause added', Math.abs((r.a.dur-r.a.sdur)-0.18)<0.01 && Math.abs((r.c.dur-r.c.sdur)-0.18/1.5)<0.01 && r.a.sdur < r.a.raw);
   /* one sentence per stretch; a long sentence is cut at a comma */
   const ch=await pg.evaluate(async()=>{ await openDoc(LIB.find(x=>x.kind==='sample').id); const out=[]; let i=0; for(let n=0;n<8;n++){ const c=natChunkAt(i); out.push([c.text.split(' ').length, c.ends]); i=c.j; } return out; });
   ok('stretches are single sentences', ch.every(([n,e])=>n<=48 && ['sent','block','clause','cap'].includes(e)), ch);
