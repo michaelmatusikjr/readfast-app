@@ -21,17 +21,14 @@ function natUnlock(){ const a=natAudio(); try{ a.src=SILENT_WAV; const p=a.play(
    from Hugging Face (about 60 MB) and is kept in the phone's private file storage, so it works offline. */
 const PIP_VOICES=[
   ['American',[['en_US-lessac-medium','Lessac','female, clear'],['en_US-amy-medium','Amy','female'],['en_US-kristin-medium','Kristin','female'],['en_US-hfc_female-medium','Hannah','female'],['en_US-ryan-medium','Ryan','male'],['en_US-joe-medium','Joe','male'],['en_US-john-medium','John','male'],['en_US-norman-medium','Norman','male, deep'],['en_US-bryce-medium','Bryce','male'],['en_US-hfc_male-medium','Henry','male']]],
-  ['British',[['en_GB-jenny_dioco-medium','Jenny','female'],['en_GB-cori-medium','Cori','female'],['en_GB-alba-medium','Alba','female, Scottish'],['en_GB-alan-medium','Alan','male'],['en_GB-northern_english_male-medium','Northern','male']]],
-  /* Supertonic 3 (test, Nov 2026): one shared model (about 100 MB) plus a tiny file per voice; see src/supertonic */
-  ['Supertonic (test)',[1,2,3,4,5].map(n=>['st-F'+n,'Supertonic '+n,'female']).concat([1,2,3,4,5].map(n=>['st-M'+n,'Supertonic '+(n+5),'male']))]
+  ['British',[['en_GB-jenny_dioco-medium','Jenny','female'],['en_GB-cori-medium','Cori','female'],['en_GB-alba-medium','Alba','female, Scottish'],['en_GB-alan-medium','Alan','male'],['en_GB-northern_english_male-medium','Northern','male']]]
 ];
 const pipVoice=()=>S.pipVoice||'en_US-lessac-medium';
 /* one manager per voice engine; both workers answer the same messages (load, gen, cancel) */
 const vmake=file=>({file, w:null, ready:null, loading:null, lvoice:null, id:0, cb:new Map(), prog:{}, onprog:null});
-const PIP=vmake('piper-worker.js'), STV=vmake('supertonic-worker.js');
-const isST=v=>/^st-/.test(v||'');
-const VM=v=>isST(v)?STV:PIP;
-const engVoice=v=>isST(v)?v.slice(3):v;   /* the name the worker knows the voice by */
+const PIP=vmake('piper-worker.js');
+const VM=v=>PIP;
+const engVoice=v=>v;   /* the name the worker knows the voice by */
 function pipWorker(M){
   M=M||PIP;
   if(M.w) return M.w;
@@ -61,20 +58,15 @@ function pipCall(msg){ const M=VM(msg.voice); return new Promise((res,rej)=>{ co
 async function pipDownloaded(voice){
   if(LS.get('pipReady.'+voice,false)) return true;
   try{ const root=await navigator.storage.getDirectory();
-    if(isST(voice)){ const dir=await root.getDirectoryHandle('supertonic-w8'); await dir.getFileHandle('onnx__vocoder.onnx'); await dir.getFileHandle('voice_styles__'+engVoice(voice)+'.json'); return true; }
     const dir=await root.getDirectoryHandle('piper'); await dir.getFileHandle(voice+'.onnx'); return true; }catch(e){ return false; }
 }
 function stClearReady(){ try{ for(let k=localStorage.length-1;k>=0;k--){ const key=localStorage.key(k); if(key && key.startsWith('rf.pipReady.st-')) localStorage.removeItem(key); } }catch(e){} }
-/* the first Supertonic copy (Nov 13) came out garbled; forget it once so the new one downloads with progress showing */
-if(!LS.get('stW8',false)){ stClearReady(); LS.set('stW8',true); }
+/* Supertonic test voices (Nov 13) were removed the same day as too slow: delete their download and go back to a Piper voice */
+if(!LS.get('stGone',false)){ stClearReady(); LS.set('stGone',true);
+  (async()=>{ try{ const root=await navigator.storage.getDirectory(); for(const d of ['supertonic','supertonic-w8']) try{ await root.removeEntry(d,{recursive:true}); }catch(e){} }catch(e){} })(); }
+if(/^st-/.test(S.pipVoice||'')){ S.pipVoice='en_US-lessac-medium'; saveSettings(); }
 async function pipRemove(voice){
   /* close the voice first so its file isn't in use, then delete it here (Safari doesn't support the library's own delete) */
-  if(isST(voice)){
-    /* Supertonic voices share one model, so removing the download removes the model and every Supertonic voice */
-    pipReset(STV);
-    try{ const root=await navigator.storage.getDirectory(); for(const d of ['supertonic','supertonic-w8']) try{ await root.removeEntry(d,{recursive:true}); }catch(e){} }catch(e){}
-    stClearReady(); return;
-  }
   if(PIP.ready===voice || PIP.lvoice===voice) pipReset(PIP);
   try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper');
     for(const name of [voice+'.onnx', voice+'.onnx.json']){ try{ await dir.removeEntry(name); }catch(e){} } }catch(e){}
@@ -83,7 +75,7 @@ async function pipRemove(voice){
 function wavInfo(buf){ const v=new DataView(buf); const sr=v.getUint32(24,true)||22050; return {sr, dur:Math.max(0,(buf.byteLength-44)/2/sr)}; }
 function progPct(prog){ let a=0,t=0; for(const k in prog){ a+=prog[k][0]; t+=prog[k][1]; } return t? {pct:Math.min(100,Math.round(100*a/t)), a, t} : {pct:0,a:0,t:0}; }
 
-const natSize=()=> isST(pipVoice())? 'about 100 MB, shared by all Supertonic voices' : 'about 60 MB';
+const natSize=()=>'about 60 MB';
 const natReady=()=> VM(pipVoice()).ready===pipVoice();
 async function natDownloaded(){ return pipDownloaded(pipVoice()); }
 function natLoad(prog){ return pipLoad(pipVoice(), prog); }
@@ -118,10 +110,8 @@ async function natRemove(){ await pipRemove(pipVoice()); }
 /* removes every downloaded voice; returns how many */
 async function natRemoveAll(){
   let n=0; try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('piper'); for await (const [name] of dir.entries()) if(name.endsWith('.onnx')) n++; }catch(e){}
-  try{ const root=await navigator.storage.getDirectory(); const dir=await root.getDirectoryHandle('supertonic-w8'); for await (const [name] of dir.entries()) if(name.startsWith('voice_styles__')) n++; }catch(e){}
-  pipReset(PIP); pipReset(STV);
+  pipReset(PIP);
   try{ const root=await navigator.storage.getDirectory(); await root.removeEntry('piper',{recursive:true}); }catch(e){}
-  try{ const root=await navigator.storage.getDirectory(); for(const d of ['supertonic','supertonic-w8']) try{ await root.removeEntry(d,{recursive:true}); }catch(e){} }catch(e){}
   try{ for(let k=localStorage.length-1;k>=0;k--){ const key=localStorage.key(k); if(key && key.startsWith('rf.pipReady.')) localStorage.removeItem(key); } }catch(e){}
   return n;
 }
@@ -172,7 +162,7 @@ function natRateChanged(){
     const first=TTS.kq[0];
     for(const c of TTS.kq) if(c.url) URL.revokeObjectURL(c.url);
     TTS.kq=[]; TTS.knext=first.i;
-    for(const M of [PIP,STV]) try{ M.w && M.w.postMessage({type:'cancel'}); }catch(e){}
+    for(const M of [PIP]) try{ M.w && M.w.postMessage({type:'cancel'}); }catch(e){}
     natFill(TTS.seq);
   },450);
 }
@@ -180,7 +170,7 @@ function natClear(){
   clearInterval(TTS.kt); TTS.kt=0;
   for(const c of TTS.kq||[]) if(c.url) URL.revokeObjectURL(c.url);
   TTS.kq=[];
-  for(const M of [PIP,STV]) try{ M.w && M.w.postMessage({type:'cancel'}); }catch(e){}
+  for(const M of [PIP]) try{ M.w && M.w.postMessage({type:'cancel'}); }catch(e){}
   const a=NAT.audio; if(a){ a.onended=null; try{ a.pause(); }catch(e){} }
 }
 function natSpeakFrom(i, seq){
@@ -259,7 +249,7 @@ function systemVoices(lang){
 }
 function voiceSectionHTML(lang){
   const e=S.ttsEngine==='system'?'system':'natural';
-  const DESC={natural:'Natural-sounding voices that run on this phone. Each voice downloads once (about 60 MB), then works offline. Supertonic voices (by Supertone, OpenRAIL-M license) are a test: they share one larger download (about 100 MB).',
+  const DESC={natural:'Natural-sounding voices that run on this phone. Each voice downloads once (about 60 MB), then works offline.',
     system:'The voices your iPhone lets web apps use. They start instantly but sound more robotic.'};
   let h=`<div class="panel-sec"><div class="group">
     <div class="set"><div class="hd"><label>Voice type</label></div><div class="seg" data-set="ttsEngine" data-type="seg">
