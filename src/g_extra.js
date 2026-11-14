@@ -1,6 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.23';
+const APP_VERSION='2026.11.13.24';
 const WHATSNEW=[
+  ['Delete bookmarks with a swipe','In Notes → Bookmarks, swipe a bookmark to the left and tap Delete. Undo brings it back.'],
   ['Shorter pauses between sentences','When a natural voice reads live, the only pause between sentences is the moment it takes to move to the next one. Saved audio (Listen offline) keeps a short, even pause.'],
   ['Supertonic voices removed','The Supertonic test voices were too slow on iPhone, so they’re gone and their download is deleted. The natural voices are the Piper voices again.'],
   ['Listen offline','Download a book’s audio with a natural voice (Voice → Listen offline). Saved audio keeps playing with the screen locked, with controls on the lock screen, and can be saved as one MP3 per chapter to play in other apps, even with Tooz closed.'],

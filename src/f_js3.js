@@ -983,10 +983,42 @@ async function renderNotes(){
   el.innerHTML=books.map(d=>{
     const L=d[key]; const n=L.length;
     const rows=hl? L.map((h,k)=>{ const t=snip(d,h.s,h.e); return `<div class="hlrow"><span class="bar" style="background:var(--hl${h.c||1})"></span><div class="grow" data-nb="${d.id}" data-ni="${h.s}"><div class="t">${esc(t.length>320?t.slice(0,320)+'…':t)}</div>${h.note?`<div class="nt">${esc(h.note)}</div>`:''}<div class="where">${esc(chapterName(d,h.s))}${chapterName(d,h.s)?' · ':''}${pctOf(d,h.s)}%</div></div></div>`; }).join('')
-      : L.map(b=>`<div class="hlrow"><span class="bar" style="background:var(--accent)"></span><div class="grow" data-nb="${d.id}" data-ni="${b.i}"><div class="t"><b>${esc(b.name||'Bookmark')}</b></div><div class="where">${pctOf(d,b.i)}% · ${esc(snip(d,b.i,b.i+11))}…</div></div></div>`).join('');
+      : L.map(b=>`<div class="swrow" data-bmbook="${d.id}" data-bmi="${b.i}" data-bmat="${b.at||0}"><button class="swdel" type="button" tabindex="-1">Delete</button><div class="hlrow swfront"><span class="bar" style="background:var(--accent)"></span><div class="grow" data-nb="${d.id}" data-ni="${b.i}"><div class="t"><b>${esc(b.name||'Bookmark')}</b></div><div class="where">${pctOf(d,b.i)}% · ${esc(snip(d,b.i,b.i+11))}…</div></div></div></div>`).join('');
     return `<div class="nbook"><div class="nbook-h"><b>${esc(d.title)}</b><span class="small">${n} ${hl?'highlight':'bookmark'}${n===1?'':'s'}</span>${hl?`<button class="btn" type="button" data-copy="${d.id}" style="padding:6px 10px;font-size:.8rem">Copy</button>`:''}<button class="btn" type="button" data-exp="${d.id}" style="padding:6px 10px;font-size:.8rem">Export</button></div>${rows}</div>`;
   }).join('');
 }
+/* swipe a bookmark left to show Delete; tap Delete to remove it (with Undo) */
+function swipeRows(host, onDelete){
+  let row=null, x0=0, y0=0, dx=0, horiz=null, base=0;
+  const W=92, front=r=>r.querySelector('.swfront');
+  const closeAll=except=>host.querySelectorAll('.swrow.open').forEach(r=>{ if(r!==except){ r.classList.remove('open'); front(r).style.transform=''; } });
+  host.addEventListener('touchstart',e=>{ const r=e.target.closest('.swrow'); if(!r || e.target.closest('.swdel')) return; row=r; x0=e.touches[0].clientX; y0=e.touches[0].clientY; dx=0; horiz=null; base=r.classList.contains('open')?-W:0; closeAll(r); },{passive:true});
+  host.addEventListener('touchmove',e=>{
+    if(!row) return; const mx=e.touches[0].clientX-x0, my=e.touches[0].clientY-y0;
+    if(horiz===null && (Math.abs(mx)>8 || Math.abs(my)>8)) horiz=Math.abs(mx)>Math.abs(my);
+    if(!horiz) return;
+    e.preventDefault(); row.classList.add('dragging'); dx=mx;
+    front(row).style.transform=`translateX(${Math.min(0,Math.max(-W*1.4,base+dx))}px)`;
+  },{passive:false});
+  host.addEventListener('touchend',()=>{
+    if(!row) return; const r=row; row=null; r.classList.remove('dragging');
+    if(!horiz) return;
+    const open= base+dx < -W/2; r.classList.toggle('open',open); front(r).style.transform= open?`translateX(${-W}px)`:'';
+    r.dataset.swiped=Date.now();   /* the tap that ends a swipe doesn't open the bookmark */
+  });
+  host.addEventListener('click',e=>{
+    const del=e.target.closest('.swdel'); if(del){ e.stopPropagation(); onDelete(del.closest('.swrow')); return; }
+    const r=e.target.closest('.swrow');
+    if(r && (r.classList.contains('open') || Date.now()-(+r.dataset.swiped||0)<400)){ e.stopPropagation(); if(r.classList.contains('open') && Date.now()-(+r.dataset.swiped||0)>=400){ r.classList.remove('open'); front(r).style.transform=''; } }
+  },true);
+}
+swipeRows($('#notesBm'), r=>{
+  const d=LIB.find(x=>x.id===r.dataset.bmbook); if(!d) return;
+  const k=(d.bookmarks||[]).findIndex(b=>b.i===+r.dataset.bmi && String(b.at||0)===r.dataset.bmat); if(k<0) return;
+  const [gone]=d.bookmarks.splice(k,1); touch(d); if(R.meta===d) updateChrome();
+  renderNotes();
+  toast('Bookmark deleted', {label:'Undo', fn:()=>{ d.bookmarks.push(gone); d.bookmarks.sort((a,b)=>a.i-b.i); touch(d); if(R.meta===d) updateChrome(); renderNotes(); }});
+});
 $('#notesSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; NOTESEG=b.dataset.n; LS.set('notesSeg',NOTESEG); renderNotes(); });
 for(const id of ['#notesHl','#notesBm']) $(id).addEventListener('click',async e=>{
   const x=e.target.closest('[data-exp]'); if(x){ const d=LIB.find(y=>y.id===x.dataset.exp); if(d) exportSheet(d); return; }
@@ -1031,7 +1063,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=15;
+const SAMPLE_V=16;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1060,7 +1092,7 @@ const SAMPLE_HTML=`
 <p><strong>Copy</strong> adds where the words came from: the author, the book and the chapter. <strong>Share</strong> turns the words into a picture, in light, sepia or dark, ready to send or save to Photos.</p>
 <p>The phone’s own menu stays hidden while you select. <strong>Define</strong> looks up the word you selected, and from there you can still reach the phone’s dictionary.</p>
 <blockquote><p>Try it on this sentence: highlight it, then add a note saying what you think of it.</p></blockquote>
-<p>Every word you define is saved in the <strong>Notes</strong> tab under Words, along with the sentence you found it in. The Notes tab also gathers the highlights, notes and bookmarks from every book, so you can find them without opening each one.</p>
+<p>Every word you define is saved in the <strong>Notes</strong> tab under Words, along with the sentence you found it in. The Notes tab also gathers the highlights, notes and bookmarks from every book, so you can find them without opening each one. To delete a bookmark there, swipe it to the left and tap <strong>Delete</strong>.</p>
 <p>To keep them somewhere else, tap <strong>Export</strong> beside a book in the Notes tab, or <strong>Export highlights and notes</strong> in the book’s three dots. You get one document with every highlight, note and bookmark, grouped by chapter, to print, save as a PDF or paste into another app.</p>
 <h2>Footnotes</h2>
 <p>Books often tuck extra detail into footnotes.<a href="#note1"><sup>1</sup></a> Tap the small number and the note opens without losing your place.</p>
