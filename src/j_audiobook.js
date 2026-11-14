@@ -163,7 +163,7 @@ async function abUI(){
   if(S.ttsEngine==='system'){ el.innerHTML=`<p class="note" style="margin:0">Downloading a book’s audio needs a <b>Natural</b> voice (iPhone voices can’t be saved).</p>`; return; }
   const mf=await abManifest(), voice=pipVoice(), job=AB.job && AB.job.id===R.meta.id ? AB.job : null;
   const wordsLeft=w=>Math.max(0,R.n-w);
-  const kbps=isST(voice)?64:48, mbPerHour=kbps*3600/8/1000;
+  const kbps=48, mbPerHour=kbps*3600/8/1000;
   const estSecs=w=> job && job.words>200 ? wordsLeft(w)*(job.made/job.words) : wordsLeft(w)/155*60;
   const doneSecs=mf? mf.parts.reduce((a,p)=>a+p.dur,0) : 0, doneBytes=mf? mf.parts.reduce((a,p)=>a+(p.size||0),0) : 0;
   const btn=(act,label,cls)=>`<button class="btn${cls?' '+cls:''}" type="button" data-act="${act}" style="margin:8px 8px 0 0">${label}</button>`;

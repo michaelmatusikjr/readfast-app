@@ -20,7 +20,7 @@ const fs=require('fs');
   ok('default natural (piper) + lessac', await pg.evaluate(()=>S.ttsEngine==='natural' && pipVoice()==='en_US-lessac-medium'));
   await pg.evaluate(()=>openVoiceSheet()); await sleep(900);
   const p1=await pg.evaluate(()=>[$('#o_pvoice').options.length, document.querySelectorAll('[data-set="ttsEngine"] button').length, $('#kokState').textContent]);
-  ok('voice sheet: 25 voices, 2 voice types, not downloaded', p1[0]===25 && p1[1]===2 && /Not downloaded/.test(p1[2]), p1);
+  ok('voice sheet: 15 voices, 2 voice types, not downloaded', p1[0]===15 && p1[1]===2 && /Not downloaded/.test(p1[2]), p1);
   await pg.evaluate(()=>document.querySelector('[data-act="vprev"]').click()); await sleep(150);
   const sh=await pg.evaluate(()=>($('#kokState')||{}).textContent||'');
   await sleep(4000);
