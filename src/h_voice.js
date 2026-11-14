@@ -87,7 +87,7 @@ async function natGen(text, padMs){
 }
 const natRate=()=> S.ttsRate||1;   /* speed is given to the voice when it makes the speech (Nov 13), so its timing stays natural */
 /* pauses between stretches at normal speed (ms); the voice's own silence at each end is trimmed off first, so every gap is exact */
-const NAT_PAUSE={sent:350, clause:180, cap:120, para:700, headBefore:1100, headAfter:800};
+const NAT_PAUSE={sent:180, clause:120, cap:80, para:550, headBefore:1000, headAfter:700};   /* sentence pause shortened from 350 ms (Nov 13) */
 function natPauseFor(c){
   if(c.ends==='block'){ return c.pauseAfter>=1100? NAT_PAUSE.headBefore : c.pauseAfter>=700? NAT_PAUSE.headAfter : NAT_PAUSE.para; }
   return NAT_PAUSE[c.ends]||NAT_PAUSE.sent;

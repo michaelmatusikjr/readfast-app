@@ -1,6 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.21';
+const APP_VERSION='2026.11.13.22';
 const WHATSNEW=[
+  ['Shorter pauses between sentences','Natural voices now pause about half as long at the end of a sentence.'],
   ['Supertonic voices removed','The Supertonic test voices were too slow on iPhone, so they’re gone and their download is deleted. The natural voices are the Piper voices again.'],
   ['Listen offline','Download a book’s audio with a natural voice (Voice → Listen offline). Saved audio keeps playing with the screen locked, with controls on the lock screen, and can be saved as one MP3 per chapter to play in other apps, even with Tooz closed.'],
   ['Smoother reading aloud','Natural voices now read one sentence at a time with even pauses: the same short pause after every sentence, a longer one between paragraphs and around headings. Long sentences break at a comma instead of mid-phrase, and the speed setting is given to the voice itself, so faster reading still sounds natural.'],
