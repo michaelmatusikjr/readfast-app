@@ -249,6 +249,17 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 /* Scroll */
 #scrollView{position:absolute;top:0;bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #scFlow{padding:18px var(--mx) 45vh}
+/* Scroll mode's "previously read" tear: the page torn across, with the gap showing what's behind it */
+#scFlow .tear{--gap:color-mix(in srgb,var(--page-bg) 84%,var(--page-ink));position:relative;margin:1.1em calc(-1 * var(--mx));background:linear-gradient(var(--page-bg) 0 8px,var(--gap) 8px calc(100% - 8px),var(--page-bg) calc(100% - 8px));text-indent:0;-webkit-user-select:none;user-select:none}
+#scFlow .tear .te{display:block;width:100%;height:26px;margin:-1px 0;color:var(--page-bg);filter:drop-shadow(0 2px 2px rgba(0,0,0,.28))}
+#scFlow .tear .te-top{clip-path:inset(0 0 -12px 0)}
+#scFlow .tear .te-bot{filter:drop-shadow(0 -2px 2px rgba(0,0,0,.22));clip-path:inset(-12px 0 0 0)}
+#scFlow .tear .te .pg{fill:var(--page-bg)}
+#scFlow .tear .te .fib{fill:color-mix(in srgb,var(--page-bg) 93%,var(--page-ink));stroke:color-mix(in srgb,var(--page-bg) 70%,var(--page-ink));stroke-width:.6;vector-effect:non-scaling-stroke}
+#scFlow .tear .tear-mid{display:flex;align-items:center;justify-content:center;gap:10px;height:58px;font-family:var(--f-ui,system-ui);font-size:.78rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--page-muted)}
+#scFlow .tear .tear-mid svg{flex:none}
+#scFlow .cont{text-indent:0 !important;margin-top:0 !important}
+#scFlow p.bli.cont::before{content:none}
 #scFlow .sec+.sec{margin-top:2.4em;padding-top:1.4em;border-top:1px solid var(--page-line)}
 #scrollView.auto-on{scroll-behavior:auto}
 

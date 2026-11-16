@@ -88,9 +88,9 @@ function wsHTML(w){
   const core=m[2]; const k=core.length<=3?1:core.length<=5?2:Math.ceil(core.length*0.42);
   return esc(m[1])+'<b class="ws">'+esc(core.slice(0,k))+'</b>'+esc(core.slice(k)+m[3]);
 }
-function blockHTML(blk,s,e){
+function blockHTML(blk,s,e,cont){
   const t=blk.t; const tag=/^h[1-6]$/.test(t)?t:'p';
-  let cls=t==='li'?'bli':t==='pre'?'pre':t==='cap'?'cap':''; /* 'bli', not 'li': that class styles the app's menu rows */ if(blk.q) cls+=(cls?' ':'')+'bq'; if(blk.g) cls+=(cls?' ':'')+'gap'; if(blk.l && tag!=='p') cls+=(cls?' ':'')+'hl';
+  let cls=(cont?'cont ':'')+(t==='li'?'bli':t==='pre'?'pre':t==='cap'?'cap':''); /* 'bli', not 'li': that class styles the app's menu rows */ if(blk.q) cls+=(cls?' ':'')+'bq'; if(blk.g) cls+=(cls?' ':'')+'gap'; if(blk.l && tag!=='p') cls+=(cls?' ':'')+'hl';
   let h='<'+tag+(cls?' class="'+cls+'"':'')+'>';
   const wf=R.wf, W=R.words, ws=S.wordStart && t!=='pre';
   for(let k=s;k<e;k++){
@@ -105,13 +105,35 @@ function blockHTML(blk,s,e){
   }
   return h+'</'+tag+'>';
 }
+/* ---------- Scroll mode: the "previously read" tear (Nov 16) ----------
+   When the reader leaves (even briefly) in Scroll mode, the first word of the topmost line in view is saved; the text
+   is then drawn torn apart just before it, with "Previously read" in the gap, and the gap is centred on return. */
+let SEC_TEAR=false;   /* true while drawing Scroll mode's sections */
+function tearEdge(seed, top){
+  /* a ragged paper edge: page colour above (top page) or below (bottom page), with a strip of torn fibres along it */
+  let x=seed*9301+49297; const rnd=()=>((x=(x*9301+49297)%233280)/233280);
+  const N=72, pts=[]; let drift=0;
+  for(let k=0;k<=N;k++){ drift+= (rnd()-0.5)*3; drift*=0.85; pts.push([k*400/N, 11+drift+Math.sin(k*0.3+seed)*2.4+(rnd()-0.5)*3.6]); }
+  const line=(dy,j)=>pts.map(([px,py],k)=>`${k?'L':'M'}${px.toFixed(1)},${(top? py+dy+(rnd()-0.5)*j : 24-py-dy-(rnd()-0.5)*j).toFixed(1)}`).join(' ');
+  const pg= top? `${line(0,0)} L400,0 L0,0 Z` : `${line(0,0)} L400,24 L0,24 Z`;
+  const fib= top? `${line(4.2,2.6)} L400,0 L0,0 Z` : `${line(4.2,2.6)} L400,24 L0,24 Z`;
+  return `<svg class="te ${top?'te-top':'te-bot'}" viewBox="0 0 400 24" preserveAspectRatio="none" aria-hidden="true"><path class="fib" d="${fib}"/><path class="pg" d="${pg}"/></svg>`;
+}
+function tearHTML(t){
+  const up='<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 5v14M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return `<div class="tear" data-tear="${t}" role="note" aria-label="Previously read: everything above">${tearEdge(t%997+3,true)}<div class="tear-mid">${up}<span>Previously read</span>${up}</div>${tearEdge(t%991+7,false)}</div>`;
+}
 function sectionHTML(k){
   const [a,b]=R.SEC[k]; const B=R.blocks; let h='';
+  const tear= SEC_TEAR && R.tear!=null && R.tear>a && R.tear<b ? R.tear : -1;
   for(let bi=blockAt(a); bi<B.length && B[bi].s<b; bi++){
     const blk=B[bi]; if(blk.e<=a) continue;
     const bef=R.imgBefore.get(bi); if(bef && blk.s>=a) h+=bef.map(figHTML).join('');
     if(R.breaks.has(blk.s) && blk.s>a) h+='<hr class="brk">';
-    h+=blockHTML(blk, Math.max(blk.s,a), Math.min(blk.e,b));
+    const s0=Math.max(blk.s,a), e0=Math.min(blk.e,b);
+    if(tear>=0 && tear===s0) h+=tearHTML(tear)+blockHTML(blk, s0, e0);
+    else if(tear>s0 && tear<e0) h+=blockHTML(blk, s0, tear)+tearHTML(tear)+blockHTML(blk, tear, e0, true);   /* the paragraph carries on below the tear */
+    else h+=blockHTML(blk, s0, e0);
     const aft=R.imgAfter.get(bi); if(aft && blk.e<=b) h+=aft.map(figHTML).join('');
   }
   if(b>=R.n && R.imgEnd.length) h+=R.imgEnd.map(figHTML).join('');
@@ -123,7 +145,7 @@ async function decodeImgs(sec){
 }
 /* builds section k and puts it in container; 'prepend' keeps the reader's place by adjusting scrollEl */
 async function renderSec(container, k, where, scrollEl){
-  const tmp=document.createElement('div'); tmp.innerHTML=sectionHTML(k);
+  const tmp=document.createElement('div'); SEC_TEAR=(container===scFlow); try{ tmp.innerHTML=sectionHTML(k); } finally{ SEC_TEAR=false; }
   const sec=tmp.firstElementChild;
   sec._k=k; sec._a=R.SEC[k][0]; sec._b=R.SEC[k][1]; sec._ws=sec.getElementsByTagName('w');
   decorate(sec);
@@ -274,7 +296,29 @@ async function scShow(i){
     scFlow.replaceChildren(); await renderSec(scFlow, secAt(i), 'append');
     const w=wordEl(i); scView.scrollTop=w?Math.max(0, scTopOf(w)-10):0;
   } finally{ SC.busy=false; }
-  await scEnsure(); R.pos=i; updateChrome();
+  await scEnsure();
+  if(R.tearCenter){ R.tearCenter=false; tearCenterNow(); await scEnsure(); tearCenterNow(); }
+  R.pos=i; updateChrome();
+}
+/* put the middle of the tear in the middle of the screen */
+function tearCenterNow(){
+  const t=scFlow.querySelector('.tear'); if(!t) return;
+  const r=t.getBoundingClientRect(), v=scView.getBoundingClientRect();
+  scView.scrollTop+= (r.top+r.height/2)-(v.top+v.height/2);
+}
+/* leaving the book or the app: the first line in view is where reading picks up, so the tear goes just before it */
+function tearMark(){
+  if(R.mode!=='scroll' || !R.meta || scView.hidden) return;
+  if(TTS.on) return;   /* reading aloud carries on in the background; the place moves by itself */
+  const v=scView.getBoundingClientRect(), old=scFlow.querySelector('.tear');
+  if(old){ const r=old.getBoundingClientRect(); if(r.bottom>v.top+8 && r.top<v.bottom-8){ R.tearShow=true; return; } }   /* still on screen: it stays put */
+  const t=scPos();
+  if(t>0 && t<R.n){ R.tear=t; LS.set('tear.'+R.meta.id, t); R.tearShow=true; }
+}
+function tearShowOnReturn(){
+  if(!R.tearShow) return; R.tearShow=false;
+  if(R.mode!=='scroll' || !R.meta || R.tear==null || TTS.on || SC.auto) return;
+  R.tearCenter=true; scShow(R.tear);
 }
 async function scEnsure(){
   if(SC.busy) return; SC.busy=true;
@@ -692,6 +736,8 @@ async function openDoc(id){
   }
   buildSections(); R.sIdx=null; R.backPos=null; $('#backPill').hidden=true; diffCache={s:-1,e:-1,f:1};
   R.pos=clamp(meta.finished?0:meta.pos,0,R.n-1); if(meta.finished) meta.finished=false;
+  R.tear=LS.get('tear.'+meta.id,null); if(R.tear!=null && !(R.tear>0 && R.tear<R.n)) R.tear=null;
+  R.tearCenter= R.tear!=null && Math.abs(R.tear-R.pos)<400; R.tearShow=false;
   R.lastNav=false; R.playing=false; R.hasPlayed=false;
   meta.lastRead=Date.now(); touch(meta);
   $('#rTitle').textContent=meta.title;
@@ -721,6 +767,7 @@ function creditLastPage(){
   recordStats(creditFor(dt,dw,true), dw); resetClock();
 }
 function closeReader(quiet){
+  tearMark(); R.tearShow=false;
   creditLastPage(); if(TTS.mode) ttsModeOff(true); stopActivity(); noteProgress(); saveProgress(true); selClear();
   const m=R.meta;
   if(R.mode) MODES[R.mode].leave(); R.mode=null; R.meta=null; /* nothing may save a closed book's record again */
@@ -732,8 +779,8 @@ function closeReader(quiet){
   if(m.finished){ if(!m.finishedAt){ m.finishedAt=Date.now(); touch(m); } if(!m.keepFinished) setTimeout(()=>finishPrompt(m.id), 350); }
 }
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden && R.meta && R.mode){ stopActivity(); noteProgress(); saveProgress(true); CLK.away=performance.now(); }
-  else if(!document.hidden && CLK.away){ CLK.away=0; if(R.meta && R.mode) resetClock(); }   /* time away from the app never counts */
+  if(document.hidden && R.meta && R.mode){ tearMark(); stopActivity(); noteProgress(); saveProgress(true); CLK.away=performance.now(); }
+  else if(!document.hidden && CLK.away){ CLK.away=0; if(R.meta && R.mode) resetClock(); tearShowOnReturn(); }   /* time away from the app never counts */
 });
 const vr=document.getElementById('v-reader');
 for(const ev of ['pointerdown','keydown','wheel','touchstart']) vr.addEventListener(ev, markActivity, {capture:true, passive:true});
@@ -746,7 +793,7 @@ setInterval(()=>{
     go:()=>{ closeSheet(); markActivity(); resetClock(); if(wasSpeed) play(); else asStart(); }
   });
 }, 30000);
-const leaving=()=>{ if(R.meta && R.mode){ stopActivity(); saveProgress(true); } };
+const leaving=()=>{ if(R.meta && R.mode){ tearMark(); stopActivity(); saveProgress(true); } };
 window.addEventListener('pagehide',leaving); window.addEventListener('beforeunload',leaving); document.addEventListener('freeze',leaving);
 document.addEventListener('keydown',e=>{
   if($('#v-reader').hidden||!$('#sheet').hidden||$('#imgOverlay')) return;
