@@ -1,6 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.13.25';
+const APP_VERSION='2026.11.16.1';
 const WHATSNEW=[
+  ['Where you left off, in Scroll','Whenever you leave a book in Scroll mode, even for a moment, the page shows a tear when you come back: what you’d read sits above it, marked Previously read, and the tear is in the middle of the screen so you can pick up right below it.'],
   ['One pause for an ellipsis','Three dots in a row (..., . . . or …) are read as a single pause instead of three.'],
   ['Delete bookmarks with a swipe','In Notes → Bookmarks, swipe a bookmark to the left and tap Delete. Undo brings it back.'],
   ['Shorter pauses between sentences','When a natural voice reads live, the only pause between sentences is the moment it takes to move to the next one. Saved audio (Listen offline) keeps a short, even pause.'],
