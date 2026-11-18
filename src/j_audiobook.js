@@ -310,25 +310,31 @@ async function ttsDownloadNatural(){
 }
 (function ttsPillBind(){
   const bar=$('#ttsBar'); if(!bar) return;
-  let sx=0, sy=0, t0=0, pid=0, moved=false, longed=false, longT=0, tracking=false;
+  let sx=0, sy=0, t0=0, pid=0, moved=false, longed=false, longT=0, tracking=false, captured=false;
   const cancelLong=()=>{ clearTimeout(longT); longT=0; };
+  const release=()=>{ if(captured){ try{ bar.releasePointerCapture(pid); }catch(_){} captured=false; } };
   bar.addEventListener('pointerdown',e=>{
     if(e.button && e.button!==0) return;
-    tracking=true; sx=e.clientX; sy=e.clientY; t0=performance.now(); pid=e.pointerId; moved=false; longed=false;
-    try{ bar.setPointerCapture(e.pointerId); }catch(_){}
-    longT=setTimeout(()=>{ longed=true; TTS.pillLock=true; ttsHideNatChip(true); openVoiceSheet(); }, 520);
+    /* Do not capture yet: capturing on the bar retargets click away from Play / speed / close,
+       so a real mouse or trackpad click would do nothing. Capture only after a swipe starts. */
+    tracking=true; sx=e.clientX; sy=e.clientY; t0=performance.now(); pid=e.pointerId; moved=false; longed=false; captured=false;
+    longT=setTimeout(()=>{ longed=true; TTS.pillLock=true; ttsHideNatChip(true); if(typeof ttsHideHoldHint==='function') ttsHideHoldHint(true); openVoiceSheet(); }, 520);
   });
   bar.addEventListener('pointermove',e=>{
     if(!tracking || e.pointerId!==pid) return;
     const dx=e.clientX-sx, dy=e.clientY-sy;
     if(Math.abs(dx)>10 || Math.abs(dy)>10){ moved=true; cancelLong(); }
+    if(!captured && Math.abs(dx)>28 && Math.abs(dx)>Math.abs(dy)*1.15){
+      try{ bar.setPointerCapture(e.pointerId); captured=true; }catch(_){}
+    }
   });
   const end=e=>{
     if(!tracking || (e.pointerId!=null && e.pointerId!==pid)) return;
     cancelLong(); tracking=false;
     const dx=(e.clientX||sx)-sx, dy=(e.clientY||sy)-sy;
-    if(longed){ TTS.pillLock=true; setTimeout(()=>{ TTS.pillLock=false; }, 400); return; }
+    if(longed){ TTS.pillLock=true; setTimeout(()=>{ TTS.pillLock=false; }, 400); release(); return; }
     if(Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy)*1.15){ TTS.pillLock=true; ttsSkip(dx<0?1:-1); setTimeout(()=>{ TTS.pillLock=false; }, 400); }
+    release();
   };
   bar.addEventListener('pointerup',end);
   bar.addEventListener('pointercancel',end);

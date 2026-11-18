@@ -266,13 +266,28 @@ function pgFirstWord(page){
   while(lo<=hi){ const m=(lo+hi)>>1; if(pgPageOfEl(ws[m])>=page){ ans=m; hi=m-1; } else lo=m+1; }
   return sec._a+ans;
 }
-async function pgLoad(k){
+async function pgLoad(k){ pgClearPin();
+
   pgFlow.style.columnCount=P.g.two?'2':'1';
   await renderSec(pgFlow,k,'replace'); P.k=k; pgMeasure();
   /* in the two-page layout, a chapter that fills only one column is set across the full width instead of sitting on the left */
   if(P.g.two && P.cols===1) pgFlow.style.columnCount='1';
 }
 const pgShift=()=>0;
+function pgClearPin(){ if(pgFlow) pgFlow.querySelectorAll('.ttspin-sp').forEach(el=>el.remove()); }
+function pgPinWord(i){
+  pgClearPin();
+  const w=wordEl(i); if(!w) return;
+  if(P.topWord===i) return;
+  const sp=document.createElement('div');
+  sp.className='ttspin-sp';
+  sp.setAttribute('aria-hidden','true');
+  w.parentNode.insertBefore(sp, w);
+  pgMeasure();
+  let p=pgPageOfEl(w); if(p==null) return;
+  while(p>0 && pgFirstWord(p-1)===i) p--;
+  pgSet(p, false);
+}
 function pgSet(page, anim){
   P.page=clamp(page,0,P.pages-1);
   const slide = anim && S.turn==='slide';
@@ -281,20 +296,20 @@ function pgSet(page, anim){
   P.topWord = P.page>0 ? pgFirstWord(P.page) : (pgFlow.firstElementChild ? pgFlow.firstElementChild._a : R.pos);
   P.rangeEnd = P.page<P.pages-1 ? pgFirstWord(P.page+1) : (pgFlow.firstElementChild?pgFlow.firstElementChild._b:R.n);
 }
-async function pgShow(i){
+async function pgShow(i, keepPos){
   const k=secAt(i);
   if(P.k!==k || !pgFlow.firstElementChild) await pgLoad(k);
   let w=wordEl(i); if(!w){ await new Promise(r=>requestAnimationFrame(r)); w=wordEl(i); }
   let p=pgPageOfEl(w); while(p>0 && pgFirstWord(p-1)===i) p--; /* a picture-only page belongs before its word */
   pgSet(p, false);
-  R.pos=i; updateChrome();
+  if(!keepPos) R.pos=i; updateChrome();
 }
 async function pgFade(fn){
   if(S.turn==='none'){ await fn(); return; }
   pgFlow.classList.add('fade'); await sleep(130); await fn(); pgFlow.classList.remove('fade');
 }
 async function pgTurn(d){
-  if(P.busy || R.mode!=='pages') return; R.anchor=null;
+  if(P.busy || R.mode!=='pages') return; pgClearPin(); R.anchor=null;
   if(!TS.edge) selClear();
   if(d>0){
     if(P.page<P.pages-1){ if(S.turn==='fade') await pgFade(()=>pgSet(P.page+1,false)); else pgSet(P.page+1,true); }
@@ -322,7 +337,7 @@ pgView.addEventListener('pointerup',e=>{
 /* ---------- Scroll mode (+ auto-scroll) ---------- */
 const SC={busy:false, auto:false, wasAuto:false, raf:0, last:0, acc:0, pxps:0, mT:0, pauseUntil:0, t0:0, passed:new WeakSet(), ticking:false, lastSave:0, lastClock:0};
 function scTopOf(w){ return w.getBoundingClientRect().top - scView.getBoundingClientRect().top + scView.scrollTop; }
-async function scShow(i){
+async function scShow(i, keepPos){
   SC.busy=true; SC.userScrolled=false; /* the place stays exactly on word i until the reader scrolls */
   try{
     scFlow.replaceChildren(); await renderSec(scFlow, secAt(i), 'append');
@@ -330,7 +345,7 @@ async function scShow(i){
   } finally{ SC.busy=false; }
   await scEnsure();
   if(R.tearCenter){ R.tearCenter=false; tearCenterNow(); await scEnsure(); tearCenterNow(); }
-  R.pos=i; updateChrome();
+  if(!keepPos) R.pos=i; updateChrome();
 }
 /* put the middle of the tear in the middle of the screen */
 function tearCenterNow(){
@@ -598,13 +613,13 @@ const MODES={
     async enter(){ pgView.hidden=false; pgApplyGeom(); P.k=-1; await pgShow(R.pos); },
     leave(){ PC.token++; $('#pgMeasure').innerHTML=''; pgView.hidden=true; pgFlow.replaceChildren(); P.k=-1; },
     show:(i)=>pgShow(i),
-    async relayout(){ /* keep the top-left word until a page is turned, so repeated changes never drift */ if(R.anchor==null) R.anchor=(P.topWord!=null && P.k>=0)? P.topWord : R.pos; const i=R.anchor; pgApplyGeom(); P.k=-1; await pgShow(i); }
+    async relayout(){ /* keep the top-left word until a page is turned, so repeated changes never drift */ if(R.anchor==null) R.anchor=(P.topWord!=null && P.k>=0)? P.topWord : R.pos; const i=R.anchor; pgApplyGeom(); P.k=-1; await pgShow(i, true); if(P.topWord!==i) pgPinWord(i); }
   },
   scroll:{
     async enter(){ scView.hidden=false; SC.userScrolled=false; asUI(); await scShow(R.pos); },
     leave(){ asStop(true); scView.hidden=true; scFlow.replaceChildren(); $('#asBar').hidden=true; },
     show:(i)=>scShow(i),
-    async relayout(){ if(R.anchor==null) R.anchor=R.pos; await scShow(R.anchor); }
+    async relayout(){ if(R.anchor==null) R.anchor=scPos(); await scShow(R.anchor, true); }
   },
   speed:{
     async enter(){ while(R.pos>0 && glued(R.pos)) R.pos--; $('#speedView').hidden=false; el.scrub.max=Math.max(1,R.n-1); setWpm(S.wpm); await new Promise(r=>requestAnimationFrame(r)); buildScrollText(); enableManualScroll(); showPaused(); positionLine(); syncScroll(true); },
@@ -616,19 +631,27 @@ const MODES={
 async function switchMode(m){
   if(!MODES[m]) m='pages'; R.anchor=null;
   if(m===R.mode) return;
-  if(TTS.mode) ttsModeOff(true);
-  stopActivity(); selClear();
+  const keepTts=!!(TTS.mode && m!=='speed' && R.mode!=='speed');
+  if(TTS.mode && !keepTts) ttsModeOff(true);
+  if(R.playing) pause(); if(SC.auto) asStop(true); if(TTS.on && !keepTts) ttsStop();
+  selClear();
   if(R.mode) MODES[R.mode].leave();
   R.mode=m; S.mode=m; saveSettings(); $('#rAs').hidden=m!=='scroll';
   $('#v-reader').dataset.mode=m; $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode); setChrome(true);
   await MODES[m].enter(); updateChrome(); resetClock();
+  if(keepTts){
+    if(TTS.on && TTS.cur>=0) ttsMark(TTS.cur);
+    else if(TTS.pick!=null) ttsPickMark(TTS.pick);
+    ttsBarUI();
+  }
 }
 let relayT=null;
 let pendingRelay=false;
 function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; if(hasSelection()){ holdPlace(); pendingRelay=true; return; } pendingRelay=false; pinApp(); applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
 /* after a rotation the page area can settle a moment later (the notch insets): if the anchor word isn't on screen, lay out once more */
-function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor==null || $('#v-reader').hidden) return; const w=wordEl(R.anchor); if(!w) return; const c=$('#pgClip').getBoundingClientRect(), r=w.getBoundingClientRect(); if(r.left<c.left-2 || r.right>c.right+2){ pgApplyGeom(); P.k=-1; await pgShow(R.anchor); } }, 400); }
-function holdPlace(){ if(R.mode && R.meta && R.anchor==null && R.mode!=='speed') R.anchor = R.mode==='pages' && P.topWord!=null && P.k>=0 ? P.topWord : R.pos; }
+function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor==null || $('#v-reader').hidden) return; const w=wordEl(R.anchor); if(!w) return; const c=$('#pgClip').getBoundingClientRect(), r=w.getBoundingClientRect(); if(r.left<c.left-2 || r.right>c.right+2){ pgApplyGeom(); P.k=-1; await pgShow(R.anchor, true); } }, 400); }
+function firstVisibleWord(){ if(R.mode==='pages' && P.topWord!=null && P.k>=0) return P.topWord; if(R.mode==='scroll') return scPos(); return R.pos; }
+function holdPlace(force){ if(!R.mode || !R.meta || R.mode==='speed') return; if(!force && R.anchor!=null) return; R.anchor=firstVisibleWord(); }
 /* iPhone can leave the whole app scrolled up after a rotation, hiding the top bar */
 function pinApp(){ if(window.scrollY || document.documentElement.scrollTop || document.body.scrollTop){ window.scrollTo(0,0); document.documentElement.scrollTop=0; document.body.scrollTop=0; } }
 window.addEventListener('resize', ()=>{ holdPlace(); pinApp(); relayoutSoon(); fitAaSheetForWord(); });
@@ -689,7 +712,9 @@ function updateChrome(){
   const info=infoText(); $('#rInfo').textContent=info; $('#runFoot').textContent=info; $('#runHead').textContent=ch?ch.t:R.meta.title;
   $('#rMark').classList.toggle('on', !!bookmarkHere());
   $('#rAs').hidden=R.mode!=='scroll'; $('#rAs').classList.toggle('on', !!S.autoScroll && !TTS.mode); $('#rAs').setAttribute('aria-label',S.autoScroll?'Close auto-scroll controls':'Auto-scroll');
-  $('#rTts').classList.toggle('on', !!TTS.mode); $('#rTts').innerHTML=ICON.speaker; $('#rTts').setAttribute('aria-label',TTS.mode?'Close read-aloud controls':'Read aloud'); ttsBarUI();
+  $('#rTts').classList.toggle('on', !!TTS.mode); $('#rTts').innerHTML=ICON.speaker; $('#rTts').setAttribute('aria-label',TTS.mode?'Close read-aloud controls':'Read aloud');
+  $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode && R.mode!=='speed');
+  ttsBarUI();
 }
 $('#rInfo').onclick=()=>{ S.info=(S.info+1)%3; saveSettings(); updateChrome(); };
 $('#rScrub').addEventListener('input',e=>{ scrubbing=true; const i=+e.target.value; const ch=currentChapter(i); $('#rInfo').textContent=`Go to ${Math.round(100*i/Math.max(1,R.n-1))}%`+(ch?' · '+ch.t:''); });
@@ -1483,10 +1508,24 @@ function ttsSpeakFrom(i, seq){
   u.onboundary=(e)=>{ if(seq!==TTS.seq) return; if(e.name && e.name!=='word') return; const c=e.charIndex; let lo=0, hi=map.length-1; while(lo<hi){ const m=(lo+hi+1)>>1; if(map[m]<=c) lo=m; else hi=m-1; } lastMark=i+lo; ttsMark(lastMark); };
   u.onend=()=>{ if(seq===TTS.seq && TTS.on){ const ms=performance.now()-t0; recordStats(Math.max(500,ms), j-i); ttsLearn(j-i, ms); if(ch.pauseAfter) setTimeout(()=>{ if(seq===TTS.seq && TTS.on) ttsSpeakFrom(j, seq); }, ch.pauseAfter/(S.ttsRate||1)); else ttsSpeakFrom(j, seq); } };
   u.onerror=(e)=>{ if(seq!==TTS.seq) return; if(e.error==='interrupted'||e.error==='canceled') return; ttsStop(); toast('Read aloud stopped ('+(e.error||'error')+').'); };
-  TTS.utt=u; ttsMark(i); speechSynthesis.speak(u);
+  TTS.utt=u; ttsMark(i); if(typeof natMedia==='function') natMedia(); speechSynthesis.speak(u);
 }
 let ttsMoveT=0;
-function ttsSentOf(i){ const a=sentStartOf(i); let b=i; while(b<R.n-1 && !isSentEnd(b)) b++; return [a,b]; }
+function ttsIsClauseEnd(k){ return /[;:—–]$/.test(R.words[k]||''); }
+function ttsSentOf(i){
+  const a0=sentStartOf(i); let b0=i; while(b0<R.n-1 && !isSentEnd(b0)) b0++;
+  let a=i, b=i;
+  while(a>a0 && !ttsIsClauseEnd(a-1)) a--;
+  while(b<b0 && !ttsIsClauseEnd(b)) b++;
+  const w=wordEl(i);
+  if(w){
+    const r=w.getBoundingClientRect(), lh=r.height||((S.size||18)*(S.lineH||1.4));
+    const lo=r.top-lh*1.1, hi=r.bottom+lh*1.1;
+    while(a<i){ const el=wordEl(a); if(!el) break; const rr=el.getBoundingClientRect(); if(rr.bottom<lo-1) a++; else break; }
+    while(b>i){ const el=wordEl(b); if(!el) break; const rr=el.getBoundingClientRect(); if(rr.top>hi+1) b--; else break; }
+  } else if(b-a>36){ a=Math.max(a, i-18); b=Math.min(b, i+18); }
+  return [a,b];
+}
 function ttsSentClear(){ if(TTS.sentA==null) return; for(let k=TTS.sentA;k<=TTS.sentB;k++){ const w=wordEl(k); if(w) w.classList.remove('ttssent'); } TTS.sentA=TTS.sentB=null; }
 function ttsSentPaint(i){
   if(i==null || i<0){ ttsSentClear(); return; }
@@ -1542,12 +1581,43 @@ function ttsDismissHint(){
   LS.set('ttsHintSeen', 1);
   const el=$('#ttsHint'); if(!el) return;
   el.classList.remove('show');
-  const go=()=>{ el.hidden=true; el.classList.remove('fade','show'); };
+  const go=()=>{ el.hidden=true; el.classList.remove('fade','show'); ttsHoldHintUI(); };
   if(el.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches){ go(); return; }
   el.classList.add('fade');
   setTimeout(go, 500);
 }
-let ttsResPx=-1;
+let ttsHoldT=0;
+function ttsHoldHintUI(){
+  const el=$('#ttsHoldHint'); if(!el) return;
+  const show=TTS.mode && R.mode!=='speed' && LS.get('ttsHintSeen', false) && !LS.get('ttsHoldHintSeen', false);
+  if(!show){ el.classList.remove('show','fade'); el.hidden=true; return; }
+  el.hidden=false;
+  requestAnimationFrame(()=>el.classList.add('show'));
+  clearTimeout(ttsHoldT);
+  ttsHoldT=setTimeout(()=>ttsHideHoldHint(), 5000);
+}
+function ttsHideHoldHint(immediate){
+  LS.set('ttsHoldHintSeen', 1);
+  const el=$('#ttsHoldHint'); if(!el) return;
+  clearTimeout(ttsHoldT); ttsHoldT=0;
+  el.classList.remove('show');
+  const go=()=>{ el.hidden=true; el.classList.remove('fade','show'); if(typeof ttsReserveSync==='function') ttsReserveSync(); };
+  if(immediate || el.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches){ go(); return; }
+  el.classList.add('fade');
+  setTimeout(go, 400);
+}
+let ttsResPx=0;
+function ttsLinePad(){
+  const host=R.mode==='pages'?pgFlow:scFlow;
+  const w=host&&host.querySelector('w');
+  let lh=0;
+  if(w){
+    const cs=getComputedStyle(w);
+    lh=parseFloat(cs.lineHeight);
+    if(!isFinite(lh) || lh<=0){ const fs=parseFloat(cs.fontSize); lh=(isFinite(fs)?fs:(S.size||18))*(S.lineH||1.4); }
+  } else lh=(S.size||18)*(S.lineH||1.4);
+  return Math.max(8, Math.round(1.2*lh));
+}
 function ttsMeasureReservePx(){
   const v=$('#v-reader'), b=$('#ttsBar');
   if(!v || !b || b.hidden) return 0;
@@ -1556,31 +1626,36 @@ function ttsMeasureReservePx(){
   if(!clip) return 0;
   const defaultBottom=clip.getBoundingClientRect().bottom + cur;
   let top=b.getBoundingClientRect().top;
-  for(const id of ['ttsHint','ttsNatChip']){
+  for(const id of ['ttsHint','ttsNatChip','ttsHoldHint']){
     const el=$('#'+id); if(!el || el.hidden || el.classList.contains('fade')) continue;
     const r=el.getBoundingClientRect();
     if(r.height>2) top=Math.min(top, r.top);
   }
-  return Math.max(0, Math.round(defaultBottom - (top - 8)));
+  const pad=ttsLinePad();
+  /* Scroll gets one extra line so the last line can rest fully above the pill, not flush against its top. */
+  const extra=(R.mode==='scroll')?pad:0;
+  return Math.max(0, Math.round(defaultBottom - (top - pad - extra)));
 }
 function ttsReserveSync(){
   const v=$('#v-reader'), b=$('#ttsBar');
   const on=!!(TTS.mode && R.mode!=='speed' && b && !b.hidden);
   if(v) v.classList.toggle('tts-pill-on', on);
   document.body.classList.toggle('tts-pill-on', on);
+  if(v && b && !b.hidden){ const lift=Math.ceil(b.getBoundingClientRect().height+8); if(lift>0) v.style.setProperty('--tts-chip-lift', lift+'px'); v.style.setProperty('--tts-line-pad', ttsLinePad()+'px'); }
   const next=on?ttsMeasureReservePx():0;
   if(next===ttsResPx) return;
+  const turningOff=ttsResPx>0 && next===0;
   ttsResPx=next;
   if(v) v.style.setProperty('--tts-reserve', next+'px');
-  if(R.mode==='pages' || R.mode==='scroll'){ holdPlace(); relayoutSoon(); }
+  if(R.mode==='pages' || R.mode==='scroll'){ if(!turningOff) holdPlace(true); else holdPlace(); relayoutSoon(); }
 }
 function ttsModeOn(){
   if(R.mode==='speed') return;
   if(SC.auto) asStop(true);
   selClear(); TTS.mode=true; TTS.pick=null; setChrome(true); updateChrome(); asUI();
-  requestAnimationFrame(()=>ttsReserveSync());
+  requestAnimationFrame(()=>{ ttsReserveSync(); const p=$('#ttsPlay'); if(p) p.focus(); ttsHoldHintUI(); });
 }
-function ttsModeOff(quiet){ ttsStop(); ttsPickMark(null); TTS.mode=false; ttsHideNatChip(true); const t=$('#toast'); if(t) t.hidden=true; updateChrome(); asUI(); ttsReserveSync(); }
+function ttsModeOff(quiet){ ttsStop(); ttsPickMark(null); TTS.mode=false; ttsHideNatChip(true); ttsHideHoldHint(true); const t=$('#toast'); if(t) t.hidden=true; updateChrome(); asUI(); ttsReserveSync(); const sp=$('#rTts'); if(!quiet && sp && R.chrome && !$('#v-reader').hidden) sp.focus(); }
 function ttsBarUI(){
   const b=$('#ttsBar'); if(!b) return;
   const was=b.hidden;
@@ -1635,7 +1710,9 @@ $('#ttsPrev').onclick=()=>ttsSkip(-1);
 $('#ttsNext').onclick=()=>ttsSkip(1);
 $('#ttsVoice').onclick=openVoiceSheet;
 $('#ttsSpeed').onclick=()=>{ if(!TTS.pillLock) ttsCycleRate(); };
+$('#ttsClose')&&($('#ttsClose').onclick=()=>{ if(!TTS.pillLock) ttsModeOff(); });
 $('#ttsPrev').innerHTML=ICON.bsent; $('#ttsNext').innerHTML=ICON.fsent; $('#ttsVoice').innerHTML=ICON.voice;
+if($('#ttsClose')) $('#ttsClose').innerHTML=ICON.close;
 /* Scroll: the auto-scroll button shows or hides the auto-scroll controls (like the speaker does for read aloud) */
 $('#rAs').innerHTML=ICON.autoscroll; $('#asMore').innerHTML=ICON.more; $('#spOpts').innerHTML=ICON.gear;
 $('#rAs').onclick=()=>{
@@ -1755,7 +1832,7 @@ function asOptsHTML(){ return `<div class="group">
 function openAsOpts(){ openSheet('Auto-scroll options', asOptsHTML(), {}); $('#sheet .sheet-body').dataset.sheet='as'; bindPanel(); }
 /* audio controls → voice button */
 function voiceSheetHTML(){ const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase(); return voiceSectionHTML(lang)+(R.meta?abSectionHTML():''); }
-function openVoiceSheet(){ const t=$('#toast'); if(t) t.hidden=true; if(typeof ttsHideNatChip==='function') ttsHideNatChip(true); openSheet('Voice', voiceSheetHTML(), Object.assign({},READ_ACTS,AB_ACTS)); $('#sheet .sheet-body').dataset.sheet='voice'; bindPanel(); setTimeout(()=>{ natStateUI(); abUI(); },0); }
+function openVoiceSheet(){ const t=$('#toast'); if(t) t.hidden=true; if(typeof ttsHideNatChip==='function') ttsHideNatChip(true); if(typeof ttsHideHoldHint==='function') ttsHideHoldHint(true); openSheet('Voice', voiceSheetHTML(), Object.assign({},READ_ACTS,AB_ACTS)); $('#sheet .sheet-body').dataset.sheet='voice'; bindPanel(); setTimeout(()=>{ natStateUI(); abUI(); },0); }
 /* actions shared by the Aa menu and the reading section of Settings */
 const READ_ACTS={
   vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') natPreview(); else voicePreview(); },

@@ -1,7 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.31-read-aloud-pill';
+const APP_VERSION='2026.11.18.32-read-aloud-pill-fixes';
 const WHATSNEW=[
-  ['A floating read-aloud pill','The speaker now opens a small floating pill with play/pause and speed, instead of replacing the bottom bar. Nothing plays until you press play. Tap a word to choose where to start, or to jump while it is reading. Swipe the pill to skip a sentence, and touch and hold it for voice options. If the natural voice is not downloaded yet, Tooz starts with the iPhone voice and offers the better one without waiting.']
+  ['Read-aloud pill fixes','The read-aloud pill now keeps your place when it opens or closes, sits in a reserved strip so it doesn’t cover the last lines or the “Back to where you were” chip, and works with a mouse or trackpad as well as a finger. A close button is on the pill, and a second tap on the speaker still puts it away.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

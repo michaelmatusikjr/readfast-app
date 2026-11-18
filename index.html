@@ -229,27 +229,29 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 /* Auto-scroll bar */
 #asBar{display:flex;align-items:center;gap:4px}
 /* Floating read-aloud pill (play/pause + speed chip). Voice is a long-press; skip is a swipe. */
-#ttsBar{position:absolute;left:50%;transform:translateX(-50%);z-index:13;display:flex;align-items:center;gap:2px;width:max-content;max-width:calc(100% - 24px);padding:4px 6px 8px 4px;border-radius:32px;background:color-mix(in srgb,var(--page-bg) 94%,var(--page-ink));color:var(--page-ink);border:1px solid var(--page-line);box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);touch-action:none;pointer-events:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px))}
-#v-reader:not(.chrome-off):not([data-mode="speed"]) #ttsBar{bottom:calc(12px + var(--rfoot-h,96px))}
+#ttsBar{position:absolute;left:50%;transform:translateX(-50%);z-index:13;display:flex;align-items:center;gap:2px;width:max-content;max-width:calc(100% - 24px);padding:4px 4px 8px 4px;border-radius:32px;background:color-mix(in srgb,var(--page-bg) 94%,var(--page-ink));color:var(--page-ink);border:1px solid var(--page-line);box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);touch-action:none;pointer-events:auto;bottom:calc(12px + var(--rfoot-h,96px))}
+#v-reader[data-mode="speed"] #ttsBar{bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 #ttsBar .icon-btn.play{width:48px;height:48px;flex:none;border-radius:50%;background:var(--accent);color:var(--accent-ink,#fff)}
 #ttsSpeed{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 12px;border-radius:22px;font:600 15px/1.15 system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums;color:var(--page-ink);cursor:pointer}
 #ttsLabel{font:inherit;color:inherit}
 #ttsTrack{position:absolute;left:14px;right:14px;bottom:4px;height:2px;border-radius:1px;background:color-mix(in srgb,var(--page-ink) 16%,transparent);overflow:hidden;pointer-events:none}
 #ttsTrack>i{display:block;height:100%;width:0;background:var(--accent);border-radius:1px}
-#ttsHint,#ttsNatChip{position:absolute;left:50%;transform:translateX(-50%);z-index:13;font-size:.8rem;text-align:center;padding:6px 12px;border-radius:14px;background:color-mix(in srgb,var(--page-bg) 94%,var(--page-ink));color:var(--page-muted);border:1px solid var(--page-line);box-shadow:0 2px 10px rgba(0,0,0,.14);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);max-width:calc(100% - 32px);bottom:calc(16px + env(safe-area-inset-bottom,0px) + var(--tts-chip-lift,72px));opacity:0;pointer-events:none}
-#v-reader:not(.chrome-off):not([data-mode="speed"]) #ttsHint,
-#v-reader:not(.chrome-off):not([data-mode="speed"]) #ttsNatChip{bottom:calc(12px + var(--rfoot-h,96px) + var(--tts-chip-lift,72px))}
-#ttsHint.show,#ttsNatChip.show{opacity:1;transition:opacity .35s ease}
-#ttsHint.fade,#ttsNatChip.fade{opacity:0;transition:opacity .5s ease}
+#ttsHint,#ttsNatChip,#ttsHoldHint{position:absolute;left:50%;transform:translateX(-50%);z-index:13;font-size:.8rem;text-align:center;padding:6px 12px;border-radius:14px;background:color-mix(in srgb,var(--page-bg) 94%,var(--page-ink));color:var(--page-muted);border:1px solid var(--page-line);box-shadow:0 2px 10px rgba(0,0,0,.14);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);max-width:calc(100% - 32px);bottom:calc(12px + var(--rfoot-h,96px) + var(--tts-chip-lift,72px));opacity:0;pointer-events:none}
+#ttsHint.show,#ttsNatChip.show,#ttsHoldHint.show{opacity:1;transition:opacity .35s ease}
+#ttsHint.fade,#ttsNatChip.fade,#ttsHoldHint.fade{opacity:0;transition:opacity .5s ease}
 #ttsNatChip{color:var(--page-ink);font-weight:600;min-height:44px;display:inline-flex;align-items:center;cursor:pointer;pointer-events:auto;border:0;font-family:inherit}
-#ttsHint.show{pointer-events:none}
+#ttsHoldHint{font-size:.75rem;padding:4px 10px}
+#ttsClose{width:44px;height:44px;flex:none;border-radius:50%}
+#ttsClose svg{width:16px;height:16px}
+#ttsHint.show,#ttsHoldHint.show{pointer-events:none}
 @media (prefers-reduced-motion:reduce){
-  #ttsHint,#ttsNatChip,#ttsHint.show,#ttsNatChip.show,#ttsHint.fade,#ttsNatChip.fade{transition:none}
+  #ttsHint,#ttsNatChip,#ttsHoldHint,#ttsHint.show,#ttsNatChip.show,#ttsHoldHint.show,#ttsHint.fade,#ttsNatChip.fade,#ttsHoldHint.fade{transition:none}
   .book w.ttssent,.book w.tts,w.tts{transition:none}
 }
 /* While the pill is open, shrink the text clip so the pill never sits on a line. Reserve is set in px on --tts-reserve. */
 #v-reader.tts-pill-on #pgClip{bottom:calc(16px + env(safe-area-inset-bottom,0px) + var(--tts-reserve,0px))}
 #v-reader.tts-pill-on #scrollView{bottom:calc(22px + env(safe-area-inset-bottom,0px) + var(--tts-reserve,0px))}
+#v-reader.tts-pill-on #scFlow{padding-bottom:var(--tts-line-pad,0px)}
 .book w.ttspick{box-shadow:inset 0 -2px 0 var(--accent);background:color-mix(in srgb,var(--accent) 18%,transparent);border-radius:2px}
 .book w.ttssent{background:color-mix(in srgb,var(--tts) 34%,transparent);border-radius:3px;transition:background-color .25s ease}
 .book w.ttssent.tts,w.tts{background:var(--tts);color:#1B1B1B;border-radius:3px;transition:background-color .25s ease,color .25s ease}
@@ -296,6 +298,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;anima
 #pgClip{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));overflow:hidden}
 #pgFlow,#pgMeasure{position:absolute;top:0;left:0;bottom:0;column-fill:auto}
 #pgFlow{will-change:transform}
+#pgFlow .ttspin-sp{display:block;break-before:column;-webkit-column-break-before:column;height:0;margin:0;padding:0;border:0;overflow:hidden}
 #pgMeasure{visibility:hidden;pointer-events:none;-webkit-user-select:none;user-select:none}
 #pagesView,#scrollView{left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px)}
 /* Pages/Scroll: the bars are a pure overlay. Page insets stay fixed whether the bars are shown or hidden,
@@ -383,6 +386,8 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 /* Floating reader bits */
 #backPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;background:var(--ink);color:var(--paper);border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:nowrap;pointer-events:auto}
 #v-reader:not(.chrome-off):not([data-mode="speed"]) #backPill{bottom:calc(8px + var(--rfoot-h,96px))}
+#v-reader.tts-pill-on #backPill,
+#v-reader.tts-pill-on:not(.chrome-off):not([data-mode="speed"]) #backPill{bottom:calc(12px + var(--rfoot-h,96px) + var(--tts-chip-lift,72px));z-index:14}
 #backPill button{background:none;border:0;color:inherit;font-weight:700;font-size:.85rem;padding:9px 6px 9px 14px;cursor:pointer}
 #backPill button+button{padding:9px 12px 9px 6px;opacity:.7}
 #selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;gap:2px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:2px 6px;box-shadow:0 8px 28px rgba(0,0,0,.22);max-width:calc(100% - 16px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));box-sizing:border-box}
@@ -609,7 +614,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.31</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.32</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -730,10 +735,12 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
       </div>
     </footer>
     <div id="ttsHint" hidden>Tap a word, then press play.</div>
+    <div id="ttsHoldHint" hidden>Hold for voices</div>
     <button type="button" id="ttsNatChip" hidden>Better voice available ›</button>
     <div id="ttsBar" hidden role="toolbar" aria-label="Read aloud" aria-describedby="ttsPillHelp">
       <button class="icon-btn play" id="ttsPlay" type="button" aria-label="Play"></button>
       <button type="button" id="ttsSpeed" aria-label="Speaking speed 1×"><span id="ttsLabel">1.0×</span></button>
+      <button class="icon-btn" id="ttsClose" type="button" aria-label="Close read-aloud controls"></button>
       <div id="ttsTrack" aria-hidden="true"><i id="ttsTrackBar"></i></div>
       <span id="ttsPillHelp" class="sr-only">Swipe left or right to skip a sentence. Touch and hold for voice options. Tap the speed to change it.</span>
       <button class="icon-btn sr-only" id="ttsVoice" type="button" aria-label="Voice"></button>
@@ -2034,13 +2041,28 @@ function pgFirstWord(page){
   while(lo<=hi){ const m=(lo+hi)>>1; if(pgPageOfEl(ws[m])>=page){ ans=m; hi=m-1; } else lo=m+1; }
   return sec._a+ans;
 }
-async function pgLoad(k){
+async function pgLoad(k){ pgClearPin();
+
   pgFlow.style.columnCount=P.g.two?'2':'1';
   await renderSec(pgFlow,k,'replace'); P.k=k; pgMeasure();
   /* in the two-page layout, a chapter that fills only one column is set across the full width instead of sitting on the left */
   if(P.g.two && P.cols===1) pgFlow.style.columnCount='1';
 }
 const pgShift=()=>0;
+function pgClearPin(){ if(pgFlow) pgFlow.querySelectorAll('.ttspin-sp').forEach(el=>el.remove()); }
+function pgPinWord(i){
+  pgClearPin();
+  const w=wordEl(i); if(!w) return;
+  if(P.topWord===i) return;
+  const sp=document.createElement('div');
+  sp.className='ttspin-sp';
+  sp.setAttribute('aria-hidden','true');
+  w.parentNode.insertBefore(sp, w);
+  pgMeasure();
+  let p=pgPageOfEl(w); if(p==null) return;
+  while(p>0 && pgFirstWord(p-1)===i) p--;
+  pgSet(p, false);
+}
 function pgSet(page, anim){
   P.page=clamp(page,0,P.pages-1);
   const slide = anim && S.turn==='slide';
@@ -2049,20 +2071,20 @@ function pgSet(page, anim){
   P.topWord = P.page>0 ? pgFirstWord(P.page) : (pgFlow.firstElementChild ? pgFlow.firstElementChild._a : R.pos);
   P.rangeEnd = P.page<P.pages-1 ? pgFirstWord(P.page+1) : (pgFlow.firstElementChild?pgFlow.firstElementChild._b:R.n);
 }
-async function pgShow(i){
+async function pgShow(i, keepPos){
   const k=secAt(i);
   if(P.k!==k || !pgFlow.firstElementChild) await pgLoad(k);
   let w=wordEl(i); if(!w){ await new Promise(r=>requestAnimationFrame(r)); w=wordEl(i); }
   let p=pgPageOfEl(w); while(p>0 && pgFirstWord(p-1)===i) p--; /* a picture-only page belongs before its word */
   pgSet(p, false);
-  R.pos=i; updateChrome();
+  if(!keepPos) R.pos=i; updateChrome();
 }
 async function pgFade(fn){
   if(S.turn==='none'){ await fn(); return; }
   pgFlow.classList.add('fade'); await sleep(130); await fn(); pgFlow.classList.remove('fade');
 }
 async function pgTurn(d){
-  if(P.busy || R.mode!=='pages') return; R.anchor=null;
+  if(P.busy || R.mode!=='pages') return; pgClearPin(); R.anchor=null;
   if(!TS.edge) selClear();
   if(d>0){
     if(P.page<P.pages-1){ if(S.turn==='fade') await pgFade(()=>pgSet(P.page+1,false)); else pgSet(P.page+1,true); }
@@ -2090,7 +2112,7 @@ pgView.addEventListener('pointerup',e=>{
 /* ---------- Scroll mode (+ auto-scroll) ---------- */
 const SC={busy:false, auto:false, wasAuto:false, raf:0, last:0, acc:0, pxps:0, mT:0, pauseUntil:0, t0:0, passed:new WeakSet(), ticking:false, lastSave:0, lastClock:0};
 function scTopOf(w){ return w.getBoundingClientRect().top - scView.getBoundingClientRect().top + scView.scrollTop; }
-async function scShow(i){
+async function scShow(i, keepPos){
   SC.busy=true; SC.userScrolled=false; /* the place stays exactly on word i until the reader scrolls */
   try{
     scFlow.replaceChildren(); await renderSec(scFlow, secAt(i), 'append');
@@ -2098,7 +2120,7 @@ async function scShow(i){
   } finally{ SC.busy=false; }
   await scEnsure();
   if(R.tearCenter){ R.tearCenter=false; tearCenterNow(); await scEnsure(); tearCenterNow(); }
-  R.pos=i; updateChrome();
+  if(!keepPos) R.pos=i; updateChrome();
 }
 /* put the middle of the tear in the middle of the screen */
 function tearCenterNow(){
@@ -2366,13 +2388,13 @@ const MODES={
     async enter(){ pgView.hidden=false; pgApplyGeom(); P.k=-1; await pgShow(R.pos); },
     leave(){ PC.token++; $('#pgMeasure').innerHTML=''; pgView.hidden=true; pgFlow.replaceChildren(); P.k=-1; },
     show:(i)=>pgShow(i),
-    async relayout(){ /* keep the top-left word until a page is turned, so repeated changes never drift */ if(R.anchor==null) R.anchor=(P.topWord!=null && P.k>=0)? P.topWord : R.pos; const i=R.anchor; pgApplyGeom(); P.k=-1; await pgShow(i); }
+    async relayout(){ /* keep the top-left word until a page is turned, so repeated changes never drift */ if(R.anchor==null) R.anchor=(P.topWord!=null && P.k>=0)? P.topWord : R.pos; const i=R.anchor; pgApplyGeom(); P.k=-1; await pgShow(i, true); if(P.topWord!==i) pgPinWord(i); }
   },
   scroll:{
     async enter(){ scView.hidden=false; SC.userScrolled=false; asUI(); await scShow(R.pos); },
     leave(){ asStop(true); scView.hidden=true; scFlow.replaceChildren(); $('#asBar').hidden=true; },
     show:(i)=>scShow(i),
-    async relayout(){ if(R.anchor==null) R.anchor=R.pos; await scShow(R.anchor); }
+    async relayout(){ if(R.anchor==null) R.anchor=scPos(); await scShow(R.anchor, true); }
   },
   speed:{
     async enter(){ while(R.pos>0 && glued(R.pos)) R.pos--; $('#speedView').hidden=false; el.scrub.max=Math.max(1,R.n-1); setWpm(S.wpm); await new Promise(r=>requestAnimationFrame(r)); buildScrollText(); enableManualScroll(); showPaused(); positionLine(); syncScroll(true); },
@@ -2384,19 +2406,27 @@ const MODES={
 async function switchMode(m){
   if(!MODES[m]) m='pages'; R.anchor=null;
   if(m===R.mode) return;
-  if(TTS.mode) ttsModeOff(true);
-  stopActivity(); selClear();
+  const keepTts=!!(TTS.mode && m!=='speed' && R.mode!=='speed');
+  if(TTS.mode && !keepTts) ttsModeOff(true);
+  if(R.playing) pause(); if(SC.auto) asStop(true); if(TTS.on && !keepTts) ttsStop();
+  selClear();
   if(R.mode) MODES[R.mode].leave();
   R.mode=m; S.mode=m; saveSettings(); $('#rAs').hidden=m!=='scroll';
   $('#v-reader').dataset.mode=m; $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode); setChrome(true);
   await MODES[m].enter(); updateChrome(); resetClock();
+  if(keepTts){
+    if(TTS.on && TTS.cur>=0) ttsMark(TTS.cur);
+    else if(TTS.pick!=null) ttsPickMark(TTS.pick);
+    ttsBarUI();
+  }
 }
 let relayT=null;
 let pendingRelay=false;
 function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; if(hasSelection()){ holdPlace(); pendingRelay=true; return; } pendingRelay=false; pinApp(); applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
 /* after a rotation the page area can settle a moment later (the notch insets): if the anchor word isn't on screen, lay out once more */
-function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor==null || $('#v-reader').hidden) return; const w=wordEl(R.anchor); if(!w) return; const c=$('#pgClip').getBoundingClientRect(), r=w.getBoundingClientRect(); if(r.left<c.left-2 || r.right>c.right+2){ pgApplyGeom(); P.k=-1; await pgShow(R.anchor); } }, 400); }
-function holdPlace(){ if(R.mode && R.meta && R.anchor==null && R.mode!=='speed') R.anchor = R.mode==='pages' && P.topWord!=null && P.k>=0 ? P.topWord : R.pos; }
+function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor==null || $('#v-reader').hidden) return; const w=wordEl(R.anchor); if(!w) return; const c=$('#pgClip').getBoundingClientRect(), r=w.getBoundingClientRect(); if(r.left<c.left-2 || r.right>c.right+2){ pgApplyGeom(); P.k=-1; await pgShow(R.anchor, true); } }, 400); }
+function firstVisibleWord(){ if(R.mode==='pages' && P.topWord!=null && P.k>=0) return P.topWord; if(R.mode==='scroll') return scPos(); return R.pos; }
+function holdPlace(force){ if(!R.mode || !R.meta || R.mode==='speed') return; if(!force && R.anchor!=null) return; R.anchor=firstVisibleWord(); }
 /* iPhone can leave the whole app scrolled up after a rotation, hiding the top bar */
 function pinApp(){ if(window.scrollY || document.documentElement.scrollTop || document.body.scrollTop){ window.scrollTo(0,0); document.documentElement.scrollTop=0; document.body.scrollTop=0; } }
 window.addEventListener('resize', ()=>{ holdPlace(); pinApp(); relayoutSoon(); fitAaSheetForWord(); });
@@ -2457,7 +2487,9 @@ function updateChrome(){
   const info=infoText(); $('#rInfo').textContent=info; $('#runFoot').textContent=info; $('#runHead').textContent=ch?ch.t:R.meta.title;
   $('#rMark').classList.toggle('on', !!bookmarkHere());
   $('#rAs').hidden=R.mode!=='scroll'; $('#rAs').classList.toggle('on', !!S.autoScroll && !TTS.mode); $('#rAs').setAttribute('aria-label',S.autoScroll?'Close auto-scroll controls':'Auto-scroll');
-  $('#rTts').classList.toggle('on', !!TTS.mode); $('#rTts').innerHTML=ICON.speaker; $('#rTts').setAttribute('aria-label',TTS.mode?'Close read-aloud controls':'Read aloud'); ttsBarUI();
+  $('#rTts').classList.toggle('on', !!TTS.mode); $('#rTts').innerHTML=ICON.speaker; $('#rTts').setAttribute('aria-label',TTS.mode?'Close read-aloud controls':'Read aloud');
+  $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode && R.mode!=='speed');
+  ttsBarUI();
 }
 $('#rInfo').onclick=()=>{ S.info=(S.info+1)%3; saveSettings(); updateChrome(); };
 $('#rScrub').addEventListener('input',e=>{ scrubbing=true; const i=+e.target.value; const ch=currentChapter(i); $('#rInfo').textContent=`Go to ${Math.round(100*i/Math.max(1,R.n-1))}%`+(ch?' · '+ch.t:''); });
@@ -3251,10 +3283,24 @@ function ttsSpeakFrom(i, seq){
   u.onboundary=(e)=>{ if(seq!==TTS.seq) return; if(e.name && e.name!=='word') return; const c=e.charIndex; let lo=0, hi=map.length-1; while(lo<hi){ const m=(lo+hi+1)>>1; if(map[m]<=c) lo=m; else hi=m-1; } lastMark=i+lo; ttsMark(lastMark); };
   u.onend=()=>{ if(seq===TTS.seq && TTS.on){ const ms=performance.now()-t0; recordStats(Math.max(500,ms), j-i); ttsLearn(j-i, ms); if(ch.pauseAfter) setTimeout(()=>{ if(seq===TTS.seq && TTS.on) ttsSpeakFrom(j, seq); }, ch.pauseAfter/(S.ttsRate||1)); else ttsSpeakFrom(j, seq); } };
   u.onerror=(e)=>{ if(seq!==TTS.seq) return; if(e.error==='interrupted'||e.error==='canceled') return; ttsStop(); toast('Read aloud stopped ('+(e.error||'error')+').'); };
-  TTS.utt=u; ttsMark(i); speechSynthesis.speak(u);
+  TTS.utt=u; ttsMark(i); if(typeof natMedia==='function') natMedia(); speechSynthesis.speak(u);
 }
 let ttsMoveT=0;
-function ttsSentOf(i){ const a=sentStartOf(i); let b=i; while(b<R.n-1 && !isSentEnd(b)) b++; return [a,b]; }
+function ttsIsClauseEnd(k){ return /[;:—–]$/.test(R.words[k]||''); }
+function ttsSentOf(i){
+  const a0=sentStartOf(i); let b0=i; while(b0<R.n-1 && !isSentEnd(b0)) b0++;
+  let a=i, b=i;
+  while(a>a0 && !ttsIsClauseEnd(a-1)) a--;
+  while(b<b0 && !ttsIsClauseEnd(b)) b++;
+  const w=wordEl(i);
+  if(w){
+    const r=w.getBoundingClientRect(), lh=r.height||((S.size||18)*(S.lineH||1.4));
+    const lo=r.top-lh*1.1, hi=r.bottom+lh*1.1;
+    while(a<i){ const el=wordEl(a); if(!el) break; const rr=el.getBoundingClientRect(); if(rr.bottom<lo-1) a++; else break; }
+    while(b>i){ const el=wordEl(b); if(!el) break; const rr=el.getBoundingClientRect(); if(rr.top>hi+1) b--; else break; }
+  } else if(b-a>36){ a=Math.max(a, i-18); b=Math.min(b, i+18); }
+  return [a,b];
+}
 function ttsSentClear(){ if(TTS.sentA==null) return; for(let k=TTS.sentA;k<=TTS.sentB;k++){ const w=wordEl(k); if(w) w.classList.remove('ttssent'); } TTS.sentA=TTS.sentB=null; }
 function ttsSentPaint(i){
   if(i==null || i<0){ ttsSentClear(); return; }
@@ -3310,12 +3356,43 @@ function ttsDismissHint(){
   LS.set('ttsHintSeen', 1);
   const el=$('#ttsHint'); if(!el) return;
   el.classList.remove('show');
-  const go=()=>{ el.hidden=true; el.classList.remove('fade','show'); };
+  const go=()=>{ el.hidden=true; el.classList.remove('fade','show'); ttsHoldHintUI(); };
   if(el.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches){ go(); return; }
   el.classList.add('fade');
   setTimeout(go, 500);
 }
-let ttsResPx=-1;
+let ttsHoldT=0;
+function ttsHoldHintUI(){
+  const el=$('#ttsHoldHint'); if(!el) return;
+  const show=TTS.mode && R.mode!=='speed' && LS.get('ttsHintSeen', false) && !LS.get('ttsHoldHintSeen', false);
+  if(!show){ el.classList.remove('show','fade'); el.hidden=true; return; }
+  el.hidden=false;
+  requestAnimationFrame(()=>el.classList.add('show'));
+  clearTimeout(ttsHoldT);
+  ttsHoldT=setTimeout(()=>ttsHideHoldHint(), 5000);
+}
+function ttsHideHoldHint(immediate){
+  LS.set('ttsHoldHintSeen', 1);
+  const el=$('#ttsHoldHint'); if(!el) return;
+  clearTimeout(ttsHoldT); ttsHoldT=0;
+  el.classList.remove('show');
+  const go=()=>{ el.hidden=true; el.classList.remove('fade','show'); if(typeof ttsReserveSync==='function') ttsReserveSync(); };
+  if(immediate || el.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches){ go(); return; }
+  el.classList.add('fade');
+  setTimeout(go, 400);
+}
+let ttsResPx=0;
+function ttsLinePad(){
+  const host=R.mode==='pages'?pgFlow:scFlow;
+  const w=host&&host.querySelector('w');
+  let lh=0;
+  if(w){
+    const cs=getComputedStyle(w);
+    lh=parseFloat(cs.lineHeight);
+    if(!isFinite(lh) || lh<=0){ const fs=parseFloat(cs.fontSize); lh=(isFinite(fs)?fs:(S.size||18))*(S.lineH||1.4); }
+  } else lh=(S.size||18)*(S.lineH||1.4);
+  return Math.max(8, Math.round(1.2*lh));
+}
 function ttsMeasureReservePx(){
   const v=$('#v-reader'), b=$('#ttsBar');
   if(!v || !b || b.hidden) return 0;
@@ -3324,31 +3401,36 @@ function ttsMeasureReservePx(){
   if(!clip) return 0;
   const defaultBottom=clip.getBoundingClientRect().bottom + cur;
   let top=b.getBoundingClientRect().top;
-  for(const id of ['ttsHint','ttsNatChip']){
+  for(const id of ['ttsHint','ttsNatChip','ttsHoldHint']){
     const el=$('#'+id); if(!el || el.hidden || el.classList.contains('fade')) continue;
     const r=el.getBoundingClientRect();
     if(r.height>2) top=Math.min(top, r.top);
   }
-  return Math.max(0, Math.round(defaultBottom - (top - 8)));
+  const pad=ttsLinePad();
+  /* Scroll gets one extra line so the last line can rest fully above the pill, not flush against its top. */
+  const extra=(R.mode==='scroll')?pad:0;
+  return Math.max(0, Math.round(defaultBottom - (top - pad - extra)));
 }
 function ttsReserveSync(){
   const v=$('#v-reader'), b=$('#ttsBar');
   const on=!!(TTS.mode && R.mode!=='speed' && b && !b.hidden);
   if(v) v.classList.toggle('tts-pill-on', on);
   document.body.classList.toggle('tts-pill-on', on);
+  if(v && b && !b.hidden){ const lift=Math.ceil(b.getBoundingClientRect().height+8); if(lift>0) v.style.setProperty('--tts-chip-lift', lift+'px'); v.style.setProperty('--tts-line-pad', ttsLinePad()+'px'); }
   const next=on?ttsMeasureReservePx():0;
   if(next===ttsResPx) return;
+  const turningOff=ttsResPx>0 && next===0;
   ttsResPx=next;
   if(v) v.style.setProperty('--tts-reserve', next+'px');
-  if(R.mode==='pages' || R.mode==='scroll'){ holdPlace(); relayoutSoon(); }
+  if(R.mode==='pages' || R.mode==='scroll'){ if(!turningOff) holdPlace(true); else holdPlace(); relayoutSoon(); }
 }
 function ttsModeOn(){
   if(R.mode==='speed') return;
   if(SC.auto) asStop(true);
   selClear(); TTS.mode=true; TTS.pick=null; setChrome(true); updateChrome(); asUI();
-  requestAnimationFrame(()=>ttsReserveSync());
+  requestAnimationFrame(()=>{ ttsReserveSync(); const p=$('#ttsPlay'); if(p) p.focus(); ttsHoldHintUI(); });
 }
-function ttsModeOff(quiet){ ttsStop(); ttsPickMark(null); TTS.mode=false; ttsHideNatChip(true); const t=$('#toast'); if(t) t.hidden=true; updateChrome(); asUI(); ttsReserveSync(); }
+function ttsModeOff(quiet){ ttsStop(); ttsPickMark(null); TTS.mode=false; ttsHideNatChip(true); ttsHideHoldHint(true); const t=$('#toast'); if(t) t.hidden=true; updateChrome(); asUI(); ttsReserveSync(); const sp=$('#rTts'); if(!quiet && sp && R.chrome && !$('#v-reader').hidden) sp.focus(); }
 function ttsBarUI(){
   const b=$('#ttsBar'); if(!b) return;
   const was=b.hidden;
@@ -3403,7 +3485,9 @@ $('#ttsPrev').onclick=()=>ttsSkip(-1);
 $('#ttsNext').onclick=()=>ttsSkip(1);
 $('#ttsVoice').onclick=openVoiceSheet;
 $('#ttsSpeed').onclick=()=>{ if(!TTS.pillLock) ttsCycleRate(); };
+$('#ttsClose')&&($('#ttsClose').onclick=()=>{ if(!TTS.pillLock) ttsModeOff(); });
 $('#ttsPrev').innerHTML=ICON.bsent; $('#ttsNext').innerHTML=ICON.fsent; $('#ttsVoice').innerHTML=ICON.voice;
+if($('#ttsClose')) $('#ttsClose').innerHTML=ICON.close;
 /* Scroll: the auto-scroll button shows or hides the auto-scroll controls (like the speaker does for read aloud) */
 $('#rAs').innerHTML=ICON.autoscroll; $('#asMore').innerHTML=ICON.more; $('#spOpts').innerHTML=ICON.gear;
 $('#rAs').onclick=()=>{
@@ -3523,7 +3607,7 @@ function asOptsHTML(){ return `<div class="group">
 function openAsOpts(){ openSheet('Auto-scroll options', asOptsHTML(), {}); $('#sheet .sheet-body').dataset.sheet='as'; bindPanel(); }
 /* audio controls → voice button */
 function voiceSheetHTML(){ const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase(); return voiceSectionHTML(lang)+(R.meta?abSectionHTML():''); }
-function openVoiceSheet(){ const t=$('#toast'); if(t) t.hidden=true; if(typeof ttsHideNatChip==='function') ttsHideNatChip(true); openSheet('Voice', voiceSheetHTML(), Object.assign({},READ_ACTS,AB_ACTS)); $('#sheet .sheet-body').dataset.sheet='voice'; bindPanel(); setTimeout(()=>{ natStateUI(); abUI(); },0); }
+function openVoiceSheet(){ const t=$('#toast'); if(t) t.hidden=true; if(typeof ttsHideNatChip==='function') ttsHideNatChip(true); if(typeof ttsHideHoldHint==='function') ttsHideHoldHint(true); openSheet('Voice', voiceSheetHTML(), Object.assign({},READ_ACTS,AB_ACTS)); $('#sheet .sheet-body').dataset.sheet='voice'; bindPanel(); setTimeout(()=>{ natStateUI(); abUI(); },0); }
 /* actions shared by the Aa menu and the reading section of Settings */
 const READ_ACTS={
   vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') natPreview(); else voicePreview(); },
@@ -4387,25 +4471,31 @@ async function ttsDownloadNatural(){
 }
 (function ttsPillBind(){
   const bar=$('#ttsBar'); if(!bar) return;
-  let sx=0, sy=0, t0=0, pid=0, moved=false, longed=false, longT=0, tracking=false;
+  let sx=0, sy=0, t0=0, pid=0, moved=false, longed=false, longT=0, tracking=false, captured=false;
   const cancelLong=()=>{ clearTimeout(longT); longT=0; };
+  const release=()=>{ if(captured){ try{ bar.releasePointerCapture(pid); }catch(_){} captured=false; } };
   bar.addEventListener('pointerdown',e=>{
     if(e.button && e.button!==0) return;
-    tracking=true; sx=e.clientX; sy=e.clientY; t0=performance.now(); pid=e.pointerId; moved=false; longed=false;
-    try{ bar.setPointerCapture(e.pointerId); }catch(_){}
-    longT=setTimeout(()=>{ longed=true; TTS.pillLock=true; ttsHideNatChip(true); openVoiceSheet(); }, 520);
+    /* Do not capture yet: capturing on the bar retargets click away from Play / speed / close,
+       so a real mouse or trackpad click would do nothing. Capture only after a swipe starts. */
+    tracking=true; sx=e.clientX; sy=e.clientY; t0=performance.now(); pid=e.pointerId; moved=false; longed=false; captured=false;
+    longT=setTimeout(()=>{ longed=true; TTS.pillLock=true; ttsHideNatChip(true); if(typeof ttsHideHoldHint==='function') ttsHideHoldHint(true); openVoiceSheet(); }, 520);
   });
   bar.addEventListener('pointermove',e=>{
     if(!tracking || e.pointerId!==pid) return;
     const dx=e.clientX-sx, dy=e.clientY-sy;
     if(Math.abs(dx)>10 || Math.abs(dy)>10){ moved=true; cancelLong(); }
+    if(!captured && Math.abs(dx)>28 && Math.abs(dx)>Math.abs(dy)*1.15){
+      try{ bar.setPointerCapture(e.pointerId); captured=true; }catch(_){}
+    }
   });
   const end=e=>{
     if(!tracking || (e.pointerId!=null && e.pointerId!==pid)) return;
     cancelLong(); tracking=false;
     const dx=(e.clientX||sx)-sx, dy=(e.clientY||sy)-sy;
-    if(longed){ TTS.pillLock=true; setTimeout(()=>{ TTS.pillLock=false; }, 400); return; }
+    if(longed){ TTS.pillLock=true; setTimeout(()=>{ TTS.pillLock=false; }, 400); release(); return; }
     if(Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy)*1.15){ TTS.pillLock=true; ttsSkip(dx<0?1:-1); setTimeout(()=>{ TTS.pillLock=false; }, 400); }
+    release();
   };
   bar.addEventListener('pointerup',end);
   bar.addEventListener('pointercancel',end);
@@ -4418,9 +4508,9 @@ async function ttsDownloadNatural(){
 $('#ttsNatChip')&&$('#ttsNatChip').addEventListener('click',()=>{ ttsHideNatChip(true); openVoiceSheet(); });
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.31-read-aloud-pill';
+const APP_VERSION='2026.11.18.32-read-aloud-pill-fixes';
 const WHATSNEW=[
-  ['A floating read-aloud pill','The speaker now opens a small floating pill with play/pause and speed, instead of replacing the bottom bar. Nothing plays until you press play. Tap a word to choose where to start, or to jump while it is reading. Swipe the pill to skip a sentence, and touch and hold it for voice options. If the natural voice is not downloaded yet, Tooz starts with the iPhone voice and offers the better one without waiting.']
+  ['Read-aloud pill fixes','The read-aloud pill now keeps your place when it opens or closes, sits in a reserved strip so it doesn’t cover the last lines or the “Back to where you were” chip, and works with a mouse or trackpad as well as a finger. A close button is on the pill, and a second tap on the speaker still puts it away.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

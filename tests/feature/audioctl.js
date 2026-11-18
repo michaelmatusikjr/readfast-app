@@ -8,7 +8,24 @@ const fs=require('fs');
 (async()=>{
   const b=await chromium.launch({args:['--autoplay-policy=no-user-gesture-required']});
   const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', hasTouch:true, isMobile:true});
-  await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
+  await ctx.addInitScript(()=>{
+    window.__toozKeepSample=true;
+    /* Headless Chromium often has no system voices; mock enough of speechSynthesis for play-fallback tests. */
+    const voices=[{voiceURI:'mock-samantha', name:'Samantha', lang:'en-US', localService:true, default:true}];
+    const fake={
+      speaking:false, pending:false, paused:false,
+      getVoices(){ return voices; },
+      addEventListener(){}, removeEventListener(){},
+      cancel(){ this.speaking=false; this._seq=(this._seq||0)+1; },
+      pause(){ this.paused=true; }, resume(){ this.paused=false; },
+      speak(u){
+        this.speaking=true; this.paused=false; const seq=this._seq||0;
+        setTimeout(()=>{ if(seq!==this._seq) return; try{ u.onboundary && u.onboundary({name:'word', charIndex:0}); }catch(e){} }, 40);
+      }
+    };
+    try{ Object.defineProperty(window, 'speechSynthesis', {configurable:true, get(){ return fake; }}); }catch(e){ window.speechSynthesis=fake; }
+    window.SpeechSynthesisUtterance=function(text){ this.text=text; this.rate=1; this.voice=null; this.lang=''; this.onboundary=null; this.onend=null; this.onerror=null; };
+  });
   const hf=[]; const cors={'access-control-allow-origin':'*'};
   await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/onnxruntime-web\/1\.18\.0\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:__E.NM+'onnxruntime-web/dist/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/javascript'},cors)}); });
   await ctx.route(/cdn\.jsdelivr\.net\/npm\/@diffusionstudio\/piper-wasm@1\.0\.0\/build\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:__E.NM+'@diffusionstudio/piper-wasm/build/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/octet-stream'},cors)}); });
@@ -43,7 +60,7 @@ const fs=require('fs');
   ok('natural voice still not forced-downloaded', await pg.evaluate(async()=>!(await natDownloaded())));
   // now download (fake piper in this test) and continue on the natural path
   ok('download natural voice', await pg.evaluate(async()=>!!(await natEnsure())));
-  await pg.evaluate(()=>{ if(TTS.pick==null && pick!=null) ttsPickMark(pick); $('#ttsPlay').click(); }); await sleep(2500);
+  await pg.evaluate((pick)=>{ if(TTS.pick==null && pick!=null) ttsPickMark(pick); $('#ttsPlay').click(); }, pick); await sleep(2500);
   const r1=await pg.evaluate(()=>[TTS.on, TTS.nat, TTS.cur, $('#ttsPlay').getAttribute('aria-label'), !document.querySelector('w.ttspick')]);
   ok('play starts at picked word on the natural voice', r1[0] && r1[1] && r1[2]>=pick && r1[2]<pick+40 && r1[3]==='Pause' && r1[4], [pick,r1]);
   // jump by tapping word while playing

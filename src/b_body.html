@@ -1,5 +1,5 @@
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.31</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.32</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -120,10 +120,12 @@
       </div>
     </footer>
     <div id="ttsHint" hidden>Tap a word, then press play.</div>
+    <div id="ttsHoldHint" hidden>Hold for voices</div>
     <button type="button" id="ttsNatChip" hidden>Better voice available ›</button>
     <div id="ttsBar" hidden role="toolbar" aria-label="Read aloud" aria-describedby="ttsPillHelp">
       <button class="icon-btn play" id="ttsPlay" type="button" aria-label="Play"></button>
       <button type="button" id="ttsSpeed" aria-label="Speaking speed 1×"><span id="ttsLabel">1.0×</span></button>
+      <button class="icon-btn" id="ttsClose" type="button" aria-label="Close read-aloud controls"></button>
       <div id="ttsTrack" aria-hidden="true"><i id="ttsTrackBar"></i></div>
       <span id="ttsPillHelp" class="sr-only">Swipe left or right to skip a sentence. Touch and hold for voice options. Tap the speed to change it.</span>
       <button class="icon-btn sr-only" id="ttsVoice" type="button" aria-label="Voice"></button>

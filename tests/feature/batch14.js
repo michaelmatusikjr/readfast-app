@@ -44,10 +44,10 @@ const fs=require('fs');
   ok('note blocks are skipped', nt.skip || nt.skippedTo===nt.nextBlockStart, nt);
   const fnw=await pg.evaluate(()=>{ const save=R.wf; R.wf=new Uint8Array(R.n); const k=R.blocks.find(b=>b.t==='p'&&b.e-b.s>10); R.wf[k.s+2]=F_N; const c=speechChunk(k.s,6,30); R.wf=save; return [c.text.split(' ').length, R.words.slice(k.s,k.s+6).join(' '), c.text]; });
   ok('footnote markers are not spoken', fnw[0]===5, fnw);
-  // 7. voice mode keeps controls and makes room
+  // 7. voice mode: hide-controls hides the bars; the floating pill stays
   await pg.evaluate(()=>{ S.focus=true; saveSettings(); $('#v-reader').classList.add('overlay'); $('#rTts').click(); }); await sleep(500);
   const vm=await pg.evaluate(()=>{ setChrome(false); return [R.chrome, $('#v-reader').classList.contains('chrome-off'), $('#v-reader').classList.contains('overlay'), $('#ttsBar').hidden]; });
-  ok('voice mode: controls stay up and the page makes room', vm[0]===true && !vm[1] && !vm[2] && !vm[3], vm);
+  ok('voice mode: hide-controls hides the bars but the pill stays', vm[0]===false && vm[1] && !vm[2] && !vm[3], vm);
   ok('time left uses listening speed', await pg.evaluate(()=>{ S.ttsWpm=150; S.ttsRate=1; return readWpm()===150 && /left in chapter/.test(infoText()); }));
   await pg.evaluate(()=>$('#rTts').click()); await sleep(500);
   ok('leaving voice mode restores hide-controls layout', await pg.evaluate(()=>$('#v-reader').classList.contains('overlay') && TTS.mode===false));

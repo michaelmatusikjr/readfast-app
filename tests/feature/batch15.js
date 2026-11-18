@@ -35,7 +35,7 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   await pg.evaluate(()=>{ const t=document.querySelector('#sheet input[data-set="asPauses"]'); t.checked=!t.checked; t.dispatchEvent(new Event('change',{bubbles:true})); }); await sleep(200);
   await pg.evaluate(()=>closeSheet()); await sleep(400);
   await pg.evaluate(()=>$('#rTts').click()); await sleep(300);
-  ok('speaker replaces auto-scroll bar', await pg.evaluate(()=>$('#asBar').hidden && !$('#ttsBar').hidden && !$('#rAs').classList.contains('on')));
+  ok('speaker opens the read-aloud pill and hides the auto-scroll bar', await pg.evaluate(()=>$('#asBar').hidden && !$('#ttsBar').hidden && !$('#rAs').classList.contains('on')));
   await pg.evaluate(()=>$('#ttsVoice').click()); await sleep(700);
   const vs=await pg.evaluate(()=>({t:$('#sheet h2').textContent, natural:!!document.querySelector('#sheet [data-set="ttsEngine"]'), list:!!$('#o_pvoice'), speed:!!document.querySelector('#sheet [data-set="ttsRate"]'), state:($('#kokState')||{}).textContent}));
   ok('voice button opens Voice sheet', vs.t==='Voice' && vs.natural && vs.list && !vs.speed && /download/i.test(vs.state||''), vs);
