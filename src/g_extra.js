@@ -1,10 +1,11 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.34-tutorial';
+const APP_VERSION='2026.11.18.35-tutorial';
 const WHATSNEW=[
   ['A quick first tour','The first time you open Tooz, a short tour shows the shelf, a page turn, notes, Speed and listen. Skip it any time. Replay it later from Settings → Help.'],
   ['A floating read-aloud pill','The speaker opens a small floating pill with play/pause, a speed chip and a close button. Nothing plays until you press play. Tap a word to choose where to start, or to jump while it is reading. Swipe the pill to skip a sentence. Touch and hold the body of the pill (not Play or the speed chip) for voice options; a one-time Hold for voices hint appears next to the speed chip. The pill stays when you switch between Pages and Scroll; Speed has no pill. Tap the X or the speaker again to close it. If the natural voice is not downloaded yet, Tooz starts with the iPhone voice and offers the better one without waiting.'],
   ['Read-aloud pill fixes','The read-aloud pill now keeps your place when it opens or closes, sits in a reserved strip so it doesn’t cover the last lines or the “Back to where you were” chip, and works with a mouse or trackpad as well as a finger. A close button is on the pill, and a second tap on the speaker still puts it away.'],
-  ['Read-aloud stays with you','Closing the read-aloud pill leaves you on the page you were listening to, and opening or closing it no longer nudges the view in Scroll. Long sentences stay softly highlighted around the word being read, and the first-time hint no longer changes the page count.']
+  ['Read-aloud stays with you','Closing the read-aloud pill leaves you on the page you were listening to, and opening or closing it no longer nudges the view in Scroll. Long sentences stay softly highlighted around the word being read, and the first-time hint no longer changes the page count.'],
+  ['A calmer library and last page','The backup reminder no longer covers the Continue button, page totals stay steady while pages are counted, and opening listen at the end of a book in Scroll keeps your place.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

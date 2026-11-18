@@ -301,7 +301,16 @@ function remindBackup(){
   if(BK.dir || BK.reminded || !S.bkRemind || !LIB.some(m=>m.kind!=='sample'&&!m.pending) || !bkChanged()) return;
   const at=LS.get('bk.at',0); if(at && Date.now()-at < S.bkRemind*864e5) return;
   BK.reminded=true;
-  setTimeout(()=>{ if($('#v-library').hidden && $('#v-words').hidden) { BK.reminded=false; return; } toast(at?'It’s been a while since your last backup':'Your library hasn’t been backed up yet', {label:'Save backup', fn:backup}, 12000); }, 1500);
+  const show=()=>{
+    if(typeof TOUR!=='undefined' && TOUR.on){ BK.reminded=false; setTimeout(()=>remindBackup(), 2000); return; }
+    if($('#v-library').hidden && $('#v-words').hidden){ BK.reminded=false; return; }
+    const hero=document.querySelector('#v-library .continue-hero');
+    toast(at?'It’s been a while since your last backup':'Your library hasn’t been backed up yet', {label:'Save backup', fn:backup}, 12000);
+    placeToastClearOfHero();
+  };
+  /* Give the Continue hero a moment on first load, then place the toast so it never covers it. */
+  const heroDelay=document.querySelector('#v-library .continue-hero')?2800:1500;
+  setTimeout(show, heroDelay);
 }
 async function initBackups(){
   if(canPickFolder()){
@@ -1049,7 +1058,7 @@ async function addGutenberg(r){
 }
 
 /* ---------- Notes tab: highlights, notes and bookmarks from every book ---------- */
-let NOTESEG=LS.get('notesSeg','hl'), notesTok=0; const SNIPS=new Map();
+let notesTok=0; const SNIPS=new Map();
 const NOTECOLLAPSE=new Set();
 function notesFindQ(){ return (($('#notesFind')||{}).value||'').trim(); }
 async function snipOf(id,s,e){
@@ -1257,10 +1266,43 @@ document.addEventListener('keydown',e=>{
   }
 });
 function toast(msg, action, ms, progress){
+  const t=$('#toast'); if(t) t.style.bottom='';
   $('#toastMsg').textContent=msg; const a=$('#toastAct'); const prog=$('#toastProg'); const bar=$('#toastBar');
   if(action){ a.hidden=false; a.textContent=action.label; a.onclick=()=>{ action.fn(); $('#toast').hidden=true; }; } else a.hidden=true;
   if(progress!=null){ prog.hidden=false; bar.style.width=Math.max(0,Math.min(100,progress))+'%'; } else { prog.hidden=true; }
   $('#toast').hidden=false; clearTimeout(toastT); if(ms!==0) toastT=setTimeout(()=>{ $('#toast').hidden=true; }, ms||(action?5000:3200));
+}
+/* Keep the backup reminder off the Continue hero/button. Prefer a spot just
+   below the hero (still above the tab bar); if there is no room, sit above
+   the hero; if that would cover it too, hide and try again after a delay. */
+function placeToastClearOfHero(){
+  const t=$('#toast'); if(!t || t.hidden) return;
+  const lib=$('#v-library');
+  const hero=lib && !lib.hidden && (lib.querySelector('.continue-hero .hero-go')||lib.querySelector('.continue-hero'));
+  if(!hero) return;
+  const overlap=(a,b)=>!(a.bottom<b.top+4 || a.top>b.bottom+4 || a.right<b.left+4 || a.left>b.right+4);
+  const place=()=>{
+    if(t.hidden || !hero.isConnected) return;
+    t.style.bottom='';
+    const tr=t.getBoundingClientRect(), hr=hero.getBoundingClientRect();
+    if(!overlap(tr,hr)) return;
+    const tabs=$('#tabs');
+    const floor=(tabs && !tabs.hidden)?tabs.getBoundingClientRect().top-8:innerHeight-8;
+    const below=hr.bottom+12;
+    if(below+tr.height<=floor){
+      t.style.bottom=(innerHeight-(below+tr.height))+'px';
+      return;
+    }
+    if(hr.top>tr.height+16){
+      t.style.bottom=(innerHeight-hr.top+12)+'px';
+      const tr2=t.getBoundingClientRect();
+      if(!overlap(tr2,hr)) return;
+    }
+    t.hidden=true; t.style.bottom='';
+    clearTimeout(toastT);
+    toastT=setTimeout(()=>{ if(t.hidden){ t.hidden=false; requestAnimationFrame(place); } }, 8000);
+  };
+  requestAnimationFrame(()=>requestAnimationFrame(place));
 }
 const VIEWS=['library','words','stats','settings'];
 function showView(v){

@@ -706,7 +706,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.34</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.35</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -2143,7 +2143,12 @@ const PC={sig:'', counts:[], token:0, fontGen:0};
 function pcSync(){
   const g=P.g; const sig=[R.meta.id,R.SEC.length,g.W,g.H,g.two,S.size,S.lineH,S.margin,S.para,S.justify,S.hyphen,S.boldText,S.wordStart,S.font,R.bookFamily,S.focus,PC.fontGen].join('|');
   if(sig===PC.sig && PC.counts.length===R.SEC.length) return;
-  PC.sig=sig; PC.counts=new Array(R.SEC.length).fill(0); pcRun();
+  /* Keep the last measured counts as a fallback so bookPages().total does not
+     drop to a rough estimate while pcRun remesures the new layout. */
+  PC.prev=(PC.counts && PC.counts.length===R.SEC.length)?PC.counts.slice():null;
+  PC.sig=sig; PC.counts=new Array(R.SEC.length).fill(0);
+  if(P.k>=0 && P.pages) PC.counts[P.k]=P.pages;
+  pcRun();
 }
 async function pcRun(){
   const tok=++PC.token; const m=$('#pgMeasure'); const g=P.g; const here=secAt(R.pos);
@@ -2160,13 +2165,19 @@ async function pcRun(){
     if(!PC.counts[k]) PC.counts[k]=Math.max(1,Math.ceil(cols/g.colsPer));
     if(performance.now()-t>10){ m.innerHTML=''; await sleep(40); t=performance.now(); if(++n%6===0 && tok===PC.token) updateChrome(); }
   }
-  m.innerHTML=''; if(tok===PC.token) updateChrome();
+  m.innerHTML='';
+  if(tok===PC.token){
+    if(P.k>=0 && P.pages) PC.counts[P.k]=P.pages;
+    PC.prev=null;
+    updateChrome();
+  }
 }
 function bookPages(){
-  const c=PC.counts; let kw=0, kp=0;
-  for(let k=0;k<R.SEC.length;k++) if(c[k]){ kw+=R.SEC[k][1]-R.SEC[k][0]; kp+=c[k]; }
+  const nOf=k=>PC.counts[k]||(PC.prev&&PC.prev[k])||0;
+  let kw=0, kp=0;
+  for(let k=0;k<R.SEC.length;k++) if(nOf(k)){ kw+=R.SEC[k][1]-R.SEC[k][0]; kp+=nOf(k); }
   const wpp=kp? kw/kp : 280; let before=0, total=0;
-  for(let k=0;k<R.SEC.length;k++){ const n=c[k]||Math.max(1,Math.round((R.SEC[k][1]-R.SEC[k][0])/wpp)); if(k<P.k) before+=n; total+=n; }
+  for(let k=0;k<R.SEC.length;k++){ const n=nOf(k)||Math.max(1,Math.round((R.SEC[k][1]-R.SEC[k][0])/wpp)); if(k<P.k) before+=n; total+=n; }
   return {page:before+P.page+1, total};
 }
 function pgMeasure(){ const g=P.g; const cols=Math.max(1,Math.round((pgFlow.scrollWidth+g.gap)/(g.cw+g.gap))); const sec=pgFlow.firstElementChild; P.cols=sec?Math.min(cols, Math.max(1,sec.getClientRects().length)):cols; /* columns the text really fills */ P.pages=Math.max(1,Math.ceil(cols/g.colsPer)); if(P.k>=0) PC.counts[P.k]=P.pages; }
@@ -2254,13 +2265,39 @@ const SC={busy:false, auto:false, wasAuto:false, raf:0, last:0, acc:0, pxps:0, m
 function scTopOf(w){ return w.getBoundingClientRect().top - scView.getBoundingClientRect().top + scView.scrollTop; }
 /* scShow places the anchor word this many px below the clip top; scPos samples at the same offset so open/close is a round trip. */
 const SC_ANCHOR_PAD=10;
+/* Extra padding at the end of the scroll flow so a short last screen can
+   still place the anchor word SC_ANCHOR_PAD below the clip top. Used when
+   the read-aloud pill shrinks the clip at max scroll. */
+function scEndPad(){ return parseFloat(scFlow.style.paddingBottom)||0; }
+function scSetEndPad(px){
+  const n=Math.max(0, Math.round(px));
+  scFlow.style.paddingBottom=n?n+'px':'';
+}
+function scPlaceAnchor(i){
+  const w=wordEl(i); if(!w) return;
+  const desired=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
+  const max=Math.max(0, scView.scrollHeight-scView.clientHeight);
+  if(desired>max+1){
+    scSetEndPad(scEndPad()+(desired-max)+2);
+    scView.scrollTop=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
+  }else{
+    if(scEndPad() && desired+8<max){
+      scSetEndPad(0);
+      const d2=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
+      const max2=Math.max(0, scView.scrollHeight-scView.clientHeight);
+      if(d2>max2+1) scSetEndPad((d2-max2)+2);
+    }
+    scView.scrollTop=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
+  }
+}
 async function scShow(i, keepPos){
   SC.busy=true; SC.userScrolled=false; /* the place stays exactly on word i until the reader scrolls */
   try{
-    scFlow.replaceChildren(); await renderSec(scFlow, secAt(i), 'append');
+    scFlow.replaceChildren(); scSetEndPad(0); await renderSec(scFlow, secAt(i), 'append');
     const w=wordEl(i); scView.scrollTop=w?Math.max(0, scTopOf(w)-SC_ANCHOR_PAD):0;
   } finally{ SC.busy=false; }
   await scEnsure();
+  scPlaceAnchor(i);
   if(R.tearCenter){ R.tearCenter=false; tearCenterNow(); await scEnsure(); tearCenterNow(); }
   if(!keepPos) R.pos=i; updateChrome();
 }
@@ -4722,12 +4759,13 @@ async function ttsDownloadNatural(){
 $('#ttsNatChip')&&$('#ttsNatChip').addEventListener('click',()=>{ ttsHideNatChip(true); openVoiceSheet(); });
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.34-tutorial';
+const APP_VERSION='2026.11.18.35-tutorial';
 const WHATSNEW=[
   ['A quick first tour','The first time you open Tooz, a short tour shows the shelf, a page turn, notes, Speed and listen. Skip it any time. Replay it later from Settings → Help.'],
   ['A floating read-aloud pill','The speaker opens a small floating pill with play/pause, a speed chip and a close button. Nothing plays until you press play. Tap a word to choose where to start, or to jump while it is reading. Swipe the pill to skip a sentence. Touch and hold the body of the pill (not Play or the speed chip) for voice options; a one-time Hold for voices hint appears next to the speed chip. The pill stays when you switch between Pages and Scroll; Speed has no pill. Tap the X or the speaker again to close it. If the natural voice is not downloaded yet, Tooz starts with the iPhone voice and offers the better one without waiting.'],
   ['Read-aloud pill fixes','The read-aloud pill now keeps your place when it opens or closes, sits in a reserved strip so it doesn’t cover the last lines or the “Back to where you were” chip, and works with a mouse or trackpad as well as a finger. A close button is on the pill, and a second tap on the speaker still puts it away.'],
-  ['Read-aloud stays with you','Closing the read-aloud pill leaves you on the page you were listening to, and opening or closing it no longer nudges the view in Scroll. Long sentences stay softly highlighted around the word being read, and the first-time hint no longer changes the page count.']
+  ['Read-aloud stays with you','Closing the read-aloud pill leaves you on the page you were listening to, and opening or closing it no longer nudges the view in Scroll. Long sentences stay softly highlighted around the word being read, and the first-time hint no longer changes the page count.'],
+  ['A calmer library and last page','The backup reminder no longer covers the Continue button, page totals stay steady while pages are counted, and opening listen at the end of a book in Scroll keeps your place.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -5812,7 +5850,16 @@ function remindBackup(){
   if(BK.dir || BK.reminded || !S.bkRemind || !LIB.some(m=>m.kind!=='sample'&&!m.pending) || !bkChanged()) return;
   const at=LS.get('bk.at',0); if(at && Date.now()-at < S.bkRemind*864e5) return;
   BK.reminded=true;
-  setTimeout(()=>{ if($('#v-library').hidden && $('#v-words').hidden) { BK.reminded=false; return; } toast(at?'It’s been a while since your last backup':'Your library hasn’t been backed up yet', {label:'Save backup', fn:backup}, 12000); }, 1500);
+  const show=()=>{
+    if(typeof TOUR!=='undefined' && TOUR.on){ BK.reminded=false; setTimeout(()=>remindBackup(), 2000); return; }
+    if($('#v-library').hidden && $('#v-words').hidden){ BK.reminded=false; return; }
+    const hero=document.querySelector('#v-library .continue-hero');
+    toast(at?'It’s been a while since your last backup':'Your library hasn’t been backed up yet', {label:'Save backup', fn:backup}, 12000);
+    placeToastClearOfHero();
+  };
+  /* Give the Continue hero a moment on first load, then place the toast so it never covers it. */
+  const heroDelay=document.querySelector('#v-library .continue-hero')?2800:1500;
+  setTimeout(show, heroDelay);
 }
 async function initBackups(){
   if(canPickFolder()){
@@ -6560,7 +6607,7 @@ async function addGutenberg(r){
 }
 
 /* ---------- Notes tab: highlights, notes and bookmarks from every book ---------- */
-let NOTESEG=LS.get('notesSeg','hl'), notesTok=0; const SNIPS=new Map();
+let notesTok=0; const SNIPS=new Map();
 const NOTECOLLAPSE=new Set();
 function notesFindQ(){ return (($('#notesFind')||{}).value||'').trim(); }
 async function snipOf(id,s,e){
@@ -6768,10 +6815,43 @@ document.addEventListener('keydown',e=>{
   }
 });
 function toast(msg, action, ms, progress){
+  const t=$('#toast'); if(t) t.style.bottom='';
   $('#toastMsg').textContent=msg; const a=$('#toastAct'); const prog=$('#toastProg'); const bar=$('#toastBar');
   if(action){ a.hidden=false; a.textContent=action.label; a.onclick=()=>{ action.fn(); $('#toast').hidden=true; }; } else a.hidden=true;
   if(progress!=null){ prog.hidden=false; bar.style.width=Math.max(0,Math.min(100,progress))+'%'; } else { prog.hidden=true; }
   $('#toast').hidden=false; clearTimeout(toastT); if(ms!==0) toastT=setTimeout(()=>{ $('#toast').hidden=true; }, ms||(action?5000:3200));
+}
+/* Keep the backup reminder off the Continue hero/button. Prefer a spot just
+   below the hero (still above the tab bar); if there is no room, sit above
+   the hero; if that would cover it too, hide and try again after a delay. */
+function placeToastClearOfHero(){
+  const t=$('#toast'); if(!t || t.hidden) return;
+  const lib=$('#v-library');
+  const hero=lib && !lib.hidden && (lib.querySelector('.continue-hero .hero-go')||lib.querySelector('.continue-hero'));
+  if(!hero) return;
+  const overlap=(a,b)=>!(a.bottom<b.top+4 || a.top>b.bottom+4 || a.right<b.left+4 || a.left>b.right+4);
+  const place=()=>{
+    if(t.hidden || !hero.isConnected) return;
+    t.style.bottom='';
+    const tr=t.getBoundingClientRect(), hr=hero.getBoundingClientRect();
+    if(!overlap(tr,hr)) return;
+    const tabs=$('#tabs');
+    const floor=(tabs && !tabs.hidden)?tabs.getBoundingClientRect().top-8:innerHeight-8;
+    const below=hr.bottom+12;
+    if(below+tr.height<=floor){
+      t.style.bottom=(innerHeight-(below+tr.height))+'px';
+      return;
+    }
+    if(hr.top>tr.height+16){
+      t.style.bottom=(innerHeight-hr.top+12)+'px';
+      const tr2=t.getBoundingClientRect();
+      if(!overlap(tr2,hr)) return;
+    }
+    t.hidden=true; t.style.bottom='';
+    clearTimeout(toastT);
+    toastT=setTimeout(()=>{ if(t.hidden){ t.hidden=false; requestAnimationFrame(place); } }, 8000);
+  };
+  requestAnimationFrame(()=>requestAnimationFrame(place));
 }
 const VIEWS=['library','words','stats','settings'];
 function showView(v){

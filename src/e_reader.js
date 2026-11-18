@@ -228,7 +228,12 @@ const PC={sig:'', counts:[], token:0, fontGen:0};
 function pcSync(){
   const g=P.g; const sig=[R.meta.id,R.SEC.length,g.W,g.H,g.two,S.size,S.lineH,S.margin,S.para,S.justify,S.hyphen,S.boldText,S.wordStart,S.font,R.bookFamily,S.focus,PC.fontGen].join('|');
   if(sig===PC.sig && PC.counts.length===R.SEC.length) return;
-  PC.sig=sig; PC.counts=new Array(R.SEC.length).fill(0); pcRun();
+  /* Keep the last measured counts as a fallback so bookPages().total does not
+     drop to a rough estimate while pcRun remesures the new layout. */
+  PC.prev=(PC.counts && PC.counts.length===R.SEC.length)?PC.counts.slice():null;
+  PC.sig=sig; PC.counts=new Array(R.SEC.length).fill(0);
+  if(P.k>=0 && P.pages) PC.counts[P.k]=P.pages;
+  pcRun();
 }
 async function pcRun(){
   const tok=++PC.token; const m=$('#pgMeasure'); const g=P.g; const here=secAt(R.pos);
@@ -245,13 +250,19 @@ async function pcRun(){
     if(!PC.counts[k]) PC.counts[k]=Math.max(1,Math.ceil(cols/g.colsPer));
     if(performance.now()-t>10){ m.innerHTML=''; await sleep(40); t=performance.now(); if(++n%6===0 && tok===PC.token) updateChrome(); }
   }
-  m.innerHTML=''; if(tok===PC.token) updateChrome();
+  m.innerHTML='';
+  if(tok===PC.token){
+    if(P.k>=0 && P.pages) PC.counts[P.k]=P.pages;
+    PC.prev=null;
+    updateChrome();
+  }
 }
 function bookPages(){
-  const c=PC.counts; let kw=0, kp=0;
-  for(let k=0;k<R.SEC.length;k++) if(c[k]){ kw+=R.SEC[k][1]-R.SEC[k][0]; kp+=c[k]; }
+  const nOf=k=>PC.counts[k]||(PC.prev&&PC.prev[k])||0;
+  let kw=0, kp=0;
+  for(let k=0;k<R.SEC.length;k++) if(nOf(k)){ kw+=R.SEC[k][1]-R.SEC[k][0]; kp+=nOf(k); }
   const wpp=kp? kw/kp : 280; let before=0, total=0;
-  for(let k=0;k<R.SEC.length;k++){ const n=c[k]||Math.max(1,Math.round((R.SEC[k][1]-R.SEC[k][0])/wpp)); if(k<P.k) before+=n; total+=n; }
+  for(let k=0;k<R.SEC.length;k++){ const n=nOf(k)||Math.max(1,Math.round((R.SEC[k][1]-R.SEC[k][0])/wpp)); if(k<P.k) before+=n; total+=n; }
   return {page:before+P.page+1, total};
 }
 function pgMeasure(){ const g=P.g; const cols=Math.max(1,Math.round((pgFlow.scrollWidth+g.gap)/(g.cw+g.gap))); const sec=pgFlow.firstElementChild; P.cols=sec?Math.min(cols, Math.max(1,sec.getClientRects().length)):cols; /* columns the text really fills */ P.pages=Math.max(1,Math.ceil(cols/g.colsPer)); if(P.k>=0) PC.counts[P.k]=P.pages; }
@@ -339,13 +350,39 @@ const SC={busy:false, auto:false, wasAuto:false, raf:0, last:0, acc:0, pxps:0, m
 function scTopOf(w){ return w.getBoundingClientRect().top - scView.getBoundingClientRect().top + scView.scrollTop; }
 /* scShow places the anchor word this many px below the clip top; scPos samples at the same offset so open/close is a round trip. */
 const SC_ANCHOR_PAD=10;
+/* Extra padding at the end of the scroll flow so a short last screen can
+   still place the anchor word SC_ANCHOR_PAD below the clip top. Used when
+   the read-aloud pill shrinks the clip at max scroll. */
+function scEndPad(){ return parseFloat(scFlow.style.paddingBottom)||0; }
+function scSetEndPad(px){
+  const n=Math.max(0, Math.round(px));
+  scFlow.style.paddingBottom=n?n+'px':'';
+}
+function scPlaceAnchor(i){
+  const w=wordEl(i); if(!w) return;
+  const desired=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
+  const max=Math.max(0, scView.scrollHeight-scView.clientHeight);
+  if(desired>max+1){
+    scSetEndPad(scEndPad()+(desired-max)+2);
+    scView.scrollTop=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
+  }else{
+    if(scEndPad() && desired+8<max){
+      scSetEndPad(0);
+      const d2=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
+      const max2=Math.max(0, scView.scrollHeight-scView.clientHeight);
+      if(d2>max2+1) scSetEndPad((d2-max2)+2);
+    }
+    scView.scrollTop=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
+  }
+}
 async function scShow(i, keepPos){
   SC.busy=true; SC.userScrolled=false; /* the place stays exactly on word i until the reader scrolls */
   try{
-    scFlow.replaceChildren(); await renderSec(scFlow, secAt(i), 'append');
+    scFlow.replaceChildren(); scSetEndPad(0); await renderSec(scFlow, secAt(i), 'append');
     const w=wordEl(i); scView.scrollTop=w?Math.max(0, scTopOf(w)-SC_ANCHOR_PAD):0;
   } finally{ SC.busy=false; }
   await scEnsure();
+  scPlaceAnchor(i);
   if(R.tearCenter){ R.tearCenter=false; tearCenterNow(); await scEnsure(); tearCenterNow(); }
   if(!keepPos) R.pos=i; updateChrome();
 }
