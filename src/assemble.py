@@ -123,3 +123,14 @@ out=fill('\n'.join(parts))
 left=re.findall(r'@@OLD',out); assert not left, left
 open(os.path.join(D,'..','index.html'),'w',encoding='utf-8').write(out)
 print('lines',out.count('\n'))
+
+# refuse to ship a page whose script does not parse: extract the inline script and run `node --check`
+import subprocess, tempfile
+html=out
+scripts=[m for m in re.findall(r'<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>',html,re.S)]
+js=max(scripts,key=len)
+with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f: f.write(js); tmp=f.name
+r=subprocess.run(['node','--check',tmp],capture_output=True,text=True)
+if r.returncode!=0:
+    sys.stderr.write('SYNTAX CHECK FAILED - index.html was written but must not be pushed:\n'+r.stderr+'\n'); sys.exit(1)
+print('node --check: ok')
