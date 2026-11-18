@@ -1,9 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.25-safe-top';
+const APP_VERSION='2026.11.18.26-reader-bar';
 const WHATSNEW=[
-  ['Reader header clears the status bar','In a book, the top bar now sits below the iPhone notch or status bar. The bar’s background fills the inset, so there isn’t an extra gap above it.'],
-  ['Update notice only when needed','The blue “Update available” bar now appears only when a newer version is actually waiting, and it stays off the page while you are in a book.'],
-  ['Word size stays in pixels','In Speed mode, the Aa word-size stepper keeps using px, and the current word stays visible in its box while the Aa sheet is open.']
+  ['A simpler reader bar','The top of a book now has just Back, Contents and Aa. Search this book, and this book’s notes and highlights, live at the top of the Contents sheet. The bars hide while you read and come back when you tap the middle of the page.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

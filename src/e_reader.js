@@ -293,7 +293,6 @@ async function pgFade(fn){
 async function pgTurn(d){
   if(P.busy || R.mode!=='pages') return; R.anchor=null;
   if(!TS.edge) selClear();
-  if(d>0 && S.focus && R.chrome){ setChrome(false); return; } /* the bars cover the page edge; reveal it before turning */
   if(d>0){
     if(P.page<P.pages-1){ if(S.turn==='fade') await pgFade(()=>pgSet(P.page+1,false)); else pgSet(P.page+1,true); }
     else if(P.k<R.SEC.length-1){ P.busy=true; try{ await pgFade(async()=>{ await pgLoad(P.k+1); pgSet(0,false); }); } finally{ P.busy=false; } }
@@ -521,8 +520,26 @@ for(const t of ['gesturestart','gesturechange','gestureend']) document.addEventL
 document.addEventListener('touchmove',e=>{ if(e.touches.length>1) e.preventDefault(); },{passive:false});
 
 /* ---------- moving around ---------- */
-function setChrome(on){ if(TTS.mode) on=true; /* the audio controls stay on screen in voice mode */ R.chrome=on; $('#v-reader').classList.toggle('chrome-off',!on); }
+function setChrome(on){
+  if(TTS.mode) on=true; /* the audio controls stay on screen in voice mode */
+  if(R.mode==='speed') on=true; /* Speed keeps the top bar; quiet-Speed fades it while playing */
+  const was=R.chrome;
+  R.chrome=on;
+  const v=$('#v-reader');
+  v.classList.toggle('chrome-off',!on);
+  for(const id of ['rTop','rFoot']){
+    const el=$('#'+id); if(!el) continue;
+    if(on) el.removeAttribute('inert'); else el.setAttribute('inert','');
+  }
+  if(was!==on && R.mode && R.mode!=='speed' && !v.hidden){ holdPlace(); relayoutSoon(); }
+}
 function toggleChrome(){ setChrome(!R.chrome); }
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Tab') return;
+  if($('#v-reader').hidden || R.chrome) return;
+  if($('#sheet') && !$('#sheet').hidden) return;
+  setChrome(true);
+}, true);
 function stopActivity(){ if(R.playing) pause(); if(SC.auto) asStop(true); if(TTS.on) ttsStop(); }
 function setBack(prev){ R.backPos=prev; $('#backPill').hidden=false; clearTimeout(R.backT); R.backT=setTimeout(()=>{ $('#backPill').hidden=true; }, 60000); }
 $('#backGo').onclick=()=>{ const p=R.backPos; if(p==null) return; $('#backPill').hidden=true; goTo(p,true); };
@@ -1037,7 +1054,9 @@ function openFootnote(i){
 /* ---------- contents, bookmarks, highlights ---------- */
 function openToc(tab){
   if(R.mode==='speed' && R.playing) pause();
+  setChrome(true);
   const t=tab||'toc';
+  const tools=`<div class="toc-tools"><button type="button" class="toc-tool" id="tocSearch" data-act="search">${ICON.search}<span>Search this book</span></button><button type="button" class="toc-tool" id="tocNotes" data-act="notes">${ICON.note}<span>Notes &amp; highlights</span></button></div>`;
   const seg=`<div class="seg" style="margin-bottom:4px">${[['toc','Contents'],['marks','Bookmarks'],['hls','Highlights & notes']].map(([k,l])=>`<button type="button" data-act="tab" data-t="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>`;
   let body='';
   if(t==='toc'){
@@ -1063,7 +1082,9 @@ function openToc(tab){
     body = hl.length ? `<button class="btn block" type="button" data-act="copyall">Copy all highlights and notes</button>`+hl.map(h=>`<div class="hlrow"><span class="bar" style="background:var(--hl${h.c})"></span><div class="grow" data-act="go" data-i="${h.s}"><div class="t">${esc(textOf(h.s,Math.min(h.e,h.s+60)))}${h.e>h.s+60?'…':''}</div>${h.note?`<div class="nt">${esc(h.note)}</div>`:''}<div class="where">${esc((currentChapter(h.s)||{}).t||'')} · ${Math.round(100*h.s/Math.max(1,R.n-1))}%</div></div><button class="icon-btn" type="button" data-act="edit" data-id="${h.id}" aria-label="Edit highlight">${ICON.more}</button></div>`).join('')
       : '<p class="note">Select text with a long press, then pick a color to highlight it or tap Note to add a note.</p>';
   }
-  openSheet(R.meta.title, seg+body, {
+  openSheet(R.meta.title, tools+seg+body, {
+    search:()=>openSearch(),
+    notes:()=>openToc('hls'),
     tab:(b)=>openToc(b.dataset.t),
     tocx:(b)=>{ const k=+b.dataset.k; const was=R.tocOpen&&R.tocOpen.id===R.meta.id&&R.tocOpen.k===k; R.tocOpen={id:R.meta.id, k: was? -1 : k}; openToc('toc'); setTimeout(()=>{ const o=$('#sheet .li.open'); o&&o.scrollIntoView({block:'start'}); },40); },
     go:(b)=>{ closeSheet(); goTo(+b.dataset.i, true); },
@@ -1072,6 +1093,7 @@ function openToc(tab){
     edit:(b)=>{ const h=R.meta.highlights.find(x=>x.id===b.dataset.id); if(h) openHlMenu(h); },
     copyall:async()=>{ const txt=R.meta.title+'\n\n'+R.meta.highlights.map(h=>'“'+textOf(h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+R.meta.highlights.length+' highlight'+(R.meta.highlights.length===1?'':'s')); }catch(e){ toast('Couldn’t copy on this device.'); } }
   });
+  sheetFocusBack=$('#rToc');
   if(t==='toc' && !(tab==='toc' && R.tocOpen && R.tocOpen.fresh===false)) setTimeout(()=>{ const on=$('#sheet .li.on')||$('#sheet .li.open'); on&&on.scrollIntoView({block:'center'}); },30);
 }
 
@@ -1084,9 +1106,11 @@ function buildSearchIndex(){
 function wordAtChar(c){ const off=R.sIdx.off; let lo=0, hi=off.length-1; while(lo<hi){ const m=(lo+hi+1)>>1; if(off[m]<=c) lo=m; else hi=m-1; } return lo; }
 function openSearch(){
   stopActivity();
+  setChrome(true);
   openSheet('Search this book', `<input class="input" id="srchIn" type="search" placeholder="Words or a phrase" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"><div id="srchMeta" class="note"></div><div id="srchOut"></div>`, {
     res:(b)=>{ const i=+b.dataset.i, len=+b.dataset.l; closeSheet(); goTo(i,true).then(()=>flashFound(i,len)); }
   });
+  sheetFocusBack=$('#rToc');
   const inp=$('#srchIn'); inp.value=R.lastSearch||''; let t=null;
   inp.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(runSearch,260); });
   setTimeout(()=>inp.focus(),80); if(inp.value) runSearch();
@@ -1349,9 +1373,11 @@ const READ_ACTS={
 function openPanel(){
   if(R.mode==='speed' && R.playing) pause();
   if(SC.auto) asStop(true);
+  setChrome(true);
   openSheet('Reading options', panelHTML(), READ_ACTS, 'short');
   $('#sheet .sheet-body').dataset.aa='1';
   bindPanel();
+  sheetFocusBack=$('#rAa');
   requestAnimationFrame(fitAaSheetForWord);
 }
 /* Keep the Speed word box in the gap above the Aa sheet so size changes stay visible. */
@@ -1364,8 +1390,9 @@ function fitAaSheetForWord(){
   }
   const word=$('#word'); if(!word) return;
   const wr=word.getBoundingClientRect();
-  const room=Math.max(240, Math.round(window.innerHeight - wr.bottom - 16));
-  sh.style.maxHeight=room+'px';
+  const room=Math.round(window.innerHeight - wr.bottom - 16);
+  if(room>80) sh.style.maxHeight=room+'px';
+  else sh.style.maxHeight=Math.floor(window.innerHeight*0.45)+'px';
 }
 /* re-draw whichever reading controls are on screen (the Aa menu, the Settings page section) */
 function refreshPanel(){
@@ -1433,7 +1460,6 @@ function bindPanel(root){
 }
 $('#rAa').onclick=openPanel;
 $('#rToc').onclick=()=>openToc('toc');
-$('#rSearch').onclick=openSearch;
 $('#markBtn').onclick=()=>openToc('marks');
 /* night theme switch and phone light/dark changes */
 setInterval(()=>{ if(S.nightAuto) applyLook(); },60000);

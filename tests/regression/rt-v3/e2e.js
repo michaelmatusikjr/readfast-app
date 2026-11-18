@@ -39,7 +39,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const [W,Hh]=(process.argv[2]|
  await selw(p0+25,p0+25); await tapSel('#selBar [data-sel="define"]'); await sleep(300); log('define',await st(), await pg.evaluate(()=>WORDS.map(w=>w.word))); await shot('define'); await tapSel('#sheet [data-act="__close"]');
  await shot('rich_hl');
  // search
- await tapSel('#rSearch'); await sleep(300); await pg.fill('#srchIn','scene break'); await sleep(600); await shot('search'); log('search',await pg.evaluate(()=>$('#srchMeta').textContent)); await tapSel('#srchOut .result'); await sleep(700); log('after search',await st(), await pg.evaluate(()=>document.querySelectorAll('w.found').length)); await shot('search_jump');
+ await pg.evaluate(()=>setChrome(true)); await tapSel('#rToc'); await sleep(300); await tapSel('#tocSearch'); await sleep(300); await pg.fill('#srchIn','scene break'); await sleep(600); await shot('search'); log('search',await pg.evaluate(()=>$('#srchMeta').textContent)); await tapSel('#srchOut .result'); await sleep(700); log('after search',await st(), await pg.evaluate(()=>document.querySelectorAll('w.found').length)); await shot('search_jump');
  // toc/bookmarks
  await tapSel('#rToc'); await shot('toc'); log('toc',await pg.evaluate(()=>[...document.querySelectorAll('#sheet .li')].map(x=>x.textContent.trim()))); await tapSel('#sheet .li:nth-child(2)'); await sleep(700); log('toc go',await st());
  await tapSel('#rMark'); log('mark',await st()); await tapSel('#rToc'); await pg.evaluate(()=>openToc('marks')); await sleep(300); await shot('marks'); await pg.evaluate(()=>openToc('hls')); await sleep(300); await shot('hls'); await pg.evaluate(()=>closeSheet());

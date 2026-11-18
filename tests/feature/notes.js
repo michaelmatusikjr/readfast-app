@@ -17,7 +17,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   // add highlight + bookmark in reader
   await pg.evaluate(()=>{ S.mode='pages'; saveSettings(); });
   await pg.evaluate(()=>openDoc(LIB[0].id)); await sleep(700);
-  console.log('rNotes btn', await pg.evaluate(()=>[!!$('#rNotes').innerHTML, $('#rNotes').getBoundingClientRect().width]));
+  console.log('rNotes btn', await pg.evaluate(()=>{ setChrome(true); return [!!$('#rToc'), $('#rToc').getBoundingClientRect().width]; }));
   await pg.evaluate(()=>{ addHighlight(20,28,2); const h=R.meta.highlights[0]; h.note='My note here'; touch(R.meta); goTo(300,true); });
   await sleep(400);
   await pg.evaluate(()=>setChrome(true)); await pg.click('#rMark'); await sleep(200);
@@ -25,7 +25,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await pg.click('#toastAct'); await sleep(500);
   console.log('see all -> sheet', await pg.evaluate(()=>[$('#sheet').hidden, $('#sheet [aria-pressed=true]')&&$('#sheet [aria-pressed=true]').textContent]));
   await pg.evaluate(()=>closeSheet()); await sleep(450);
-  await pg.click('#rNotes'); await sleep(500);
+  await pg.evaluate(()=>setChrome(true)); await pg.click('#rToc'); await sleep(300); await pg.click('#tocNotes'); await sleep(500);
   console.log('rNotes -> sheet', await pg.evaluate(()=>[$('#sheet [aria-pressed=true]').textContent, document.querySelectorAll("#sheet .hlrow").length]));
   await pg.evaluate(()=>closeSheet()); await sleep(450);
   await pg.evaluate(()=>closeReader()); await sleep(300);

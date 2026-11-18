@@ -166,11 +166,11 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 
 /* ---------- Reader frame ---------- */
 #v-reader{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;background:var(--page-bg);color:var(--page-ink)}
-.rchrome{flex:none;transition:opacity .2s ease;background:var(--page-bg);position:relative;z-index:5}
-#v-reader.chrome-off .rchrome{opacity:0;pointer-events:none}
+.rchrome{flex:none;transition:opacity .2s ease,visibility .2s ease;background:var(--page-bg);position:relative;z-index:5}
+#v-reader.chrome-off .rchrome{opacity:0;visibility:hidden;pointer-events:none}
 #rTop{display:flex;align-items:center;gap:0;padding:max(2px,env(safe-area-inset-top,0px)) max(4px,env(safe-area-inset-right,0px)) 2px max(4px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--page-line)}
-#rTop .title{flex:1;min-width:0;text-align:center;font-weight:700;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;line-height:1.25}
-#rTop .sub{display:block;font-weight:400;font-size:.75rem;color:var(--page-muted);overflow:hidden;text-overflow:ellipsis}
+#rTop .r-spacer{flex:1;min-width:0}
+#rTop .r-ident{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 #rAa{font-family:Georgia,serif;font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
 #rBody{flex:1;min-height:0;position:relative;overflow:hidden}
 #rFoot{display:flex;flex-direction:column;gap:4px;padding:8px max(8px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));border-top:1px solid var(--page-line)}
@@ -276,8 +276,15 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 #v-reader.overlay:not([data-mode="speed"]) .rchrome{position:absolute;left:0;right:0}
 #v-reader.overlay:not([data-mode="speed"]) #rTop{top:0}
 #v-reader.overlay:not([data-mode="speed"]) #rFoot{bottom:0}
-#v-reader.overlay #pgClip{top:calc(50px + env(safe-area-inset-top,0px));bottom:46px}
-#v-reader.overlay #scrollView{top:calc(48px + env(safe-area-inset-top,0px));bottom:46px}
+#v-reader.overlay #pgClip{top:calc(50px + env(safe-area-inset-top,0px));bottom:calc(46px + env(safe-area-inset-bottom,0px))}
+#v-reader.overlay #scrollView{top:calc(48px + env(safe-area-inset-top,0px));bottom:calc(46px + env(safe-area-inset-bottom,0px))}
+/* Hidden bars leave the page: only the status-bar / home-indicator insets remain. */
+#v-reader.chrome-off:not([data-mode="speed"]) #rTop,
+#v-reader.chrome-off:not([data-mode="speed"]) #rFoot{position:absolute;left:0;right:0}
+#v-reader.chrome-off:not([data-mode="speed"]) #rTop{top:0}
+#v-reader.chrome-off:not([data-mode="speed"]) #rFoot{bottom:0}
+#v-reader.chrome-off:not([data-mode="speed"]) #pgClip{top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px)}
+#v-reader.chrome-off:not([data-mode="speed"]) #scrollView{top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px)}
 #pgFlow.anim-slide{transition:transform .28s cubic-bezier(.3,.6,.2,1)}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
 /* Scroll */
@@ -354,7 +361,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 #backPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);z-index:8;display:flex;align-items:center;background:var(--ink);color:var(--paper);border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:nowrap}
 #backPill button{background:none;border:0;color:inherit;font-weight:700;font-size:.85rem;padding:9px 6px 9px 14px;cursor:pointer}
 #backPill button+button{padding:9px 12px 9px 6px;opacity:.7}
-#selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;gap:2px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:4px 6px;box-shadow:0 8px 28px rgba(0,0,0,.22);max-width:calc(100% - 16px)}
+#selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;gap:2px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:4px 6px;box-shadow:0 8px 28px rgba(0,0,0,.22);max-width:calc(100% - 16px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))}
 #selBar .dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;margin:0 3px;flex:none}
 #selBar .dot[data-hl="1"]{background:var(--hl1)} #selBar .dot[data-hl="2"]{background:var(--hl2)} #selBar .dot[data-hl="3"]{background:var(--hl3)} #selBar .dot[data-hl="4"]{background:var(--hl4)}
 #selBar .tb{border:0;background:none;font-weight:700;font-size:.86rem;padding:8px 8px;cursor:pointer;color:var(--ink);white-space:nowrap}
@@ -369,7 +376,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 /* Sheets and overlays */
 #backdrop{position:fixed;inset:0;background:rgba(10,14,20,.42);z-index:20}
 #backdrop.light{background:rgba(10,14,20,.08)}
-#sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);color:var(--ink);border-radius:18px 18px 0 0;max-height:86%;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.18);padding-bottom:env(safe-area-inset-bottom,0px);max-width:720px;margin:0 auto}
+.toc-tools{display:flex;flex-direction:column;gap:8px;margin:0 0 12px}.toc-tool{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--raise);color:inherit;font:inherit;font-weight:600;text-align:left;cursor:pointer}.toc-tool svg{width:22px;height:22px;flex:none}#sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);color:var(--ink);border-radius:18px 18px 0 0;max-height:86%;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.18);padding-bottom:env(safe-area-inset-bottom,0px);max-width:720px;margin:0 auto}
 #sheet.short{max-height:60%}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px max(12px,env(safe-area-inset-right,0px)) 6px max(18px,env(safe-area-inset-left,0px))}
 .sheet-body{overflow-y:auto;padding:4px max(18px,env(safe-area-inset-right,0px)) 18px max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch}
@@ -451,7 +458,7 @@ h3.subh{margin:16px 0 8px}
 .goalbar{height:10px;border-radius:5px;background:var(--raise);overflow:hidden;margin-top:6px}
 .goalbar i{display:block;height:100%;background:var(--accent);border-radius:5px}
 
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--paper);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:14px;font-size:.92rem;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.25);flex-wrap:wrap}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--paper);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:14px;font-size:.92rem;max-width:calc(100% - 32px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));box-shadow:0 6px 20px rgba(0,0,0,.25);flex-wrap:wrap}
 #toast button{background:none;border:0;color:var(--paper);font-weight:700;text-decoration:underline;cursor:pointer;padding:4px}
 #toastProg{flex-basis:100%}
 
@@ -539,7 +546,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 body:has(#v-reader:not([hidden])) #verBadge{display:none}
 
 /* Update bar sits above the tab bar, below sheets, and hides while a sheet is open */
-#swUpdate{position:fixed;left:12px;right:12px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:15;background:#1d4ed8;color:#fff;padding:12px 16px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 15px/1.3 system-ui,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+#swUpdate{position:fixed;left:max(12px, calc(8px + env(safe-area-inset-left,0px)));right:max(12px, calc(8px + env(safe-area-inset-right,0px)));bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:15;background:#1d4ed8;color:#fff;padding:12px 16px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 15px/1.3 system-ui,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.25)}
 body:not(:has(#tabs[hidden])) #swUpdate{bottom:calc(56px + max(6px, env(safe-area-inset-bottom, 0px)) + 8px)}
 body:has(#sheet:not([hidden])) #swUpdate{display:none}
 body:has(#v-reader:not([hidden])) #swUpdate{display:none}
@@ -552,7 +559,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.25</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.26</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -605,9 +612,9 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   <section id="v-reader" aria-label="Reader" data-mode="pages" hidden>
     <header class="rchrome" id="rTop">
       <button class="icon-btn" id="rBack" type="button" aria-label="Back to library"></button>
-      <div class="title"><span id="rTitle"></span><span class="sub" id="rSub"></span></div>
-      <button class="icon-btn" id="rSearch" type="button" aria-label="Search in this book"></button>
-      <button class="icon-btn" id="rToc" type="button" aria-label="Contents, bookmarks and highlights"></button>
+      <div class="r-ident"><span id="rTitle"></span><span class="sub" id="rSub"></span></div>
+      <span class="r-spacer" aria-hidden="true"></span>
+      <button class="icon-btn" id="rToc" type="button" aria-label="Contents, search, notes and highlights"></button>
       <button class="icon-btn" id="rAa" type="button" aria-label="Reading options">Aa</button>
     </header>
     <div id="rBody">
@@ -1991,7 +1998,6 @@ async function pgFade(fn){
 async function pgTurn(d){
   if(P.busy || R.mode!=='pages') return; R.anchor=null;
   if(!TS.edge) selClear();
-  if(d>0 && S.focus && R.chrome){ setChrome(false); return; } /* the bars cover the page edge; reveal it before turning */
   if(d>0){
     if(P.page<P.pages-1){ if(S.turn==='fade') await pgFade(()=>pgSet(P.page+1,false)); else pgSet(P.page+1,true); }
     else if(P.k<R.SEC.length-1){ P.busy=true; try{ await pgFade(async()=>{ await pgLoad(P.k+1); pgSet(0,false); }); } finally{ P.busy=false; } }
@@ -2219,8 +2225,26 @@ for(const t of ['gesturestart','gesturechange','gestureend']) document.addEventL
 document.addEventListener('touchmove',e=>{ if(e.touches.length>1) e.preventDefault(); },{passive:false});
 
 /* ---------- moving around ---------- */
-function setChrome(on){ if(TTS.mode) on=true; /* the audio controls stay on screen in voice mode */ R.chrome=on; $('#v-reader').classList.toggle('chrome-off',!on); }
+function setChrome(on){
+  if(TTS.mode) on=true; /* the audio controls stay on screen in voice mode */
+  if(R.mode==='speed') on=true; /* Speed keeps the top bar; quiet-Speed fades it while playing */
+  const was=R.chrome;
+  R.chrome=on;
+  const v=$('#v-reader');
+  v.classList.toggle('chrome-off',!on);
+  for(const id of ['rTop','rFoot']){
+    const el=$('#'+id); if(!el) continue;
+    if(on) el.removeAttribute('inert'); else el.setAttribute('inert','');
+  }
+  if(was!==on && R.mode && R.mode!=='speed' && !v.hidden){ holdPlace(); relayoutSoon(); }
+}
 function toggleChrome(){ setChrome(!R.chrome); }
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Tab') return;
+  if($('#v-reader').hidden || R.chrome) return;
+  if($('#sheet') && !$('#sheet').hidden) return;
+  setChrome(true);
+}, true);
 function stopActivity(){ if(R.playing) pause(); if(SC.auto) asStop(true); if(TTS.on) ttsStop(); }
 function setBack(prev){ R.backPos=prev; $('#backPill').hidden=false; clearTimeout(R.backT); R.backT=setTimeout(()=>{ $('#backPill').hidden=true; }, 60000); }
 $('#backGo').onclick=()=>{ const p=R.backPos; if(p==null) return; $('#backPill').hidden=true; goTo(p,true); };
@@ -2735,7 +2759,9 @@ function openFootnote(i){
 /* ---------- contents, bookmarks, highlights ---------- */
 function openToc(tab){
   if(R.mode==='speed' && R.playing) pause();
+  setChrome(true);
   const t=tab||'toc';
+  const tools=`<div class="toc-tools"><button type="button" class="toc-tool" id="tocSearch" data-act="search">${ICON.search}<span>Search this book</span></button><button type="button" class="toc-tool" id="tocNotes" data-act="notes">${ICON.note}<span>Notes &amp; highlights</span></button></div>`;
   const seg=`<div class="seg" style="margin-bottom:4px">${[['toc','Contents'],['marks','Bookmarks'],['hls','Highlights & notes']].map(([k,l])=>`<button type="button" data-act="tab" data-t="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>`;
   let body='';
   if(t==='toc'){
@@ -2761,7 +2787,9 @@ function openToc(tab){
     body = hl.length ? `<button class="btn block" type="button" data-act="copyall">Copy all highlights and notes</button>`+hl.map(h=>`<div class="hlrow"><span class="bar" style="background:var(--hl${h.c})"></span><div class="grow" data-act="go" data-i="${h.s}"><div class="t">${esc(textOf(h.s,Math.min(h.e,h.s+60)))}${h.e>h.s+60?'…':''}</div>${h.note?`<div class="nt">${esc(h.note)}</div>`:''}<div class="where">${esc((currentChapter(h.s)||{}).t||'')} · ${Math.round(100*h.s/Math.max(1,R.n-1))}%</div></div><button class="icon-btn" type="button" data-act="edit" data-id="${h.id}" aria-label="Edit highlight">${ICON.more}</button></div>`).join('')
       : '<p class="note">Select text with a long press, then pick a color to highlight it or tap Note to add a note.</p>';
   }
-  openSheet(R.meta.title, seg+body, {
+  openSheet(R.meta.title, tools+seg+body, {
+    search:()=>openSearch(),
+    notes:()=>openToc('hls'),
     tab:(b)=>openToc(b.dataset.t),
     tocx:(b)=>{ const k=+b.dataset.k; const was=R.tocOpen&&R.tocOpen.id===R.meta.id&&R.tocOpen.k===k; R.tocOpen={id:R.meta.id, k: was? -1 : k}; openToc('toc'); setTimeout(()=>{ const o=$('#sheet .li.open'); o&&o.scrollIntoView({block:'start'}); },40); },
     go:(b)=>{ closeSheet(); goTo(+b.dataset.i, true); },
@@ -2770,6 +2798,7 @@ function openToc(tab){
     edit:(b)=>{ const h=R.meta.highlights.find(x=>x.id===b.dataset.id); if(h) openHlMenu(h); },
     copyall:async()=>{ const txt=R.meta.title+'\n\n'+R.meta.highlights.map(h=>'“'+textOf(h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+R.meta.highlights.length+' highlight'+(R.meta.highlights.length===1?'':'s')); }catch(e){ toast('Couldn’t copy on this device.'); } }
   });
+  sheetFocusBack=$('#rToc');
   if(t==='toc' && !(tab==='toc' && R.tocOpen && R.tocOpen.fresh===false)) setTimeout(()=>{ const on=$('#sheet .li.on')||$('#sheet .li.open'); on&&on.scrollIntoView({block:'center'}); },30);
 }
 
@@ -2782,9 +2811,11 @@ function buildSearchIndex(){
 function wordAtChar(c){ const off=R.sIdx.off; let lo=0, hi=off.length-1; while(lo<hi){ const m=(lo+hi+1)>>1; if(off[m]<=c) lo=m; else hi=m-1; } return lo; }
 function openSearch(){
   stopActivity();
+  setChrome(true);
   openSheet('Search this book', `<input class="input" id="srchIn" type="search" placeholder="Words or a phrase" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"><div id="srchMeta" class="note"></div><div id="srchOut"></div>`, {
     res:(b)=>{ const i=+b.dataset.i, len=+b.dataset.l; closeSheet(); goTo(i,true).then(()=>flashFound(i,len)); }
   });
+  sheetFocusBack=$('#rToc');
   const inp=$('#srchIn'); inp.value=R.lastSearch||''; let t=null;
   inp.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(runSearch,260); });
   setTimeout(()=>inp.focus(),80); if(inp.value) runSearch();
@@ -3047,9 +3078,11 @@ const READ_ACTS={
 function openPanel(){
   if(R.mode==='speed' && R.playing) pause();
   if(SC.auto) asStop(true);
+  setChrome(true);
   openSheet('Reading options', panelHTML(), READ_ACTS, 'short');
   $('#sheet .sheet-body').dataset.aa='1';
   bindPanel();
+  sheetFocusBack=$('#rAa');
   requestAnimationFrame(fitAaSheetForWord);
 }
 /* Keep the Speed word box in the gap above the Aa sheet so size changes stay visible. */
@@ -3062,8 +3095,9 @@ function fitAaSheetForWord(){
   }
   const word=$('#word'); if(!word) return;
   const wr=word.getBoundingClientRect();
-  const room=Math.max(240, Math.round(window.innerHeight - wr.bottom - 16));
-  sh.style.maxHeight=room+'px';
+  const room=Math.round(window.innerHeight - wr.bottom - 16);
+  if(room>80) sh.style.maxHeight=room+'px';
+  else sh.style.maxHeight=Math.floor(window.innerHeight*0.45)+'px';
 }
 /* re-draw whichever reading controls are on screen (the Aa menu, the Settings page section) */
 function refreshPanel(){
@@ -3131,7 +3165,6 @@ function bindPanel(root){
 }
 $('#rAa').onclick=openPanel;
 $('#rToc').onclick=()=>openToc('toc');
-$('#rSearch').onclick=openSearch;
 $('#markBtn').onclick=()=>openToc('marks');
 /* night theme switch and phone light/dark changes */
 setInterval(()=>{ if(S.nightAuto) applyLook(); },60000);
@@ -3837,11 +3870,9 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.25-safe-top';
+const APP_VERSION='2026.11.18.26-reader-bar';
 const WHATSNEW=[
-  ['Reader header clears the status bar','In a book, the top bar now sits below the iPhone notch or status bar. The bar’s background fills the inset, so there isn’t an extra gap above it.'],
-  ['Update notice only when needed','The blue “Update available” bar now appears only when a newer version is actually waiting, and it stays off the page while you are in a book.'],
-  ['Word size stays in pixels','In Speed mode, the Aa word-size stepper keeps using px, and the current word stays visible in its box while the Aa sheet is open.']
+  ['A simpler reader bar','The top of a book now has just Back, Contents and Aa. Search this book, and this book’s notes and highlights, live at the top of the Contents sheet. The bars hide while you read and come back when you tap the middle of the page.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -5225,13 +5256,20 @@ for(const id of ['#notesHl','#notesBm']) $(id).addEventListener('click',async e=
 let sheetActs={}, sheetAt=0;
 /* a tap that opens a sheet is followed by the browser's own click at the same spot; ignore it */
 const ghost=()=>performance.now()-sheetAt<420;
+let sheetFocusBack=null;
 function openSheet(title, body, acts, cls){
-  sheetActs=acts||{}; selHide(); sheetAt=performance.now();
+  sheetActs=acts||{}; sheetFocusBack=null; selHide(); sheetAt=performance.now();
   const sh=$('#sheet'); sh.className=cls||''; sh.style.maxHeight='';
   sh.innerHTML=`<div class="grab"></div><div class="sheet-head"><h2>${esc(title)}</h2><button class="icon-btn" type="button" data-act="__close" aria-label="Close">${ICON.close}</button></div><div class="sheet-body">${body}</div>`;
   sh.hidden=false; const bd=$('#backdrop'); bd.className=cls&&cls.includes('short')?'light':''; bd.hidden=false;
 }
-function closeSheet(){ const sh=$('#sheet'); sh.hidden=true; sh.style.maxHeight=''; $('#backdrop').hidden=true; sheetActs={}; }
+function closeSheet(){
+  const sh=$('#sheet'); sh.hidden=true; sh.style.maxHeight=''; $('#backdrop').hidden=true; sheetActs={};
+  const back=sheetFocusBack; sheetFocusBack=null;
+  if(back && typeof back.focus==='function' && document.contains(back) && !back.hasAttribute('inert') && !back.disabled){
+    try{ back.focus(); }catch(e){}
+  }
+}
 $('#sheet').addEventListener('click',e=>{ if(ghost()){ e.preventDefault(); return; } const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act; if(a==='__close'){ closeSheet(); return; } const fn=sheetActs[a]; if(fn) fn(b,e); });
 $('#backdrop').onclick=()=>{ if(!ghost()) closeSheet(); };
 document.addEventListener('keydown',e=>{
@@ -5259,13 +5297,13 @@ function showView(v){
 }
 const TABS={library:['book','Library'], words:['note','Notes'], stats:['stats','Stats'], settings:['gear','Settings']};
 document.querySelectorAll('#tabs button').forEach(b=>{ const [ic,l]=TABS[b.dataset.tab]; b.innerHTML=ICON[ic]+l; b.onclick=()=>showView(b.dataset.tab); });
-$('#rBack').innerHTML=ICON.back; $('#rSearch').innerHTML=ICON.search; $('#rToc').innerHTML=ICON.toc; $('#rMark').innerHTML=ICON.mark; $('#rTts').innerHTML=ICON.speaker;
+$('#rBack').innerHTML=ICON.back; $('#rToc').innerHTML=ICON.toc; $('#rMark').innerHTML=ICON.mark; $('#rTts').innerHTML=ICON.speaker;
 $('#bSent').innerHTML=ICON.bsent; $('#bWord').innerHTML=ICON.back; $('#fWord').innerHTML=ICON.fwd; $('#fSent').innerHTML=ICON.fsent;
 $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown').innerHTML=ICON.minus; $('#asUp').innerHTML=ICON.plus; $('#asPlay').innerHTML=ICON.play;
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=19;
+const SAMPLE_V=20;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -5301,7 +5339,7 @@ const SAMPLE_HTML=`
 <hr>
 <p>A row of stars like the one above marks a break in the story. Books you import keep their breaks, headings, <em>italics</em>, quotations and lists.</p>
 <h2>Getting around</h2>
-<p>The list icon at the top opens the contents. The note icon beside it opens this book’s highlights, notes and bookmarks. In very long books, like the Bible, the contents show the books first; tap one to see its chapters. The magnifying glass searches the whole book. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book.</p>
+<p>The list icon at the top opens the contents. At the top of that sheet you can search this book, or open this book’s highlights, notes and bookmarks. In very long books, like the Bible, the contents show the books first; tap one to see its chapters. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book. Tap the middle of a page to hide or show the bars while you read.</p>
 <p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
 <h2>Read aloud</h2>
 <p>Tap the speaker at the bottom to open the audio controls. Nothing plays yet: tap a word to choose where to start, then press <strong>play</strong>. Each word is marked as it is spoken and the page turns by itself. Tap another word while it plays to jump there. The arrows go back or forward a sentence, and the slider sets the speed. The controls stay on screen until you tap the speaker again to close them.</p>
@@ -5380,8 +5418,13 @@ function showSwUpdate(){
   bar.innerHTML='<span>Update available</span><div class="sw-actions"><button type="button" class="sw-reload">Reload</button><button type="button" class="sw-dismiss" aria-label="Dismiss update notice">'+(ICON.close||'×')+'</button></div>';
   bar.querySelector('.sw-reload').onclick=()=>{
     navigator.serviceWorker.getRegistration().then(reg=>{
-      if(reg&&reg.waiting) try{ reg.waiting.postMessage({type:'skipWaiting'}); }catch(e){}
-      location.reload();
+      const go=()=>location.reload();
+      if(reg&&reg.waiting){
+        try{ reg.waiting.postMessage({type:'skipWaiting'}); }catch(e){}
+        const t=setTimeout(go, 3000);
+        const onChange=()=>{ clearTimeout(t); navigator.serviceWorker.removeEventListener('controllerchange', onChange); go(); };
+        navigator.serviceWorker.addEventListener('controllerchange', onChange);
+      } else go();
     }).catch(()=>location.reload());
   };
   bar.querySelector('.sw-dismiss').onclick=()=>{ try{ sessionStorage.setItem('rf.swUpdateDismissed','1'); }catch(e){} bar.remove(); };
