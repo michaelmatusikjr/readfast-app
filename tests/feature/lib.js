@@ -32,6 +32,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await pg.click('#libTags [data-tag=favorites]'); await sleep(150);
   console.log('tag filter', await pg.evaluate(()=>[...document.querySelectorAll('#docList .doc .t')].map(e=>e.textContent)));
   await pg.click('#libTags [data-tag=""]'); await pg.click('#libSort [data-s=recent]');
+  await pg.click('#libSearchBtn'); await sleep(150);
   await pg.fill('#libFind','austen'); await sleep(150);
   console.log('search', await pg.evaluate(()=>[...document.querySelectorAll('#docList .doc .t')].map(e=>e.textContent)));
   await pg.fill('#libFind',''); await sleep(100);

@@ -27,6 +27,7 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   await pg.evaluate(()=>closeSheet());
   // full-text search
   await pg.evaluate(()=>showView('library')); await sleep(500);
+  await pg.click('#libSearchBtn'); await sleep(200);
   await pg.fill('#libFind','page keeps'); await sleep(300);
   ok('fts pill', await pg.evaluate(()=>!!document.querySelector('[data-fts]')));
   await pg.evaluate(()=>document.querySelector('[data-fts]').click()); await sleep(1200);

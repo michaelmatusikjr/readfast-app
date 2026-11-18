@@ -343,13 +343,13 @@ function docCard(d){
 function heroCard(d){
   const pct=Math.round(100*d.pos/Math.max(1,d.count-1));
   const left=fmtMins((d.count-d.pos)/(S.measuredWpm||230));
-  return `<div class="continue-hero doc" data-open="${d.id}" role="button" tabindex="0" aria-label="Continue reading ${esc(d.title)}" style="--p:${pct}%">
+  return `<div class="continue-hero doc" data-open="${d.id}" style="--p:${pct}%">
       <div class="eyebrow">Continue reading</div>
       <button class="icon-btn more" type="button" data-more="${d.id}" aria-label="Edit or organize ${esc(d.title)}">${ICON.more}</button>
       <div class="t">${esc(d.title)}</div>
       ${d.author?`<div class="a">${esc(d.author)}</div>`:''}
       <div class="m">${(d.count||0).toLocaleString()} words · ${pct}% · ${left} left</div>
-      <button class="btn primary hero-go" type="button" data-open="${d.id}">Continue</button>
+      <button class="btn primary hero-go" type="button" data-open="${d.id}" aria-label="Continue reading ${esc(d.title)}">Continue</button>
     </div>`;
 }
 /* "Jane Austen" sorts under Austen */
@@ -396,7 +396,7 @@ const SECCLS={st:'f-st',ti:'f-ti',au:'f-au',tg:'f-tg'}, SECKEY={st:'Status',ti:'
 function syncLibTools(){
   if(fCount() || (LIBV.q||'').trim()) LIBTOOLS_OPEN=true;
   const box=$('#libTools'); if(box) box.classList.toggle('open', !!LIBTOOLS_OPEN);
-  const b=$('#libSearchBtn'); if(b){ b.innerHTML=ICON.search; b.setAttribute('aria-expanded', LIBTOOLS_OPEN?'true':'false'); }
+  const b=$('#libSearchBtn'); if(b){ b.innerHTML=LIBTOOLS_OPEN?ICON.close:ICON.search; b.setAttribute('aria-expanded', LIBTOOLS_OPEN?'true':'false'); b.setAttribute('aria-label', LIBTOOLS_OPEN?'Close search':'Search, sort and filter'); }
 }
 function renderLibTools(){
   syncLibTools();
@@ -495,14 +495,19 @@ document.addEventListener('click',e=>{
 $('#sortBtn').onclick=openSort;
 $('#filterBtn').onclick=openFilter;
 $('#libSearchBtn').onclick=()=>{
-  if($('#libTools').classList.contains('open') && !fCount() && !(LIBV.q||'').trim()) LIBTOOLS_OPEN=false;
-  else LIBTOOLS_OPEN=true;
-  renderLibTools();
-  if(LIBTOOLS_OPEN) setTimeout(()=>{ const i=$('#libFind'); if(i) i.focus(); }, 30);
+  if($('#libTools').classList.contains('open')){
+    LIBTOOLS_OPEN=false;
+    if((LIBV.q||'').trim()){ LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
+    else renderLibTools();
+  } else {
+    LIBTOOLS_OPEN=true;
+    renderLibTools();
+    setTimeout(()=>{ const i=$('#libFind'); if(i) i.focus(); }, 30);
+  }
 };
 $('#docList').addEventListener('keydown',e=>{
   if(e.key!==' ' && e.key!=='Spacebar') return;
-  const o=e.target.closest('[data-open]'); if(!o || e.target.closest('[data-more],input,textarea')) return;
+  const o=e.target.closest('[data-open]'); if(!o || e.target.closest('button,.hero-go,[data-more],input,textarea')) return;
   e.preventDefault(); openDoc(o.dataset.open);
 });
 $('#v-library').addEventListener('click',e=>{
@@ -1113,7 +1118,7 @@ document.addEventListener('keydown',e=>{
   else if($('#imgOverlay')) $('#imgOverlay').remove();
   else if(!$('#v-library').hidden && $('#libTools') && $('#libTools').classList.contains('open')){
     if(LIBV.q){ LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
-    else if(!fCount()){ LIBTOOLS_OPEN=false; renderLibTools(); }
+    else if(!fCount()){ LIBTOOLS_OPEN=false; renderLibTools(); const b=$('#libSearchBtn'); if(b) b.focus(); }
   }
 });
 function toast(msg, action, ms, progress){
@@ -1126,6 +1131,7 @@ const VIEWS=['library','words','stats','settings'];
 function showView(v){
   for(const x of VIEWS) $('#v-'+x).hidden=(x!==v);
   $('#v-reader').hidden=v!=='reader'; $('#tabs').hidden=v==='reader';
+  positionSwUpdate();
   document.querySelectorAll('#tabs button').forEach(b=>{ if(b.dataset.tab===v) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   if(v==='stats') renderStats(); if(v==='settings') renderSettings(); if(v==='words') renderNotes(); if(v==='library'){ renderLibrary(); setTimeout(nearFinishCheck, 600); }
 }
@@ -1217,6 +1223,27 @@ function touch(m){ m.mod=Date.now(); Store.put('meta',m).catch(()=>{}); }
 function fetchText(meta){ if(meta.kind!=='sample') return null; return sampleText(meta.id, sampleDoc()); }
 
 /* ---------- boot ---------- */
+function positionSwUpdate(){
+  const bar=$('#swUpdate'); if(!bar) return;
+  const tabs=$('#tabs');
+  bar.style.bottom=(tabs && !tabs.hidden)?(Math.round(tabs.getBoundingClientRect().height)+8)+'px':'';
+}
+function showSwUpdate(){
+  if($('#swUpdate') || sessionStorage.getItem('rf.swUpdateDismissed')) return;
+  const bar=document.createElement('div');
+  bar.id='swUpdate';
+  bar.setAttribute('role','status');
+  bar.innerHTML='<span>Update available</span><div class="sw-actions"><button type="button" class="sw-reload">Reload</button><button type="button" class="sw-dismiss" aria-label="Dismiss update notice">'+(ICON.close||'×')+'</button></div>';
+  bar.querySelector('.sw-reload').onclick=()=>location.reload();
+  bar.querySelector('.sw-dismiss').onclick=()=>{ try{ sessionStorage.setItem('rf.swUpdateDismissed','1'); }catch(e){} bar.remove(); };
+  document.body.appendChild(bar);
+  positionSwUpdate();
+  if(!window.__swUpdateRO){
+    window.__swUpdateRO=new ResizeObserver(positionSwUpdate);
+    const tabs=$('#tabs'); if(tabs) window.__swUpdateRO.observe(tabs);
+    window.addEventListener('resize', positionSwUpdate);
+  }
+}
 async function boot(){
   applyLook(); setWpm(S.wpm); asUI();
   await Store.open();
@@ -1230,21 +1257,12 @@ async function boot(){
   try{
   if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){
     navigator.serviceWorker.register('sw.js').then(reg=>{
-      const showUpdate=()=>{
-        if($('#swUpdate')) return;
-        const bar=document.createElement('div');
-        bar.id='swUpdate';
-        bar.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:10000;background:#1d4ed8;color:#fff;padding:12px 16px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 15px/1.3 system-ui,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.25)';
-        bar.innerHTML='<span>Update available</span><button type="button" style="background:#fff;color:#1d4ed8;border:0;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer">Reload</button>';
-        bar.querySelector('button').onclick=()=>location.reload();
-        document.body.appendChild(bar);
-      };
-      if(reg.waiting) showUpdate();
+      if(reg.waiting) showSwUpdate();
       reg.addEventListener('updatefound',()=>{
         const nw=reg.installing;
         if(!nw) return;
         nw.addEventListener('statechange',()=>{
-          if(nw.state==='installed' && navigator.serviceWorker.controller) showUpdate();
+          if(nw.state==='installed' && navigator.serviceWorker.controller) showSwUpdate();
         });
       });
     }).catch(()=>{});

@@ -196,6 +196,7 @@ function yearHTML(st, met){
 /* version badge: a small fixed chip, hidden by CSS while a book is open */
 (function(){
   const b=$('#verBadge'); if(!b) return;
-  b.textContent='v'+APP_VERSION;
+  b.textContent='';
+  const chip=document.createElement('span'); chip.className='ver-chip'; chip.textContent='v'+APP_VERSION; b.appendChild(chip);
   b.addEventListener('click', ()=>whatsNewSheet());
 })();

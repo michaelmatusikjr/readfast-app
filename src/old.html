@@ -628,7 +628,7 @@ $('#docList').addEventListener('click',e=>{
   const m=e.target.closest('[data-more]'); if(m){ e.stopPropagation(); docOptions(m.dataset.more); return; }
   const o=e.target.closest('[data-open]'); if(o) openDoc(o.dataset.open);
 });
-$('#docList').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const o=e.target.closest('[data-open]'); if(o&&!e.target.closest('[data-more]')) openDoc(o.dataset.open); } });
+$('#docList').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const o=e.target.closest('[data-open]'); if(o&&!e.target.closest('button,.hero-go,[data-more],input,textarea')) openDoc(o.dataset.open); } });
 
 function docOptions(id){
   const d=LIB.find(x=>x.id===id); if(!d) return;

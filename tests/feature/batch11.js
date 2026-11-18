@@ -22,6 +22,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   console.log('speed steps', sp);
   // library tools
   await pg.evaluate(()=>showView('library')); await sleep(300);
+  await pg.click('#libSearchBtn'); await sleep(200);
   console.log('placeholder', await pg.evaluate(()=>[$('#libFind').placeholder, !!$('#libSort'), !!$('#sortBtn').innerHTML]));
   await pg.click('#sortBtn'); await sleep(500);
   console.log('sort sheet', await pg.evaluate(()=>[...document.querySelectorAll('#sheet .sortopt')].map(b=>b.textContent)));
