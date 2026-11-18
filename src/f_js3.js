@@ -1057,6 +1057,7 @@ function showView(v){
 }
 const TABS={library:['book','Library'], words:['note','Notes'], stats:['stats','Stats'], settings:['gear','Settings']};
 document.querySelectorAll('#tabs button').forEach(b=>{ const [ic,l]=TABS[b.dataset.tab]; b.innerHTML=ICON[ic]+l; b.onclick=()=>showView(b.dataset.tab); });
+$('#rBack').innerHTML=ICON.back; $('#rSearch').innerHTML=ICON.search; $('#rToc').innerHTML=ICON.toc; $('#rMark').innerHTML=ICON.mark; $('#rTts').innerHTML=ICON.speaker;
 $('#bSent').innerHTML=ICON.bsent; $('#bWord').innerHTML=ICON.back; $('#fWord').innerHTML=ICON.fwd; $('#fSent').innerHTML=ICON.fsent;
 $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown').innerHTML=ICON.minus; $('#asUp').innerHTML=ICON.plus; $('#asPlay').innerHTML=ICON.play;
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
