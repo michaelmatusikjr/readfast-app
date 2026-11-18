@@ -22,17 +22,12 @@
   <section id="v-words" class="view" aria-label="Notes" hidden>
     <div class="wrap">
       <div class="topbar"><div><div class="eyebrow">From every book</div><h1>Notes</h1></div></div>
-      <div class="seg" id="notesSeg" hidden><button type="button" data-n="hl">Notes &amp; highlights</button><button type="button" data-n="bm">Bookmarks</button><button type="button" data-n="w">Words</button></div>
       <div id="notesHlTools">
         <input class="input" id="notesFind" type="search" placeholder="Search notes, bookmarks and words" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search notes, bookmarks and words">
         <div class="hl-meta"><span id="notesHlCount"></span><button class="sort" type="button" id="notesSort"></button></div>
       </div>
       <div id="notesHl" class="wrap" style="gap:14px"></div>
-      <div id="notesBm" class="wrap" style="gap:14px" hidden></div>
-      <div id="wordsPane" class="wrap" style="gap:10px" hidden>
-        <p class="note">Tap a word to look it up again or jump back to where you found it. <span class="hint-touch">Swipe a word left, or tap its trash can, to remove it.</span><span class="hint-mouse">Click the trash can to remove a word.</span></p>
-        <div id="wordList" class="wrap" style="gap:10px"></div>
-      </div>
+      <div id="wordList" hidden></div>
     </div>
   </section>
 
@@ -158,8 +153,58 @@
 <div id="backdrop" hidden></div>
 <div id="sheet" role="dialog" aria-modal="true" hidden></div>
 
-<div id="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button><div id="toastProg" hidden style="height:4px;background:var(--line);border-radius:2px;overflow:hidden"><div id="toastBar" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div></div></div>
+<div id="toast" role="status" aria-live="polite" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button><div id="toastProg" hidden style="height:4px;background:var(--line);border-radius:2px;overflow:hidden"><div id="toastBar" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div></div></div>
 <input type="file" id="fileIn" accept=".epub,.pdf,.txt,.md,.markdown,.html,.htm,.xhtml,application/epub+zip,application/pdf,text/plain,text/markdown,text/html" hidden>
 <input type="file" id="restoreIn" accept=".json,application/json" hidden>
+
+
+<div id="tour" hidden role="dialog" aria-modal="true" aria-labelledby="tourCaption">
+  <button type="button" id="tourSkip">Skip</button>
+  <div id="tourScrim" aria-hidden="true"></div>
+  <div id="tourHole" hidden aria-hidden="true"></div>
+  <div id="tourDemo" hidden data-mode="pages">
+    <header class="tour-rtop" id="tourDemoTop">
+      <span class="tour-ico" aria-hidden="true">‹</span>
+      <button type="button" class="tour-ico" id="tourTocIcon" tabindex="-1" aria-hidden="true">☰</button>
+      <span class="tour-ico" aria-hidden="true">Aa</span>
+    </header>
+    <div class="tour-page">
+      <p id="tourPageA">This short book is a tour of Tooz. Swipe left, or tap the right edge of the page, to turn it. Tap the <em id="tourHoldWord">middle</em> of the page to show or hide the controls. Press and hold a word until it is marked.</p>
+      <p id="tourPageB" hidden>The chapter name sits at the top and your page number at the bottom. Contents holds search and notes for this book.</p>
+      <div id="tourMid" aria-hidden="true"></div>
+      <div id="tourEdgeR" aria-hidden="true"></div>
+    </div>
+    <div id="tourSel" hidden>
+      <button class="dot" type="button" tabindex="-1" aria-hidden="true" data-hl="1"></button>
+      <button class="dot" type="button" tabindex="-1" aria-hidden="true" data-hl="2"></button>
+      <button class="dot" type="button" tabindex="-1" aria-hidden="true" data-hl="3"></button>
+      <button class="dot" type="button" tabindex="-1" aria-hidden="true" data-hl="4"></button>
+      <span class="sep"></span>
+      <span class="tour-more">More</span>
+    </div>
+    <div id="tourPeek" hidden>
+      <div class="tour-peek-row">Search this book</div>
+      <div class="tour-peek-row">Notes &amp; highlights</div>
+    </div>
+    <div id="tourSpeedWord" hidden>exactly</div>
+    <div id="tourMoment" hidden>
+      <span class="moment-dot" style="background:var(--hl1)" aria-hidden="true"></span>
+      <div>
+        <div class="t"><span class="moment-kind">Yellow</span> middle of the page</div>
+        <div class="nt">A note you added</div>
+      </div>
+    </div>
+    <div id="tourPill" hidden role="presentation">
+      <span class="tour-pill-play" aria-hidden="true"></span>
+      <span class="tour-pill-speed">1.0×</span>
+    </div>
+  </div>
+  <div id="tourFinger" hidden aria-hidden="true"></div>
+  <div id="tourCaption" aria-live="polite"></div>
+  <p id="tourSub" hidden></p>
+  <div id="tourDots" aria-hidden="true"></div>
+  <button type="button" id="tourNext" class="tour-pill-btn">Next</button>
+  <button type="button" id="tourStart" class="tour-pill-btn primary" hidden>Start reading</button>
+</div>
 
 <button type="button" id="verBadge" aria-label="What’s new">v…</button>

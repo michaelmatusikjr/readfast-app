@@ -67,7 +67,7 @@ const THEMES = {
   dark:{label:'Dark', bg:'#16181C', ink:'#D8DBE0', muted:'#8C929C', line:'#2A2E35', link:'#8AA4FF', dark:true},
   black:{label:'Black', bg:'#000000', ink:'#C8C8C8', muted:'#7D7D7D', line:'#1E1E1E', link:'#7C97F2', dark:true}
 };
-const HL_LIGHT=['#FFE58A','#C4EDB5','#C5E1FF','#FFC9DF'], HL_DARK=['rgba(255,214,64,.42)','rgba(110,200,90,.38)','rgba(90,160,255,.40)','rgba(255,110,170,.40)'];
+const HL_LIGHT=['#FFE58A','#C4EDB5','#C5E1FF','#FFC9DF'], HL_DARK=['rgba(255,214,64,.42)','rgba(110,200,90,.38)','rgba(90,160,255,.40)','rgba(255,110,170,.40)'], HL_DARK_DOT=['#FFE14D','#8BE07A','#7EB6FF','#FF9EC8'];
 /* margins grow with the screen: [smallest in px, share of the reading width] */
 const MARGINS={narrow:[12,0.03], normal:[22,0.065], wide:[44,0.13]};
 function marginPx(W){ const m=MARGINS[S.margin]||MARGINS.normal; if(!W){ const rb=document.getElementById('rBody'); W=(rb&&rb.clientWidth)||window.innerWidth||390; } return Math.round(Math.max(m[0], W*m[1])); }
@@ -91,6 +91,7 @@ function applyLook(){
   r.setAttribute('data-theme', T.dark?'dark':'light');
   st.setProperty('--page-bg',T.bg); st.setProperty('--page-ink',T.ink); st.setProperty('--page-muted',T.muted); st.setProperty('--page-line',T.line); st.setProperty('--page-link',T.link);
   (T.dark?HL_DARK:HL_LIGHT).forEach((c,k)=>st.setProperty('--hl'+(k+1),c));
+  (T.dark?HL_DARK_DOT:HL_LIGHT).forEach((c,k)=>st.setProperty('--hl-dot'+(k+1),c));
   st.setProperty('--hl-ink', T.dark?'#F4F4F4':'#1B1B1B');
   st.setProperty('--tts', T.dark?'rgba(255,200,40,.55)':'#FFD54A');
   st.setProperty('--focus', S.focusColor);

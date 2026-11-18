@@ -601,6 +601,7 @@ function buildBacklinks(){
 }
 async function goTo(i, jump){
   if(!R.meta || !R.mode) return;
+  pendingRelay=false; clearTimeout(relayT);
   R.anchor=null;
   const prev=R.pos; stopActivity(); selClear();
   R.pos=clamp(i|0,0,R.n-1); R.lastNav=true;
@@ -1231,7 +1232,14 @@ function hlName(c){ return HL_NAME[c||1]||'Highlight'; }
 function jumpToMoment(i, len){
   if(R.mode==='speed' && R.playing) pause();
   const prev=R.pos;
-  return goTo(i, true).then(()=>{ if(prev!==i) setBack(prev); return flashFound(i, Math.max(1, len||1)); });
+  pendingRelay=false; clearTimeout(relayT);
+  const frames=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  return frames().then(()=>goTo(i, true)).then(async()=>{
+    if(prev!==i) setBack(prev);
+    await frames();
+    if(R.meta && R.mode && R.pos!==i) await goTo(i, 'back');
+    return flashFound(i, Math.max(1, len||1));
+  });
 }
 function refreshMomentViews(){ try{ if(typeof renderNotes==='function' && $('#v-words') && !$('#v-words').hidden) renderNotes(); }catch(e){} }
 function openHlMenu(h, focusNote, from){
@@ -1280,11 +1288,11 @@ function bookMoments(d){
   return out;
 }
 function momentQuote(m, getText){
-  if(m.kind==='word'){ const s=m.sentence||''; const cap=s.length>180; return (m.word||'Word')+(s?': '+(cap?s.slice(0,180)+'…':s):''); }
+  if(m.kind==='word') return m.word||'Word';
   if(m.kind==='bm'){
-    const raw=getText?getText(m):(typeof textOf==='function' && R.meta && R.meta.id===m.bookId?textOf(m.s, Math.min((R.n||1)-1, m.s+9)):'');
-    const q=raw?raw+(raw.length>40|| (R.n&&m.s+9<R.n-1)?'…':''):'';
-    return (m.name||'Bookmark')+(q?' · '+q:'');
+    const raw=getText?getText(m):(typeof textOf==='function' && R.meta && R.meta.id===m.bookId?textOf(m.s, Math.min((R.n||1)-1, m.s+12)):'');
+    const line=(raw||'').split(/[.?!]/)[0].trim()||raw||'';
+    return line?(line.length>80?line.slice(0,80)+'…':line):'';
   }
   const raw=(getText?getText(m):textOf(m.s, Math.min(m.e, m.s+80)))||'';
   const cap=(m.e>m.s+80) || raw.length>320;
@@ -1296,23 +1304,38 @@ function momentMatches(m, q, quote){
   return [quote, m.note, m.name, m.word, m.sentence, m.def, m.kind==='hl'?'highlight':m.kind==='bm'?'bookmark':'word', m.kind==='hl'?hlName(m.c):''].some(x=>x && String(x).toLowerCase().includes(q));
 }
 function momentKindMeta(m){
-  if(m.kind==='hl'){ const name=hlName(m.c); return {label:name+' highlight', kindLbl:name, icon:`<span class="moment-dot" style="background:var(--hl${m.c||1})" aria-hidden="true"></span>`}; }
+  if(m.kind==='hl'){ const name=hlName(m.c); return {label:name+' highlight', kindLbl:name, icon:`<span class="moment-dot" style="background:var(--hl-dot${m.c||1},var(--hl${m.c||1}))" aria-hidden="true"></span>`}; }
   if(m.kind==='bm') return {label:'Bookmark', kindLbl:'Bookmark', icon:`<span class="moment-ico" aria-hidden="true">${ICON.mark}</span>`};
   return {label:'Looked-up word', kindLbl:'Word', icon:`<span class="moment-ico" aria-hidden="true">${ICON.define}</span>`};
 }
 function momentRowHtml(m, quote, where, goAttrs, moreBtn){
   const k=momentKindMeta(m);
+  let body='';
+  if(m.kind==='word'){
+    const def=(m.def||'').trim();
+    const snip=m.sentence||'';
+    body=`<div class="t"><span class="moment-kind">${esc(k.kindLbl)}</span><span class="moment-word">${esc(m.word||quote||'Word')}</span>${def?` <span class="moment-def">${esc(def)}</span>`:''}</div>
+        ${snip?`<div class="moment-snip">${esc(snip)}</div>`:''}
+        ${where?`<div class="where">${esc(where)}</div>`:''}`;
+  }else if(m.kind==='bm'){
+    body=`<div class="t"><span class="moment-kind">${esc(k.kindLbl)}</span>${esc(quote)}</div>
+        ${where?`<div class="where">${esc(where)}</div>`:''}`;
+  }else{
+    const long=!!(m.note && m.note.length>90);
+    body=`<div class="t"><span class="moment-kind">${esc(k.kindLbl)}</span>${esc(quote)}</div>
+        ${m.note?`<div class="nt${long?' nt-clamp':''}">${esc(m.note)}</div>${long?`<span class="nt-more" data-act="more" role="button" tabindex="0">more</span>`:''}`:''}
+        ${where?`<div class="where">${esc(where)}</div>`:''}`;
+  }
+  const exp=m.kind==='word' && (m.sentence||'') ? `<button class="icon-btn moment-exp" type="button" data-act="expand" aria-label="Show the sentence" aria-expanded="false">▾</button>` : '';
   return `<div class="swrow moment-row" data-mk="${m.kind}" data-mid="${esc(String(m.id))}" data-book="${esc(m.bookId||'')}" data-i="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}" data-bmat="${m.kind==='bm'?(m.at||0):''}">
     <button class="swdel" type="button" tabindex="-1">Delete</button>
     <div class="hlrow moment swfront">
       ${k.icon}
       <span class="sr-only">${k.label}</span>
       <button type="button" class="grow moment-go" ${goAttrs}>
-        <div class="t"><span class="moment-kind">${esc(k.kindLbl)}</span>${esc(quote)}</div>
-        ${m.note?`<div class="nt">${esc(m.note)}</div>`:''}
-        ${where?`<div class="where">${esc(where)}</div>`:''}
+        ${body}
       </button>
-      ${moreBtn||''}
+      ${exp}${moreBtn||''}
       <button class="icon-btn moment-rm" type="button" data-act="rmmoment" aria-label="Remove ${k.label}">${ICON.close}</button>
     </div>
   </div>`;
@@ -1337,12 +1360,59 @@ function removeMoment(m, book){
     label='Removed “'+(gone.word||'word')+'”';
     undo=()=>{ WORDS.splice(k,0,gone); if(typeof saveWords==='function') saveWords(); afterMomentChange(); };
   } else return;
+  const host=document.querySelector('.moment-row[data-mid="'+CSS.escape(String(m.id))+'"]');
+  const list=host && (host.closest('#hlStream')||host.closest('#notesHl'));
+  const idx=list?[...list.querySelectorAll('.moment-row')].findIndex(r=>r.dataset.mid===String(m.id)):-1;
   afterMomentChange();
   toast(label, {label:'Undo', fn:undo});
+  requestAnimationFrame(()=>{
+    const box=($('#hlStream') && document.getElementById('sheet') && !$('#sheet').hidden)?$('#hlStream'):$('#notesHl');
+    const rows=box?[...box.querySelectorAll('.moment-row')]:[];
+    const target=rows[idx]||rows[Math.max(0,idx-1)]||null;
+    const btn=target&&target.querySelector('.moment-rm');
+    const fallback=$('#hlFind')||$('#notesFind');
+    if(btn) btn.focus(); else if(fallback) fallback.focus();
+  });
 }
 function afterMomentChange(){
   if($('#hlStream')) fillHlStream();
   refreshMomentViews();
+}
+const MOMENT_PAGE=80;
+function paintMomentRows(box, rows, empty){
+  if(!box) return;
+  box._allRows=rows;
+  box._shown=0;
+  if(!rows.length){ box.innerHTML=empty||''; return; }
+  const n=Math.min(MOMENT_PAGE, rows.length);
+  box.innerHTML=rows.slice(0,n).join('');
+  box._shown=n;
+  if(!box._lazyBound){
+    box._lazyBound=1;
+    const scroller=box.closest('.sheet-body')||box.closest('.view')||box;
+    scroller.addEventListener('scroll',()=>{
+      if(!box._allRows || box._shown>=box._allRows.length) return;
+      if(scroller.scrollTop+scroller.clientHeight < scroller.scrollHeight-160) return;
+      const from=box._shown, to=Math.min(box._allRows.length, from+MOMENT_PAGE);
+      box.insertAdjacentHTML('beforeend', box._allRows.slice(from,to).join(''));
+      box._shown=to;
+    },{passive:true});
+  }
+}
+function momentsCopyText(d, quoteOf){
+  const lines=[d.title||''];
+  for(const m of sortMoments(bookMoments(d))){
+    if(m.kind==='hl'){
+      const q=quoteOf?quoteOf(m):(typeof textOf==='function'&&R.meta&&R.meta.id===d.id?textOf(m.s,m.e):'');
+      lines.push('“'+(q||'')+'”'+(m.note?'\nNote: '+m.note:''));
+    }else if(m.kind==='bm'){
+      const q=quoteOf?quoteOf(m):(typeof textOf==='function'&&R.meta&&R.meta.id===d.id?textOf(m.s, Math.min((R.n||1)-1,m.s+12)):'');
+      lines.push('Bookmark · '+Math.round(100*m.s/Math.max(1,(d.count||R.n||1)-1))+'%'+(q?'\n“'+q+'”':''));
+    }else if(m.kind==='word'){
+      lines.push('Word · '+(m.word||'')+(m.def?' — '+m.def:'')+(m.sentence?'\n“'+m.sentence+'”':''));
+    }
+  }
+  return lines.filter(Boolean).join('\n\n');
 }
 function fillHlStream(){
   const box=$('#hlStream'), count=$('#hlCount'); if(!box||!R.meta) return;
@@ -1351,16 +1421,15 @@ function fillHlStream(){
   const rows=[];
   for(const m of all){
     const quote=momentQuote(m);
-    if(!momentMatches(m,q,quote)) continue;
-    const ch=(currentChapter(m.s)||{}).t||'';
-    const where=(ch?ch+' · ':'')+Math.round(100*m.s/Math.max(1,R.n-1))+'%';
+    if(!momentMatches(m,q,quote+(m.sentence||'')+(m.def||'')+(m.note||''))) continue;
+    const where=Math.round(100*m.s/Math.max(1,R.n-1))+'%';
     const more=m.kind==='hl'?`<button class="icon-btn moment-more" type="button" data-act="edit" data-id="${esc(m.id)}" aria-label="Edit ${hlName(m.c)} highlight">${ICON.more}</button>`:'';
     rows.push(momentRowHtml(m, quote, where, `data-act="go" data-i="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}"`, more));
   }
   const n=rows.length, tot=all.length;
   if(count) count.textContent=tot?(n+' of '+tot):'';
   const empty=q?'<p class="note">No matches.</p>':'<p class="note">Select text in the book to highlight it. Add a note from More. Bookmarks and words you look up appear here too.</p>';
-  box.innerHTML=n?rows.join(''):empty;
+  paintMomentRows(box, rows, empty);
   const sortBtn=$('#hlSort'); if(sortBtn){ sortBtn.textContent=notesSortLabel(); sortBtn.setAttribute('aria-pressed', NOTESORT==='date'?'true':'false'); }
 }
 
@@ -1385,19 +1454,14 @@ function openToc(tab){
       if(maxD>0) rows=rows.filter(k=>(ch[k].d||0)<maxD || parentOf(k)===open);
     }
     body = ch.length ? `<div class="list">${rows.map(k=>{ const c=ch[k]; const par=kids.has(k); return `<button class="li${c===cur?' on':''}${k===open?' open':''}" type="button" data-act="${par?'tocx':'go'}" data-k="${k}" data-i="${c.i}" style="padding-left:${4+(c.d||0)*16}px"${par?` aria-expanded="${k===open}"`:''}><span class="grow">${par?(k===open?'▾ ':'▸ '):''}${esc(c.t)}</span><span class="small">${Math.round(100*c.i/Math.max(1,R.n-1))}%</span></button>`; }).join('')}</div>` : '<p class="note">This document has no chapter list. Use search or the progress bar to move around.</p>';
-  } else if(t==='marks'){
-    const bm=R.meta.bookmarks;
-    body=`<div class="field"><label for="bmName">Bookmark this spot</label><input class="input" id="bmName" placeholder="Name (optional)"></div>
-      <button class="btn primary block" type="button" data-act="addbm">${ICON.mark} Add bookmark here</button>
-      <div class="list">${bm.length?bm.map((b,k)=>`<div class="li"><button type="button" style="all:unset;flex:1;min-width:0;cursor:pointer" data-act="go" data-i="${b.i}"><b>${esc(b.name||'Bookmark')}</b><div class="small">${Math.round(100*b.i/Math.max(1,R.n-1))}% · ${esc(textOf(b.i,Math.min(R.n-1,b.i+9)))}…</div></button><button class="icon-btn" type="button" data-act="rmbm" data-k="${k}" aria-label="Remove bookmark">${ICON.close}</button></div>`).join(''):'<p class="note">No bookmarks yet. Tap the bookmark at the bottom of any page.</p>'}</div>`;
   } else {
-    const hl=R.meta.highlights||[];
+    const hl=(R.meta.highlights||[]).length || (R.meta.bookmarks||[]).length || (typeof WORDS!=='undefined' && WORDS.some(w=>w&&w.docId===R.meta.id));
     body=`<div class="hl-tools">
         <input class="input" id="hlFind" type="search" placeholder="Search notes, bookmarks and words" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search notes, bookmarks and words">
         <div class="hl-meta"><span id="hlCount"></span><button class="sort" type="button" id="hlSort" data-act="hlsort">${notesSortLabel()}</button></div>
       </div>
       <div id="hlStream"></div>
-      ${hl.length?`<button class="btn block" type="button" data-act="copyall" style="margin-top:12px">Copy all highlights and notes</button>`:''}`;
+      ${hl?`<button class="btn block" type="button" data-act="copyall" style="margin-top:12px">Copy all</button>`:''}`;
   }
   openSheet(R.meta.title, tools+seg+body, {
     search:()=>openSearch(),
@@ -1405,12 +1469,12 @@ function openToc(tab){
     tab:(b)=>openToc(b.dataset.t),
     tocx:(b)=>{ const k=+b.dataset.k; const was=R.tocOpen&&R.tocOpen.id===R.meta.id&&R.tocOpen.k===k; R.tocOpen={id:R.meta.id, k: was? -1 : k}; openToc('toc'); setTimeout(()=>{ const o=$('#sheet .li.open'); o&&o.scrollIntoView({block:'start'}); },40); },
     go:(b)=>{ const i=+b.dataset.i, len=+b.dataset.len||1; closeSheet(); jumpToMoment(i, len); },
-    addbm:()=>{ const bm=R.meta.bookmarks; bm.push({i:R.pos, name:$('#bmName').value.trim()||((currentChapter(R.pos)||{}).t||''), at:Date.now()}); bm.sort((a,b)=>a.i-b.i); touch(R.meta); updateChrome(); toast('Bookmarked'); openToc('marks'); },
-    rmbm:(b)=>{ R.meta.bookmarks.splice(+b.dataset.k,1); touch(R.meta); updateChrome(); openToc('marks'); },
     edit:(b)=>{ const h=R.meta.highlights.find(x=>x.id===b.dataset.id); if(h) openHlMenu(h,false,'toc'); },
     rmmoment:(b)=>{ const row=b.closest('.moment-row'); if(row) removeMoment({kind:row.dataset.mk, id:row.dataset.mid, bookId:row.dataset.book, s:+row.dataset.i, at:+row.dataset.bmat||0}, R.meta); },
     hlsort:()=>{ NOTESORT=NOTESORT==='date'?'pos':'date'; LS.set('notesSort',NOTESORT); fillHlStream(); },
-    copyall:async()=>{ const txt=R.meta.title+'\n\n'+R.meta.highlights.map(h=>'“'+textOf(h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+R.meta.highlights.length+' highlight'+(R.meta.highlights.length===1?'':'s')); }catch(e){ toast('Couldn’t copy on this device.'); } }
+    copyall:async()=>{ const txt=momentsCopyText(R.meta); try{ await navigator.clipboard.writeText(txt); toast('Copied'); }catch(e){ toast('Couldn’t copy on this device.'); } },
+    expand:(b)=>{ const row=b.closest('.moment-row'); if(!row) return; const on=row.classList.toggle('open'); b.setAttribute('aria-expanded', on?'true':'false'); },
+    more:(b)=>{ const nt=b.parentElement && b.parentElement.querySelector('.nt-clamp'); if(nt) nt.classList.remove('nt-clamp'); b.remove(); }
   });
   sheetFocusBack=$('#rToc');
   if(t==='hls'){
@@ -1432,7 +1496,7 @@ function openSearch(){
   stopActivity();
   setChrome(true);
   openSheet('Search this book', `<input class="input" id="srchIn" type="search" placeholder="Words or a phrase" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"><div id="srchMeta" class="note"></div><div id="srchOut"></div>`, {
-    res:(b)=>{ const i=+b.dataset.i, len=+b.dataset.l; const prev=R.pos; closeSheet(); goTo(i,true).then(()=>{ if(prev!==i) setBack(prev); return flashFound(i,len); }); }
+    res:(b)=>{ const i=+b.dataset.i, len=+b.dataset.l; closeSheet(); jumpToMoment(i, len); }
   });
   sheetFocusBack=$('#rToc');
   const inp=$('#srchIn'); inp.value=R.lastSearch||''; let t=null;

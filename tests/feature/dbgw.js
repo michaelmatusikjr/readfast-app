@@ -7,6 +7,6 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const pg=await ctx.newPage(); await pg.goto('http://localhost:8750/'); await sleep(1000);
   await pg.evaluate(async()=>{ await openDoc(LIB[0].id); addHighlight(20,28,2); touch(R.meta); closeReader(); });
   await pg.click('#tabs [data-tab=words]'); await sleep(500);
-  console.log(await pg.evaluate(()=>{ let e=document.querySelector('#notesHl .nbook-h .btn'); const o=[]; while(e){ const r=e.getBoundingClientRect(); o.push(e.tagName+'#'+e.id+'.'+e.className+' '+Math.round(r.left)+'-'+Math.round(r.right)+' '+getComputedStyle(e).display); e=e.parentElement; } return o; }));
+  console.log(await pg.evaluate(()=>{ let e=document.querySelector('#notesHl [data-export], #notesHl [data-copy], #notesHl .nbook-toggle'); const o=[]; while(e){ const r=e.getBoundingClientRect(); o.push(e.tagName+'#'+e.id+'.'+e.className+' '+Math.round(r.left)+'-'+Math.round(r.right)+' '+getComputedStyle(e).display); e=e.parentElement; } return o; }));
   await b.close();
 })();

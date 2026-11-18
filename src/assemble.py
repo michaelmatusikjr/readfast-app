@@ -118,6 +118,7 @@ parts.append(open(D+'i_speech.js',encoding='utf-8').read())
 parts.append(open(D+'h_voice.js',encoding='utf-8').read())
 parts.append(open(D+'j_audiobook.js',encoding='utf-8').read())
 parts.append(open(D+'g_extra.js',encoding='utf-8').read())
+parts.append(open(D+'k_tour.js',encoding='utf-8').read())
 parts.append(open(D+'f_js3.js',encoding='utf-8').read())
 out=fill('\n'.join(parts))
 left=re.findall(r'@@OLD',out); assert not left, left

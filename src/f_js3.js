@@ -126,7 +126,7 @@ function renderSettings(){
     <h2>Help</h2>
     <div class="group"><div class="set">
       <div class="desc">${LIB.some(m=>m.kind==='sample')?'The tutorial is in your library. When you close it, Tooz asks whether to keep it there or tuck it away here.':'The tutorial walks you through every feature. It’s tucked away here until you want it.'}</div>
-      <div class="row">${LIB.some(m=>m.kind==='sample')?'':'<button class="btn" type="button" id="tutRestore">Restore tutorial to library</button>'}<button class="btn" type="button" id="tutOpen">Open the tutorial</button></div>
+      <div class="row">${LIB.some(m=>m.kind==='sample')?'':'<button class="btn" type="button" id="tutRestore">Restore tutorial to library</button>'}<button class="btn" type="button" id="tutOpen">Open the tutorial</button><button class="btn" type="button" id="tourReplay">Replay the tour</button></div>
     </div></div>
     <div class="group" style="margin-top:10px"><div class="set">
       <div class="hd"><b>Tooz eReader</b><span class="val" style="font-family:var(--f-mono)">Version ${APP_VERSION}</span></div>
@@ -142,6 +142,7 @@ function renderSettings(){
   $('#archSet').addEventListener('click',e=>{ const b=e.target.closest('[data-arch]'); if(b) openArchived(+b.dataset.arch); });
   if($('#tutRestore')) $('#tutRestore').onclick=async()=>{ await restoreTutorial(false); renderSettings(); toast('The tutorial is back in your library'); };
   $('#tutOpen').onclick=()=>restoreTutorial(true);
+  if($('#tourReplay')) $('#tourReplay').onclick=()=>startTour({replay:true});
   $('#eraseBtn').onclick=eraseAllSheet;
   $('#storeNote').textContent=Store.db?'':'Storage is unavailable in this view, so documents will disappear when you close the app.';
   $('#sLinkSvc').addEventListener('change',e=>{ S.linkService=e.target.value.trim(); saveSettings(); toast(S.linkService?'Reader service saved':'Reader service cleared'); });
@@ -576,7 +577,7 @@ function docOptions(id, keep){
       const pend=normTag($('#edTag').value); if(pend && !has(pend)) draft.tags.push(pend);
       d.title=t; d.author=draft.author.replace(/\s+/g,' ').trim(); d.tags=draft.tags.map(normTag).filter(Boolean);
       touch(d); renderLibrary(); closeSheet(); toast('Saved'); },
-    notes:async()=>{ closeSheet(); if(await openDoc(id)!==false){ R.returnTo='library'; openToc((d.highlights||[]).length?'hls':'marks'); } },
+    notes:async()=>{ closeSheet(); if(await openDoc(id)!==false){ R.returnTo='library'; openToc('hls'); } },
     export:()=>exportSheet(d),
     restart:async()=>{ if(R.meta&&R.meta.id===id&&R.mode) closeReader(); startOver(d); renderLibrary(); closeSheet(); toast('Back to the beginning'); },
     archive:()=>archiveFlow(id),
@@ -1084,28 +1085,55 @@ async function renderNotes(){
     for(const m of sortMoments(all)){
       let quote='';
       if(m.kind==='hl'){ const raw=await snipOf(d.id,m.s,Math.min(m.e,m.s+80)); quote=(m.e>m.s+80 && raw && !raw.endsWith('…'))?raw+'…':(raw||'Highlight'); }
-      else if(m.kind==='bm'){ const sn=await snipOf(d.id,m.s,m.s+9); quote=(m.name||'Bookmark')+(sn?' · '+sn+(sn.endsWith('…')?'':'…'):''); }
+      else if(m.kind==='bm'){ const sn=await snipOf(d.id,m.s,m.s+12); const line=(sn||'').split(/[.?!]/)[0].trim()||sn||''; quote=line?(line.length>80?line.slice(0,80)+'…':line):''; }
       else quote=momentQuote(m);
-      if(!momentMatches(m,q,quote)) continue;
-      const where=Math.round(100*m.s/Math.max(1,(d.count||1)-1))+'% · '+(m.at?new Date(m.at).toLocaleDateString():'');
+      if(!momentMatches(m,q,quote+(m.sentence||'')+(m.def||'')+(m.note||''))) continue;
+      const where=Math.round(100*m.s/Math.max(1,(d.count||1)-1))+'%';
       const more=m.kind==='hl'?`<button class="icon-btn moment-more" type="button" data-ed="${esc(m.id)}" data-book="${esc(d.id)}" aria-label="Edit ${hlName(m.c)} highlight">${ICON.more}</button>`:'';
       rows.push(momentRowHtml(m, quote, where, `data-nb="${esc(d.id)}" data-ni="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}"`, more));
     }
     if(!rows.length) continue;
     shown+=rows.length;
     const collapsed=NOTECOLLAPSE.has(d.id);
-    groups.push(`<div class="nbook" data-book="${esc(d.id)}">
-      <button type="button" class="nbook-toggle" data-toggle="${esc(d.id)}" aria-expanded="${!collapsed}"><span class="nbook-title">${esc(d.title)}</span><span class="nbook-count">${rows.length}</span></button>
-      <div class="nbook-body"${collapsed?' hidden':''}>${rows.join('')}
-        ${LIB.some(x=>x.id===d.id)?`<div class="row" style="margin-top:4px"><button class="btn" type="button" data-copy="${esc(d.id)}">Copy</button><button class="btn" type="button" data-export="${esc(d.id)}">Export…</button></div>`:''}
-      </div>
-    </div>`);
+    const foot=LIB.some(x=>x.id===d.id)?`<div class="row" style="margin-top:4px"><button class="btn" type="button" data-copy="${esc(d.id)}">Copy</button><button class="btn" type="button" data-export="${esc(d.id)}">Export…</button></div>`:'';
+    groups.push({id:d.id, title:d.title, collapsed, rows, foot});
   }
   if(tok!==notesTok) return;
   const count=$('#notesHlCount'); if(count) count.textContent=total?(shown+' of '+total):'';
   const sortBtn=$('#notesSort'); if(sortBtn){ sortBtn.textContent=notesSortLabel(); sortBtn.setAttribute('aria-pressed', NOTESORT==='date'?'true':'false'); }
   const empty=q?'<p class="note">No matches.</p>':'<p class="note">Select text in the book to highlight it. Add a note from More. Bookmarks and words you look up appear here too.</p>';
-  el.innerHTML=groups.length?groups.join(''):empty;
+  if(!groups.length){ el.innerHTML=empty; return; }
+  let budget=typeof MOMENT_PAGE==='number'?MOMENT_PAGE:80;
+  el._rest=[];
+  const html=[];
+  for(const g of groups){
+    const vis=g.rows.slice(0, Math.max(0,budget));
+    const rest=g.rows.slice(vis.length);
+    budget-=vis.length;
+    if(rest.length) el._rest.push({id:g.id, rows:rest, foot:g.foot, done:false});
+    const foot=rest.length?'':g.foot;
+    html.push(`<div class="nbook" data-book="${esc(g.id)}">
+      <button type="button" class="nbook-toggle" data-toggle="${esc(g.id)}" aria-expanded="${!g.collapsed}"><span class="nbook-title">${esc(g.title)}</span><span class="nbook-count">${g.rows.length}</span></button>
+      <div class="nbook-body"${g.collapsed?' hidden':''}>${vis.join('')}${foot}</div>
+    </div>`);
+  }
+  el.innerHTML=html.join('');
+  if(!el._lazyBound){
+    el._lazyBound=1;
+    const scroller=el.closest('.view')||el;
+    scroller.addEventListener('scroll',()=>{
+      if(!el._rest || !el._rest.length) return;
+      if(scroller.scrollTop+scroller.clientHeight < scroller.scrollHeight-160) return;
+      const g=el._rest[0];
+      const take=g.rows.splice(0, typeof MOMENT_PAGE==='number'?MOMENT_PAGE:80);
+      const body=el.querySelector('.nbook[data-book="'+CSS.escape(g.id)+'"] .nbook-body');
+      if(body && take.length) body.insertAdjacentHTML('beforeend', take.join(''));
+      if(!g.rows.length){
+        if(g.foot && body) body.insertAdjacentHTML('beforeend', g.foot);
+        el._rest.shift();
+      }
+    },{passive:true});
+  }
 }
 
 function swipeRows(host, onDelete){
@@ -1157,13 +1185,26 @@ $('#notesHl').addEventListener('click',async e=>{
     return;
   }
   if(e.target.closest('.swdel')) return;
+  const expBtn=e.target.closest('.moment-exp, [data-act=expand]');
+  if(expBtn){ const row=expBtn.closest('.moment-row'); if(row){ const on=row.classList.toggle('open'); expBtn.setAttribute('aria-expanded', on?'true':'false'); } return; }
+  const more=e.target.closest('.nt-more');
+  if(more){ const nt=more.parentElement && more.parentElement.querySelector('.nt-clamp'); if(nt) nt.classList.remove('nt-clamp'); more.remove(); return; }
   const rm=e.target.closest('.moment-rm');
   if(rm){ const m=momentFromRow(rm.closest('.moment-row')); if(m) removeMoment(m, LIB.find(x=>x.id===m.bookId)); return; }
   const copy=e.target.closest('[data-copy]');
   if(copy){
     const d=LIB.find(x=>x.id===copy.dataset.copy); if(!d) return;
+    const quoteOf=async m=>{
+      if(m.kind==='hl') return await snipOf(d.id,m.s,m.e);
+      if(m.kind==='bm') return await snipOf(d.id,m.s,m.s+12);
+      return m.sentence||'';
+    };
     const lines=[d.title];
-    for(const h of d.highlights||[]){ const q=await snipOf(d.id,h.s,h.e); lines.push('“'+q+'”'+(h.note?'\nNote: '+h.note:'')); }
+    for(const m of sortMoments(bookMoments(d))){
+      if(m.kind==='hl'){ const q=await quoteOf(m); lines.push('“'+q+'”'+(m.note?'\nNote: '+m.note:'')); }
+      else if(m.kind==='bm'){ const q=await quoteOf(m); lines.push('Bookmark · '+Math.round(100*m.s/Math.max(1,(d.count||1)-1))+'%'+(q?'\n“'+q+'”':'')); }
+      else if(m.kind==='word'){ lines.push('Word · '+(m.word||'')+(m.def?' — '+m.def:'')+(m.sentence?'\n“'+m.sentence+'”':'')); }
+    }
     try{ await navigator.clipboard.writeText(lines.join('\n\n')); toast('Copied'); }catch(err){ toast('Couldn’t copy on this device.'); }
     return;
   }
@@ -1183,6 +1224,8 @@ $('#notesHl').addEventListener('click',async e=>{
 });
 $('#notesFind')&&$('#notesFind').addEventListener('input',()=>{ renderNotes(); });
 $('#notesSort')&&$('#notesSort').addEventListener('click',()=>{ NOTESORT=NOTESORT==='date'?'pos':'date'; LS.set('notesSort',NOTESORT); renderNotes(); });
+function renderWords(){ if(typeof renderNotes==='function') renderNotes(); }
+
 
 /* ---------- sheet, toast, views ---------- */
 let sheetActs={}, sheetAt=0;
@@ -1235,10 +1278,10 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=23;
+const SAMPLE_V=24;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
-<p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
+<p>The first time you open Tooz, a short tour walks through the shelf, a page turn, notes, Speed and listen. Skip it whenever you like, or replay it later from <strong>Settings → Help</strong>. This book stays in your library as a longer guide; when you close it, Tooz asks whether to keep it there or tuck it away in <strong>Settings → Tutorial</strong>.</p>
 <p>Swipe left, or tap the right edge of the page, to turn it. Tap the left edge to go back. Tap the <em>middle</em> of the page to show or hide the controls.</p>
 <p>While you read, the controls stay out of the way. The chapter name sits at the top and your page number at the bottom.</p>
 <h2>Three ways to read</h2>
@@ -1275,9 +1318,9 @@ const SAMPLE_HTML=`
 <p>The list icon at the top opens the contents. At the top of that sheet you can search this book, or open this book’s highlights, notes and bookmarks. In very long books, like the Bible, the contents show the books first; tap one to see its chapters. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book. Tap the middle of a page to hide or show the bars while you read.</p>
 <p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
 <h2>Read aloud</h2>
-<p>Tap the speaker at the bottom to open the audio controls. Nothing plays yet: tap a word to choose where to start, then press <strong>play</strong>. Each word is marked as it is spoken and the page turns by itself. Tap another word while it plays to jump there. The arrows go back or forward a sentence, and the slider sets the speed. The controls stay on screen until you tap the speaker again to close them.</p>
+<p>Tap the speaker at the bottom to open a small floating pill with play and speed. Nothing plays yet: tap a word to choose where to start, then press play. The spoken sentence is softly marked and the page keeps up. Tap another word while it plays to jump there. Swipe the pill left or right to skip a sentence, and touch and hold it to choose a voice or download one. The pill stays on screen until you tap the speaker again to close it.</p>
 <p>Read aloud skips footnote numbers and the notes themselves, pauses a little longer before a new heading, and reads Bible references in full: Rom. 8:28 is read as “Romans chapter 8 verse 28”, and 1 Cor. 10:31 as “First Corinthians chapter 10 verse 31”. Abbreviations like e.g. and Dr. are read as words. While it reads in Scroll, the page moves so the spoken word stays near the middle of the screen.</p>
-<p>Tap the <strong>voice</strong> button on the audio controls to choose a voice. There are two kinds. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
+<p>Touch and hold the pill to choose a voice. There are two kinds. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
 <p>To listen with the screen locked, open the voice settings and tap <strong>Download this book’s audio</strong> under <strong>Listen offline</strong>. Tooz makes the audio while the app is open and saves it on your phone, then plays it from the saved copy with the screen locked, with play, pause and skip on the lock screen. <strong>Save as audio files</strong> exports one MP3 per chapter, so you can play the book in the Files app or another audio app even with Tooz closed.</p>
 <h2>Helpful extras</h2>
 <ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li><li><strong>Your year in books</strong>, also on Stats, lists the books you finished each year, your longest streak, and a goal for how many books to finish this year.</li></ul>
@@ -1369,14 +1412,25 @@ function showSwUpdate(){
     window.addEventListener('resize', positionSwUpdate);
   }
 }
+function isBundledSample(m){ return !!(m && m.kind==='sample'); }
+async function refreshOutdatedSample(m){
+  /* only the bundled tutorial book may be rewritten; a user book is never touched */
+  if(!isBundledSample(m) || m.sv===SAMPLE_V) return false;
+  const d=sampleDoc();
+  await Store.put('texts',sampleText(m.id,d));
+  Object.assign(m,{title:d.title, count:d.words.length, chapters:d.chapters, pos:0, finished:false, bookmarks:[], highlights:[], sv:SAMPLE_V});
+  try{ localStorage.removeItem('rf.pos.'+m.id); }catch(e){}
+  touch(m);
+  return true;
+}
 async function boot(){
   applyLook(); setWpm(S.wpm); asUI();
   await Store.open();
   try{ LIB=await Store.all('meta'); }catch(e){ LIB=[]; }
   LIB=LIB.filter(m=>m.id!=='__probe');
   const hadData=LIB.length>0 || LS.get('seeded',false);
-  /* an older sample book is replaced by the current tour */
-  for(const m of LIB){ if(m.kind==='sample' && m.sv!==SAMPLE_V){ try{ const d=sampleDoc(); await Store.put('texts',sampleText(m.id,d)); Object.assign(m,{title:d.title, count:d.words.length, chapters:d.chapters, pos:0, finished:false, bookmarks:[], highlights:[], sv:SAMPLE_V}); try{ localStorage.removeItem('rf.pos.'+m.id); }catch(e){} touch(m); }catch(e){} } }
+  /* an older bundled sample book is replaced by the current tour — never a user's own book */
+  for(const m of LIB){ if(isBundledSample(m) && m.sv!==SAMPLE_V){ try{ await refreshOutdatedSample(m); }catch(e){} } }
   for(const m of LIB){ if(applySavedPos(m)) Store.put('meta',m).catch(()=>{}); }
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
   try{
@@ -1402,10 +1456,10 @@ async function boot(){
   onHash(); window.addEventListener('hashchange', onHash);
   if(document.fonts) document.fonts.ready.then(()=>{ if(R.mode==='speed'&&!$('#v-reader').hidden) showChunk(R.pos); });
   showView('library');
-  /* the first time Tooz opens, the tutorial opens with it */
   checkUpdated(hadData && !firstRun);
-  if(firstRun && !keepTutorial()) openDoc(firstRun);
-  else if(LS.get('tutOpen',false) && !keepTutorial()){ LS.set('tutOpen',false); const sm=LIB.find(m=>m.kind==='sample'); if(sm) setTimeout(()=>tutorialPrompt(sm.id), 700); }
+  const touring=typeof maybeStartTour==='function' && maybeStartTour();
+  if(!touring && firstRun && !keepTutorial()) openDoc(firstRun);
+  else if(!touring && LS.get('tutOpen',false) && !keepTutorial()){ LS.set('tutOpen',false); const sm=LIB.find(m=>m.kind==='sample'); if(sm) setTimeout(()=>tutorialPrompt(sm.id), 700); }
 }
 boot();
 </script>

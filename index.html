@@ -38,7 +38,8 @@
 }
 :root[data-theme="dark"]{
   --paper:#0E1217; --surface:#171C23; --raise:#1E242C; --ink:#E4E9F0; --muted:#8D99A8;
-  --line:#2B333D; --accent:#8AA4FF; --accent-soft:#232E4D; --accent-ink:#0E1217; --danger:#FF7A82; color-scheme:dark}
+  --line:#2B333D; --accent:#8AA4FF; --accent-soft:#232E4D; --accent-ink:#0E1217; --danger:#FF7A82; color-scheme:dark;
+  --hl1:#FFE14D; --hl4:#FF9EC8}
 *{box-sizing:border-box}
 html,body{height:100%;touch-action:pan-x pan-y} /* no pinch or double-tap zoom of the app; pictures have their own zoom */
 body{background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.45;overflow:hidden;-webkit-tap-highlight-color:transparent}
@@ -394,7 +395,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 #selBar.placed{transform:none}
 #selBar .dot{position:relative;width:44px;height:44px;border:0;background:none;cursor:pointer;margin:0;flex:none;padding:0}
 #selBar .dot::after{content:"";position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--hc);box-shadow:0 0 0 1px var(--line);border:2px solid var(--surface)}
-#selBar .dot[data-hl="1"]{--hc:var(--hl1)} #selBar .dot[data-hl="2"]{--hc:var(--hl2)} #selBar .dot[data-hl="3"]{--hc:var(--hl3)} #selBar .dot[data-hl="4"]{--hc:var(--hl4)}
+#selBar .dot[data-hl="1"]{--hc:var(--hl-dot1,var(--hl1))} #selBar .dot[data-hl="2"]{--hc:var(--hl-dot2,var(--hl2))} #selBar .dot[data-hl="3"]{--hc:var(--hl-dot3,var(--hl3))} #selBar .dot[data-hl="4"]{--hc:var(--hl-dot4,var(--hl4))}
 #selBar .tb,#selMore{border:0;background:none;font-weight:700;font-size:.86rem;padding:0 10px;cursor:pointer;color:var(--ink);white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:44px;min-height:44px}
 #selMore svg{width:18px;height:18px;flex:none}
 #selBar .sep{width:1px;align-self:stretch;background:var(--line);margin:4px 3px}
@@ -452,8 +453,8 @@ code{font-family:var(--f-mono);font-size:.85em;background:var(--raise);padding:1
 .nbook-h .small{color:var(--muted);font-size:.78rem}
 .nbook .hlrow:last-child{border-bottom:0}
 .hlrow{display:flex;gap:10px;align-items:flex-start;border-bottom:1px solid var(--line);padding:10px 0}
-.moment-dot{flex:none;width:12px;height:12px;border-radius:50%;margin-top:8px;box-shadow:0 0 0 1px var(--line)}
-.moment-go{all:unset;flex:1;min-width:0;cursor:pointer;display:block;text-align:left;color:inherit;font:inherit}
+.moment-dot{flex:none;width:12px;height:12px;border-radius:50%;margin-top:8px;box-shadow:0 0 0 1px var(--line);opacity:1;background:var(--hl1)}
+.moment-go{all:unset;flex:1;min-width:0;cursor:pointer;display:flex;flex-direction:column;align-items:stretch;text-align:left;color:inherit;font:inherit}
 .moment-more{flex:none}
 .hl-tools{display:flex;flex-direction:column;gap:8px;margin:0 0 10px}
 .hl-meta{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--muted);min-height:44px}
@@ -610,6 +611,92 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #swUpdate .sw-dismiss{background:transparent;color:#fff;border:0;width:44px;height:44px;padding:0;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 #swUpdate .sw-dismiss svg{width:20px;height:20px}
 
+
+/* Notes stream: clamp long notes, word/bookmark rows, lazy list */
+.nt-clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.moment-go .t,.moment-go .nt,.moment-go .where{display:block;width:100%}
+.moment-go .nt.nt-clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.moment-go .moment-snip{display:none;width:100%}
+.moment-row.open .moment-go .moment-snip{display:block}
+.nt-more{display:block;align-self:flex-start;margin:2px 0 0;padding:0;border:0;background:none;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;min-height:32px}
+.moment-word{font-weight:700}
+.moment-def{font-weight:500;color:var(--ink)}
+.moment-snip{display:none;margin-top:4px;font-size:.85rem;color:var(--muted);line-height:1.4}
+.moment-row.open .moment-snip{display:block}
+.moment-exp{flex:none;min-width:44px;min-height:44px}
+
+/* Tour */
+#tour{position:fixed;inset:0;z-index:20000;font-family:var(--f-ui)}
+#tourScrim{position:absolute;inset:0;background:rgba(10,12,16,.62);pointer-events:none}
+#tourHole{position:absolute;box-shadow:0 0 0 9999px rgba(10,12,16,.62);background:transparent;pointer-events:none;z-index:1;border-radius:16px}
+#tour.reduced #tourHole{box-shadow:0 0 0 9999px rgba(10,12,16,.7)}
+#tourSkip{position:absolute;top:calc(6px + var(--sat));right:calc(8px + var(--sar));z-index:5;min-width:44px;min-height:44px;padding:0 12px;border:0;background:rgba(20,22,26,.62);color:#fff;font:700 16px/1 var(--f-ui);cursor:pointer;border-radius:12px}
+#tourCaption{position:absolute;left:calc(20px + var(--sal));right:calc(20px + var(--sar));z-index:5;color:#fff;font:700 1.15rem/1.35 var(--f-display);text-align:center;text-shadow:0 1px 4px rgba(0,0,0,.75);margin:0}
+#tourSub{position:absolute;left:calc(24px + var(--sal));right:calc(24px + var(--sar));bottom:calc(120px + var(--sab));z-index:5;color:rgba(255,255,255,.9);font:500 .95rem/1.4 var(--f-ui);text-align:center;margin:0;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+#tourDots{position:absolute;left:0;right:0;bottom:calc(76px + var(--sab));z-index:5;display:flex;justify-content:center;gap:7px;pointer-events:none}
+.tour-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4);box-shadow:0 0 0 1.5px rgba(0,0,0,.55)}
+.tour-dot.on,.tour-dot.done,#tourDots.all-on .tour-dot{background:#fff}
+.tour-pill-btn{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--sab));z-index:5;min-height:44px;min-width:120px;padding:0 22px;border:0;border-radius:22px;background:#fff;color:#111;font:700 16px/1 var(--f-ui);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.tour-pill-btn.primary{background:var(--accent);color:var(--accent-ink,#fff)}
+#tourStart.primary{background:#fff;color:#111}
+
+#tourDemo{position:absolute;inset:0;z-index:2;background:var(--page-bg,#fff);color:var(--page-ink,#1b1b1b);pointer-events:none;overflow:hidden}
+.tour-rtop{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:calc(8px + var(--sat)) 12px 8px;background:color-mix(in srgb,var(--page-bg) 92%,transparent);transition:transform .8s ease-out,opacity .8s ease-out;z-index:3}
+.tour-rtop.away{transform:translateY(-120%);opacity:0}
+.tour-ico{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border:0;background:none;color:inherit;font:700 16px var(--f-ui);border-radius:12px}
+.tour-page{position:absolute;inset:calc(64px + var(--sat)) 24px calc(24px + var(--sab));font-family:var(--bfont),Georgia,serif;font-size:1.15rem;line-height:1.55}
+#tourPageA,#tourPageB{margin:0}
+#tourPageA.turn{animation:tourTurn .8s ease-out forwards}
+@keyframes tourTurn{to{transform:translateX(-30%) rotateY(-8deg);opacity:0}}
+#tourPageB.in{animation:tourIn .8s ease-out}
+@keyframes tourIn{from{transform:translateX(24%);opacity:0}to{transform:none;opacity:1}}
+#tourHoldWord.sel{background:var(--hl1);border-radius:2px;box-shadow:0 0 0 3px var(--hl1)}
+#tourMid{position:absolute;left:22%;right:22%;top:18%;bottom:18%;border-radius:16px}
+#tourEdgeR{position:absolute;top:22%;right:-8px;width:56px;height:38%;border-radius:12px}
+#tourSel{position:absolute;left:50%;top:46%;transform:translate(-50%,-120%);z-index:4;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:22px;background:var(--surface);color:var(--ink);box-shadow:0 8px 28px rgba(0,0,0,.2);pointer-events:none}
+#tourSel .dot{width:28px;height:28px;border-radius:50%;border:0;opacity:0;transform:scale(.6)}
+#tourSel .dot.pop{opacity:1;transform:none;transition:transform .6s ease-out,opacity .6s ease-out}
+#tourSel .dot[data-hl="1"]{background:var(--hl1)}
+#tourSel .dot[data-hl="2"]{background:var(--hl2)}
+#tourSel .dot[data-hl="3"]{background:var(--hl3)}
+#tourSel .dot[data-hl="4"]{background:var(--hl4)}
+#tourSel .sep{width:1px;height:20px;background:var(--line)}
+#tourSel .tour-more{font-weight:700;padding:0 8px}
+#tourPeek{position:absolute;left:12px;right:12px;top:calc(56px + var(--sat));z-index:4;background:var(--surface);color:var(--ink);border-radius:16px 16px 0 0;padding:16px 16px 20px;box-shadow:0 -8px 30px rgba(0,0,0,.2);animation:tourPeek .8s ease-out}
+@keyframes tourPeek{from{transform:translateY(40%);opacity:0}}
+.tour-peek-row{padding:12px 10px;border-bottom:1px solid var(--line);font-weight:700}
+#tourMoment{position:absolute;left:16px;right:16px;bottom:calc(116px + var(--sab));z-index:6;display:flex;gap:10px;align-items:flex-start;background:var(--surface);color:var(--ink);border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:tourIn .8s ease-out}
+#tourSpeedWord{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-family:var(--bfont),Georgia,serif;font-size:2.4rem;font-weight:700;color:var(--page-ink,#1b1b1b);z-index:4}
+#tourSpeedWord.flash{animation:tourFlash .8s ease-out}
+@keyframes tourFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(.92)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1}}
+#tourDemo.speed-on .tour-page,#tourDemo.speed-on #tourSel,#tourDemo.speed-on #tourPeek,#tourDemo.speed-on #tourMoment{display:none}
+#tourPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--sab));z-index:6;display:flex;align-items:center;gap:2px;width:max-content;padding:4px 6px 8px 4px;border-radius:32px;background:color-mix(in srgb,var(--page-bg,#fff) 94%,var(--page-ink,#111));color:var(--page-ink,#111);border:1px solid var(--page-line,#ddd);box-shadow:0 4px 18px rgba(0,0,0,.18)}
+#tourPill.glide{animation:tourGlide .8s ease-out}
+@keyframes tourGlide{from{transform:translateX(-50%) translateY(24px);opacity:0}to{transform:translateX(-50%);opacity:1}}
+#tourPill.breathe{animation:tourGlide .8s ease-out, tourBreathe .9s ease-out .8s}
+@keyframes tourBreathe{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.06)}}
+.tour-pill-play{width:48px;height:48px;border-radius:50%;background:var(--accent);display:inline-block;position:relative;flex:none}
+.tour-pill-play::after{content:"";position:absolute;left:18px;top:14px;border-style:solid;border-width:10px 0 10px 16px;border-color:transparent transparent transparent var(--accent-ink,#fff)}
+.tour-pill-speed{font-family:var(--f-mono),monospace;font-size:.78rem;font-weight:700;min-width:2.4em}
+#tourFinger{position:absolute;z-index:7;width:28px;height:28px;margin:-6px 0 0 -14px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none}
+#tourFinger.tap{animation:tourTap .8s ease-out}
+@keyframes tourTap{0%{transform:scale(1);opacity:1}40%{transform:scale(.72);opacity:1}100%{transform:scale(1);opacity:.4}}
+
+.tour-pulse{animation:tourPulse .8s ease-out infinite}
+.tour-pulse-once{animation:tourPulse .8s ease-out 1}
+@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(80,120,255,.0)}50%{box-shadow:0 0 0 10px rgba(80,120,255,.35)}}
+#v-library .continue-hero.tour-pulse{animation:tourHeroPulse .8s ease-out infinite}
+@keyframes tourHeroPulse{0%,100%{box-shadow:0 0 0 0 rgba(80,120,255,0)}50%{box-shadow:0 0 0 10px rgba(80,120,255,.4)}}
+#v-library.tour-grid-dim #docList .doc:not(.continue-hero){opacity:.45}
+#docList [data-tour-hide]{display:none}
+
+#tour.reduced *{animation:none !important;transition:opacity .35s ease !important}
+#tour.reduced #tourCaption{transition:opacity .35s ease}
+
+@media (prefers-reduced-motion: reduce){
+  #tour *{animation:none !important}
+}
+
 </style>
 </head>
 
@@ -637,17 +724,12 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   <section id="v-words" class="view" aria-label="Notes" hidden>
     <div class="wrap">
       <div class="topbar"><div><div class="eyebrow">From every book</div><h1>Notes</h1></div></div>
-      <div class="seg" id="notesSeg" hidden><button type="button" data-n="hl">Notes &amp; highlights</button><button type="button" data-n="bm">Bookmarks</button><button type="button" data-n="w">Words</button></div>
       <div id="notesHlTools">
         <input class="input" id="notesFind" type="search" placeholder="Search notes, bookmarks and words" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search notes, bookmarks and words">
         <div class="hl-meta"><span id="notesHlCount"></span><button class="sort" type="button" id="notesSort"></button></div>
       </div>
       <div id="notesHl" class="wrap" style="gap:14px"></div>
-      <div id="notesBm" class="wrap" style="gap:14px" hidden></div>
-      <div id="wordsPane" class="wrap" style="gap:10px" hidden>
-        <p class="note">Tap a word to look it up again or jump back to where you found it. <span class="hint-touch">Swipe a word left, or tap its trash can, to remove it.</span><span class="hint-mouse">Click the trash can to remove a word.</span></p>
-        <div id="wordList" class="wrap" style="gap:10px"></div>
-      </div>
+      <div id="wordList" hidden></div>
     </div>
   </section>
 
@@ -773,9 +855,59 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 <div id="backdrop" hidden></div>
 <div id="sheet" role="dialog" aria-modal="true" hidden></div>
 
-<div id="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button><div id="toastProg" hidden style="height:4px;background:var(--line);border-radius:2px;overflow:hidden"><div id="toastBar" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div></div></div>
+<div id="toast" role="status" aria-live="polite" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button><div id="toastProg" hidden style="height:4px;background:var(--line);border-radius:2px;overflow:hidden"><div id="toastBar" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div></div></div>
 <input type="file" id="fileIn" accept=".epub,.pdf,.txt,.md,.markdown,.html,.htm,.xhtml,application/epub+zip,application/pdf,text/plain,text/markdown,text/html" hidden>
 <input type="file" id="restoreIn" accept=".json,application/json" hidden>
+
+
+<div id="tour" hidden role="dialog" aria-modal="true" aria-labelledby="tourCaption">
+  <button type="button" id="tourSkip">Skip</button>
+  <div id="tourScrim" aria-hidden="true"></div>
+  <div id="tourHole" hidden aria-hidden="true"></div>
+  <div id="tourDemo" hidden data-mode="pages">
+    <header class="tour-rtop" id="tourDemoTop">
+      <span class="tour-ico" aria-hidden="true">‹</span>
+      <button type="button" class="tour-ico" id="tourTocIcon" tabindex="-1" aria-hidden="true">☰</button>
+      <span class="tour-ico" aria-hidden="true">Aa</span>
+    </header>
+    <div class="tour-page">
+      <p id="tourPageA">This short book is a tour of Tooz. Swipe left, or tap the right edge of the page, to turn it. Tap the <em id="tourHoldWord">middle</em> of the page to show or hide the controls. Press and hold a word until it is marked.</p>
+      <p id="tourPageB" hidden>The chapter name sits at the top and your page number at the bottom. Contents holds search and notes for this book.</p>
+      <div id="tourMid" aria-hidden="true"></div>
+      <div id="tourEdgeR" aria-hidden="true"></div>
+    </div>
+    <div id="tourSel" hidden>
+      <button class="dot" type="button" tabindex="-1" aria-hidden="true" data-hl="1"></button>
+      <button class="dot" type="button" tabindex="-1" aria-hidden="true" data-hl="2"></button>
+      <button class="dot" type="button" tabindex="-1" aria-hidden="true" data-hl="3"></button>
+      <button class="dot" type="button" tabindex="-1" aria-hidden="true" data-hl="4"></button>
+      <span class="sep"></span>
+      <span class="tour-more">More</span>
+    </div>
+    <div id="tourPeek" hidden>
+      <div class="tour-peek-row">Search this book</div>
+      <div class="tour-peek-row">Notes &amp; highlights</div>
+    </div>
+    <div id="tourSpeedWord" hidden>exactly</div>
+    <div id="tourMoment" hidden>
+      <span class="moment-dot" style="background:var(--hl1)" aria-hidden="true"></span>
+      <div>
+        <div class="t"><span class="moment-kind">Yellow</span> middle of the page</div>
+        <div class="nt">A note you added</div>
+      </div>
+    </div>
+    <div id="tourPill" hidden role="presentation">
+      <span class="tour-pill-play" aria-hidden="true"></span>
+      <span class="tour-pill-speed">1.0×</span>
+    </div>
+  </div>
+  <div id="tourFinger" hidden aria-hidden="true"></div>
+  <div id="tourCaption" aria-live="polite"></div>
+  <p id="tourSub" hidden></p>
+  <div id="tourDots" aria-hidden="true"></div>
+  <button type="button" id="tourNext" class="tour-pill-btn">Next</button>
+  <button type="button" id="tourStart" class="tour-pill-btn primary" hidden>Start reading</button>
+</div>
 
 <button type="button" id="verBadge" aria-label="What’s new">v…</button>
 
@@ -895,7 +1027,7 @@ const THEMES = {
   dark:{label:'Dark', bg:'#16181C', ink:'#D8DBE0', muted:'#8C929C', line:'#2A2E35', link:'#8AA4FF', dark:true},
   black:{label:'Black', bg:'#000000', ink:'#C8C8C8', muted:'#7D7D7D', line:'#1E1E1E', link:'#7C97F2', dark:true}
 };
-const HL_LIGHT=['#FFE58A','#C4EDB5','#C5E1FF','#FFC9DF'], HL_DARK=['rgba(255,214,64,.42)','rgba(110,200,90,.38)','rgba(90,160,255,.40)','rgba(255,110,170,.40)'];
+const HL_LIGHT=['#FFE58A','#C4EDB5','#C5E1FF','#FFC9DF'], HL_DARK=['rgba(255,214,64,.42)','rgba(110,200,90,.38)','rgba(90,160,255,.40)','rgba(255,110,170,.40)'], HL_DARK_DOT=['#FFE14D','#8BE07A','#7EB6FF','#FF9EC8'];
 /* margins grow with the screen: [smallest in px, share of the reading width] */
 const MARGINS={narrow:[12,0.03], normal:[22,0.065], wide:[44,0.13]};
 function marginPx(W){ const m=MARGINS[S.margin]||MARGINS.normal; if(!W){ const rb=document.getElementById('rBody'); W=(rb&&rb.clientWidth)||window.innerWidth||390; } return Math.round(Math.max(m[0], W*m[1])); }
@@ -919,6 +1051,7 @@ function applyLook(){
   r.setAttribute('data-theme', T.dark?'dark':'light');
   st.setProperty('--page-bg',T.bg); st.setProperty('--page-ink',T.ink); st.setProperty('--page-muted',T.muted); st.setProperty('--page-line',T.line); st.setProperty('--page-link',T.link);
   (T.dark?HL_DARK:HL_LIGHT).forEach((c,k)=>st.setProperty('--hl'+(k+1),c));
+  (T.dark?HL_DARK_DOT:HL_LIGHT).forEach((c,k)=>st.setProperty('--hl-dot'+(k+1),c));
   st.setProperty('--hl-ink', T.dark?'#F4F4F4':'#1B1B1B');
   st.setProperty('--tts', T.dark?'rgba(255,200,40,.55)':'#FFD54A');
   st.setProperty('--focus', S.focusColor);
@@ -2376,6 +2509,7 @@ function buildBacklinks(){
 }
 async function goTo(i, jump){
   if(!R.meta || !R.mode) return;
+  pendingRelay=false; clearTimeout(relayT);
   R.anchor=null;
   const prev=R.pos; stopActivity(); selClear();
   R.pos=clamp(i|0,0,R.n-1); R.lastNav=true;
@@ -3006,7 +3140,14 @@ function hlName(c){ return HL_NAME[c||1]||'Highlight'; }
 function jumpToMoment(i, len){
   if(R.mode==='speed' && R.playing) pause();
   const prev=R.pos;
-  return goTo(i, true).then(()=>{ if(prev!==i) setBack(prev); return flashFound(i, Math.max(1, len||1)); });
+  pendingRelay=false; clearTimeout(relayT);
+  const frames=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  return frames().then(()=>goTo(i, true)).then(async()=>{
+    if(prev!==i) setBack(prev);
+    await frames();
+    if(R.meta && R.mode && R.pos!==i) await goTo(i, 'back');
+    return flashFound(i, Math.max(1, len||1));
+  });
 }
 function refreshMomentViews(){ try{ if(typeof renderNotes==='function' && $('#v-words') && !$('#v-words').hidden) renderNotes(); }catch(e){} }
 function openHlMenu(h, focusNote, from){
@@ -3055,11 +3196,11 @@ function bookMoments(d){
   return out;
 }
 function momentQuote(m, getText){
-  if(m.kind==='word'){ const s=m.sentence||''; const cap=s.length>180; return (m.word||'Word')+(s?': '+(cap?s.slice(0,180)+'…':s):''); }
+  if(m.kind==='word') return m.word||'Word';
   if(m.kind==='bm'){
-    const raw=getText?getText(m):(typeof textOf==='function' && R.meta && R.meta.id===m.bookId?textOf(m.s, Math.min((R.n||1)-1, m.s+9)):'');
-    const q=raw?raw+(raw.length>40|| (R.n&&m.s+9<R.n-1)?'…':''):'';
-    return (m.name||'Bookmark')+(q?' · '+q:'');
+    const raw=getText?getText(m):(typeof textOf==='function' && R.meta && R.meta.id===m.bookId?textOf(m.s, Math.min((R.n||1)-1, m.s+12)):'');
+    const line=(raw||'').split(/[.?!]/)[0].trim()||raw||'';
+    return line?(line.length>80?line.slice(0,80)+'…':line):'';
   }
   const raw=(getText?getText(m):textOf(m.s, Math.min(m.e, m.s+80)))||'';
   const cap=(m.e>m.s+80) || raw.length>320;
@@ -3071,23 +3212,38 @@ function momentMatches(m, q, quote){
   return [quote, m.note, m.name, m.word, m.sentence, m.def, m.kind==='hl'?'highlight':m.kind==='bm'?'bookmark':'word', m.kind==='hl'?hlName(m.c):''].some(x=>x && String(x).toLowerCase().includes(q));
 }
 function momentKindMeta(m){
-  if(m.kind==='hl'){ const name=hlName(m.c); return {label:name+' highlight', kindLbl:name, icon:`<span class="moment-dot" style="background:var(--hl${m.c||1})" aria-hidden="true"></span>`}; }
+  if(m.kind==='hl'){ const name=hlName(m.c); return {label:name+' highlight', kindLbl:name, icon:`<span class="moment-dot" style="background:var(--hl-dot${m.c||1},var(--hl${m.c||1}))" aria-hidden="true"></span>`}; }
   if(m.kind==='bm') return {label:'Bookmark', kindLbl:'Bookmark', icon:`<span class="moment-ico" aria-hidden="true">${ICON.mark}</span>`};
   return {label:'Looked-up word', kindLbl:'Word', icon:`<span class="moment-ico" aria-hidden="true">${ICON.define}</span>`};
 }
 function momentRowHtml(m, quote, where, goAttrs, moreBtn){
   const k=momentKindMeta(m);
+  let body='';
+  if(m.kind==='word'){
+    const def=(m.def||'').trim();
+    const snip=m.sentence||'';
+    body=`<div class="t"><span class="moment-kind">${esc(k.kindLbl)}</span><span class="moment-word">${esc(m.word||quote||'Word')}</span>${def?` <span class="moment-def">${esc(def)}</span>`:''}</div>
+        ${snip?`<div class="moment-snip">${esc(snip)}</div>`:''}
+        ${where?`<div class="where">${esc(where)}</div>`:''}`;
+  }else if(m.kind==='bm'){
+    body=`<div class="t"><span class="moment-kind">${esc(k.kindLbl)}</span>${esc(quote)}</div>
+        ${where?`<div class="where">${esc(where)}</div>`:''}`;
+  }else{
+    const long=!!(m.note && m.note.length>90);
+    body=`<div class="t"><span class="moment-kind">${esc(k.kindLbl)}</span>${esc(quote)}</div>
+        ${m.note?`<div class="nt${long?' nt-clamp':''}">${esc(m.note)}</div>${long?`<span class="nt-more" data-act="more" role="button" tabindex="0">more</span>`:''}`:''}
+        ${where?`<div class="where">${esc(where)}</div>`:''}`;
+  }
+  const exp=m.kind==='word' && (m.sentence||'') ? `<button class="icon-btn moment-exp" type="button" data-act="expand" aria-label="Show the sentence" aria-expanded="false">▾</button>` : '';
   return `<div class="swrow moment-row" data-mk="${m.kind}" data-mid="${esc(String(m.id))}" data-book="${esc(m.bookId||'')}" data-i="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}" data-bmat="${m.kind==='bm'?(m.at||0):''}">
     <button class="swdel" type="button" tabindex="-1">Delete</button>
     <div class="hlrow moment swfront">
       ${k.icon}
       <span class="sr-only">${k.label}</span>
       <button type="button" class="grow moment-go" ${goAttrs}>
-        <div class="t"><span class="moment-kind">${esc(k.kindLbl)}</span>${esc(quote)}</div>
-        ${m.note?`<div class="nt">${esc(m.note)}</div>`:''}
-        ${where?`<div class="where">${esc(where)}</div>`:''}
+        ${body}
       </button>
-      ${moreBtn||''}
+      ${exp}${moreBtn||''}
       <button class="icon-btn moment-rm" type="button" data-act="rmmoment" aria-label="Remove ${k.label}">${ICON.close}</button>
     </div>
   </div>`;
@@ -3112,12 +3268,59 @@ function removeMoment(m, book){
     label='Removed “'+(gone.word||'word')+'”';
     undo=()=>{ WORDS.splice(k,0,gone); if(typeof saveWords==='function') saveWords(); afterMomentChange(); };
   } else return;
+  const host=document.querySelector('.moment-row[data-mid="'+CSS.escape(String(m.id))+'"]');
+  const list=host && (host.closest('#hlStream')||host.closest('#notesHl'));
+  const idx=list?[...list.querySelectorAll('.moment-row')].findIndex(r=>r.dataset.mid===String(m.id)):-1;
   afterMomentChange();
   toast(label, {label:'Undo', fn:undo});
+  requestAnimationFrame(()=>{
+    const box=($('#hlStream') && document.getElementById('sheet') && !$('#sheet').hidden)?$('#hlStream'):$('#notesHl');
+    const rows=box?[...box.querySelectorAll('.moment-row')]:[];
+    const target=rows[idx]||rows[Math.max(0,idx-1)]||null;
+    const btn=target&&target.querySelector('.moment-rm');
+    const fallback=$('#hlFind')||$('#notesFind');
+    if(btn) btn.focus(); else if(fallback) fallback.focus();
+  });
 }
 function afterMomentChange(){
   if($('#hlStream')) fillHlStream();
   refreshMomentViews();
+}
+const MOMENT_PAGE=80;
+function paintMomentRows(box, rows, empty){
+  if(!box) return;
+  box._allRows=rows;
+  box._shown=0;
+  if(!rows.length){ box.innerHTML=empty||''; return; }
+  const n=Math.min(MOMENT_PAGE, rows.length);
+  box.innerHTML=rows.slice(0,n).join('');
+  box._shown=n;
+  if(!box._lazyBound){
+    box._lazyBound=1;
+    const scroller=box.closest('.sheet-body')||box.closest('.view')||box;
+    scroller.addEventListener('scroll',()=>{
+      if(!box._allRows || box._shown>=box._allRows.length) return;
+      if(scroller.scrollTop+scroller.clientHeight < scroller.scrollHeight-160) return;
+      const from=box._shown, to=Math.min(box._allRows.length, from+MOMENT_PAGE);
+      box.insertAdjacentHTML('beforeend', box._allRows.slice(from,to).join(''));
+      box._shown=to;
+    },{passive:true});
+  }
+}
+function momentsCopyText(d, quoteOf){
+  const lines=[d.title||''];
+  for(const m of sortMoments(bookMoments(d))){
+    if(m.kind==='hl'){
+      const q=quoteOf?quoteOf(m):(typeof textOf==='function'&&R.meta&&R.meta.id===d.id?textOf(m.s,m.e):'');
+      lines.push('“'+(q||'')+'”'+(m.note?'\nNote: '+m.note:''));
+    }else if(m.kind==='bm'){
+      const q=quoteOf?quoteOf(m):(typeof textOf==='function'&&R.meta&&R.meta.id===d.id?textOf(m.s, Math.min((R.n||1)-1,m.s+12)):'');
+      lines.push('Bookmark · '+Math.round(100*m.s/Math.max(1,(d.count||R.n||1)-1))+'%'+(q?'\n“'+q+'”':''));
+    }else if(m.kind==='word'){
+      lines.push('Word · '+(m.word||'')+(m.def?' — '+m.def:'')+(m.sentence?'\n“'+m.sentence+'”':''));
+    }
+  }
+  return lines.filter(Boolean).join('\n\n');
 }
 function fillHlStream(){
   const box=$('#hlStream'), count=$('#hlCount'); if(!box||!R.meta) return;
@@ -3126,16 +3329,15 @@ function fillHlStream(){
   const rows=[];
   for(const m of all){
     const quote=momentQuote(m);
-    if(!momentMatches(m,q,quote)) continue;
-    const ch=(currentChapter(m.s)||{}).t||'';
-    const where=(ch?ch+' · ':'')+Math.round(100*m.s/Math.max(1,R.n-1))+'%';
+    if(!momentMatches(m,q,quote+(m.sentence||'')+(m.def||'')+(m.note||''))) continue;
+    const where=Math.round(100*m.s/Math.max(1,R.n-1))+'%';
     const more=m.kind==='hl'?`<button class="icon-btn moment-more" type="button" data-act="edit" data-id="${esc(m.id)}" aria-label="Edit ${hlName(m.c)} highlight">${ICON.more}</button>`:'';
     rows.push(momentRowHtml(m, quote, where, `data-act="go" data-i="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}"`, more));
   }
   const n=rows.length, tot=all.length;
   if(count) count.textContent=tot?(n+' of '+tot):'';
   const empty=q?'<p class="note">No matches.</p>':'<p class="note">Select text in the book to highlight it. Add a note from More. Bookmarks and words you look up appear here too.</p>';
-  box.innerHTML=n?rows.join(''):empty;
+  paintMomentRows(box, rows, empty);
   const sortBtn=$('#hlSort'); if(sortBtn){ sortBtn.textContent=notesSortLabel(); sortBtn.setAttribute('aria-pressed', NOTESORT==='date'?'true':'false'); }
 }
 
@@ -3160,19 +3362,14 @@ function openToc(tab){
       if(maxD>0) rows=rows.filter(k=>(ch[k].d||0)<maxD || parentOf(k)===open);
     }
     body = ch.length ? `<div class="list">${rows.map(k=>{ const c=ch[k]; const par=kids.has(k); return `<button class="li${c===cur?' on':''}${k===open?' open':''}" type="button" data-act="${par?'tocx':'go'}" data-k="${k}" data-i="${c.i}" style="padding-left:${4+(c.d||0)*16}px"${par?` aria-expanded="${k===open}"`:''}><span class="grow">${par?(k===open?'▾ ':'▸ '):''}${esc(c.t)}</span><span class="small">${Math.round(100*c.i/Math.max(1,R.n-1))}%</span></button>`; }).join('')}</div>` : '<p class="note">This document has no chapter list. Use search or the progress bar to move around.</p>';
-  } else if(t==='marks'){
-    const bm=R.meta.bookmarks;
-    body=`<div class="field"><label for="bmName">Bookmark this spot</label><input class="input" id="bmName" placeholder="Name (optional)"></div>
-      <button class="btn primary block" type="button" data-act="addbm">${ICON.mark} Add bookmark here</button>
-      <div class="list">${bm.length?bm.map((b,k)=>`<div class="li"><button type="button" style="all:unset;flex:1;min-width:0;cursor:pointer" data-act="go" data-i="${b.i}"><b>${esc(b.name||'Bookmark')}</b><div class="small">${Math.round(100*b.i/Math.max(1,R.n-1))}% · ${esc(textOf(b.i,Math.min(R.n-1,b.i+9)))}…</div></button><button class="icon-btn" type="button" data-act="rmbm" data-k="${k}" aria-label="Remove bookmark">${ICON.close}</button></div>`).join(''):'<p class="note">No bookmarks yet. Tap the bookmark at the bottom of any page.</p>'}</div>`;
   } else {
-    const hl=R.meta.highlights||[];
+    const hl=(R.meta.highlights||[]).length || (R.meta.bookmarks||[]).length || (typeof WORDS!=='undefined' && WORDS.some(w=>w&&w.docId===R.meta.id));
     body=`<div class="hl-tools">
         <input class="input" id="hlFind" type="search" placeholder="Search notes, bookmarks and words" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search notes, bookmarks and words">
         <div class="hl-meta"><span id="hlCount"></span><button class="sort" type="button" id="hlSort" data-act="hlsort">${notesSortLabel()}</button></div>
       </div>
       <div id="hlStream"></div>
-      ${hl.length?`<button class="btn block" type="button" data-act="copyall" style="margin-top:12px">Copy all highlights and notes</button>`:''}`;
+      ${hl?`<button class="btn block" type="button" data-act="copyall" style="margin-top:12px">Copy all</button>`:''}`;
   }
   openSheet(R.meta.title, tools+seg+body, {
     search:()=>openSearch(),
@@ -3180,12 +3377,12 @@ function openToc(tab){
     tab:(b)=>openToc(b.dataset.t),
     tocx:(b)=>{ const k=+b.dataset.k; const was=R.tocOpen&&R.tocOpen.id===R.meta.id&&R.tocOpen.k===k; R.tocOpen={id:R.meta.id, k: was? -1 : k}; openToc('toc'); setTimeout(()=>{ const o=$('#sheet .li.open'); o&&o.scrollIntoView({block:'start'}); },40); },
     go:(b)=>{ const i=+b.dataset.i, len=+b.dataset.len||1; closeSheet(); jumpToMoment(i, len); },
-    addbm:()=>{ const bm=R.meta.bookmarks; bm.push({i:R.pos, name:$('#bmName').value.trim()||((currentChapter(R.pos)||{}).t||''), at:Date.now()}); bm.sort((a,b)=>a.i-b.i); touch(R.meta); updateChrome(); toast('Bookmarked'); openToc('marks'); },
-    rmbm:(b)=>{ R.meta.bookmarks.splice(+b.dataset.k,1); touch(R.meta); updateChrome(); openToc('marks'); },
     edit:(b)=>{ const h=R.meta.highlights.find(x=>x.id===b.dataset.id); if(h) openHlMenu(h,false,'toc'); },
     rmmoment:(b)=>{ const row=b.closest('.moment-row'); if(row) removeMoment({kind:row.dataset.mk, id:row.dataset.mid, bookId:row.dataset.book, s:+row.dataset.i, at:+row.dataset.bmat||0}, R.meta); },
     hlsort:()=>{ NOTESORT=NOTESORT==='date'?'pos':'date'; LS.set('notesSort',NOTESORT); fillHlStream(); },
-    copyall:async()=>{ const txt=R.meta.title+'\n\n'+R.meta.highlights.map(h=>'“'+textOf(h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+R.meta.highlights.length+' highlight'+(R.meta.highlights.length===1?'':'s')); }catch(e){ toast('Couldn’t copy on this device.'); } }
+    copyall:async()=>{ const txt=momentsCopyText(R.meta); try{ await navigator.clipboard.writeText(txt); toast('Copied'); }catch(e){ toast('Couldn’t copy on this device.'); } },
+    expand:(b)=>{ const row=b.closest('.moment-row'); if(!row) return; const on=row.classList.toggle('open'); b.setAttribute('aria-expanded', on?'true':'false'); },
+    more:(b)=>{ const nt=b.parentElement && b.parentElement.querySelector('.nt-clamp'); if(nt) nt.classList.remove('nt-clamp'); b.remove(); }
   });
   sheetFocusBack=$('#rToc');
   if(t==='hls'){
@@ -3207,7 +3404,7 @@ function openSearch(){
   stopActivity();
   setChrome(true);
   openSheet('Search this book', `<input class="input" id="srchIn" type="search" placeholder="Words or a phrase" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"><div id="srchMeta" class="note"></div><div id="srchOut"></div>`, {
-    res:(b)=>{ const i=+b.dataset.i, len=+b.dataset.l; const prev=R.pos; closeSheet(); goTo(i,true).then(()=>{ if(prev!==i) setBack(prev); return flashFound(i,len); }); }
+    res:(b)=>{ const i=+b.dataset.i, len=+b.dataset.l; closeSheet(); jumpToMoment(i, len); }
   });
   sheetFocusBack=$('#rToc');
   const inp=$('#srchIn'); inp.value=R.lastSearch||''; let t=null;
@@ -4518,8 +4715,11 @@ async function ttsDownloadNatural(){
 $('#ttsNatChip')&&$('#ttsNatChip').addEventListener('click',()=>{ ttsHideNatChip(true); openVoiceSheet(); });
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.33-read-aloud-pill-2';
+const APP_VERSION='2026.11.18.32-tutorial';
 const WHATSNEW=[
+  ['A quick first tour','The first time you open Tooz, a short tour shows the shelf, a page turn, notes, Speed and listen. Skip it any time. Replay it later from Settings → Help.'],
+  ['A floating read-aloud pill','The speaker now opens a small floating pill with play/pause and speed, instead of replacing the bottom bar. Nothing plays until you press play. Tap a word to choose where to start, or to jump while it is reading. Swipe the pill to skip a sentence, and touch and hold it for voice options. If the natural voice is not downloaded yet, Tooz starts with the iPhone voice and offers the better one without waiting.'],
+  ['Read-aloud pill fixes','The read-aloud pill now keeps your place when it opens or closes, sits in a reserved strip so it doesn’t cover the last lines or the “Back to where you were” chip, and works with a mouse or trackpad as well as a finger. A close button is on the pill, and a second tap on the speaker still puts it away.'],
   ['Read-aloud stays with you','Closing the read-aloud pill leaves you on the page you were listening to, and opening or closing it no longer nudges the view in Scroll. Long sentences stay softly highlighted around the word being read, and the first-time hint no longer changes the page count.']
 ];
 function whatsNewSheet(){
@@ -4531,7 +4731,7 @@ function whatsNewSheet(){
 function checkUpdated(hadData){
   const seen=LS.get('seenVer','');
   LS.set('seenVer',APP_VERSION);
-  if(hadData && seen!==APP_VERSION) setTimeout(()=>{ if($('#sheet').hidden && $('#v-reader').hidden) whatsNewSheet(); else toast('Tooz was updated', {label:'What’s new', fn:whatsNewSheet}, 8000); }, 900);
+  if(hadData && seen!==APP_VERSION) setTimeout(()=>{ if(typeof TOUR!=='undefined' && TOUR.on) return; if($('#sheet').hidden && $('#v-reader').hidden) whatsNewSheet(); else toast('Tooz was updated', {label:'What’s new', fn:whatsNewSheet}, 8000); }, 900);
 }
 
 /* ---------- storage used ---------- */
@@ -4718,6 +4918,482 @@ function yearHTML(st, met){
   b.textContent='';
   const chip=document.createElement('span'); chip.className='ver-chip'; chip.textContent='v'+APP_VERSION; b.appendChild(chip);
   b.addEventListener('click', ()=>whatsNewSheet());
+})();
+
+/* ---------- first-run tour (demo layer; never writes library, notes, words or settings) ---------- */
+const TOUR_DOTS=6;
+const TOUR_AUTO_MS=4000;
+const TOUR_ANIM_MS=800;
+let TOUR={on:false, step:0, replay:false, token:0, reduced:false, timers:[], lastFocus:null, tmpHero:null, swiping:null};
+
+function tourDoneSet(){ LS.set('tourDone', 1); }
+function tourIsDone(){ return !!LS.get('tourDone', 0); }
+function tourReduced(){ try{ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){ return false; } }
+function shouldAutoTour(){
+  if(tourIsDone()) return false;
+  const books=(typeof LIB!=='undefined' && LIB)?LIB.filter(m=>m && !m.pending):[];
+  if(!books.length) return true;
+  return books.every(m=>m.kind==='sample');
+}
+function tourRoot(){ return document.getElementById('tour'); }
+function tourClearTimers(){ (TOUR.timers||[]).forEach(t=>clearTimeout(t)); TOUR.timers=[]; }
+function tourAfter(ms){
+  return new Promise(res=>{
+    const tok=TOUR.token;
+    const t=setTimeout(()=>{ if(TOUR.token===tok && TOUR.on) res(true); else res(false); }, ms);
+    TOUR.timers.push(t);
+  });
+}
+
+function tourObstacles(){
+  const ids=['tourSkip','tourNext','tourStart','tourSub','tourDots','tourPeek','tourMoment','tourPill','tourSel','tourFinger'];
+  const out=[];
+  for(const id of ids){
+    const el=$('#'+id);
+    if(!el || el.hidden || (el.closest && el.closest('[hidden]'))) continue;
+    const r=el.getBoundingClientRect();
+    if(r.width>2 && r.height>2) out.push({left:r.left, top:r.top, right:r.right, bottom:r.bottom});
+  }
+  return out;
+}
+
+function tourPlaceCaption(hole){
+  const cap=$('#tourCaption'), next=$('#tourNext'), start=$('#tourStart'), skip=$('#tourSkip');
+  if(!cap) return;
+  const safeTop=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat'))||0;
+  const safeBot=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab'))||0;
+  const safeL=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sal'))||0;
+  const safeR=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sar'))||0;
+  const foot=(!start||start.hidden)?next:start;
+  const nextH=(foot && !foot.hidden)?foot.getBoundingClientRect().height+16:0;
+  const skipBox=skip?skip.getBoundingClientRect():{bottom:safeTop+56,left:innerWidth};
+  const vw=innerWidth, vh=innerHeight;
+  const capH=Math.max(48, cap.offsetHeight||56);
+  const margin=12;
+  const obs=tourObstacles();
+  const overlaps=(top,left,w)=>{
+    const a={left, top, right:left+w, bottom:top+capH};
+    const hit=r=>!(a.bottom<r.top-8 || a.top>r.bottom+8 || a.right<r.left-8 || a.left>r.right-8);
+    if(hole && hit(hole)) return true;
+    return obs.some(hit);
+  };
+  const cands=[];
+  const fullW=vw-safeL-safeR-40;
+  let reservedBot=safeBot+nextH+16;
+  for(const id of ['tourSub','tourDots','tourMoment','tourPill']){
+    const el=$('#'+id);
+    if(!el || el.hidden) continue;
+    const r=el.getBoundingClientRect();
+    if(r.height>2) reservedBot=Math.max(reservedBot, vh-r.top+10);
+  }
+  const bottomY=vh-reservedBot-capH;
+  const topY=Math.max(safeTop+skipBox.bottom+8, safeTop+56);
+  cands.push({top:bottomY,left:safeL+20,w:fullW});
+  cands.push({top:topY,left:safeL+20,w:fullW});
+  /* end card and empty-hole steps prefer a mid-page band */
+  if(!hole) cands.unshift({top:Math.max(topY, Math.min(bottomY, vh*0.34)), left:safeL+20, w:fullW});
+  if(hole){
+    const leftW=Math.max(120, hole.left-safeL-32);
+    const rightX=hole.right+12, rightW=Math.max(120, vw-safeR-16-rightX);
+    if(hole.left>vw*0.4) cands.unshift({top:Math.max(topY, Math.min(bottomY,(hole.top+hole.bottom-capH)/2)), left:safeL+16, w:leftW});
+    if(hole.right<vw*0.6) cands.unshift({top:Math.max(topY, Math.min(bottomY,(hole.top+hole.bottom-capH)/2)), left:rightX, w:rightW});
+    if(hole.top-topY>capH+margin) cands.unshift({top:Math.max(topY, hole.top-capH-margin), left:safeL+20, w:fullW});
+    if(bottomY-hole.bottom>margin) cands.unshift({top:Math.min(bottomY, hole.bottom+margin), left:safeL+20, w:fullW});
+  }
+  let pick=cands.find(c=>c.w>=80 && c.top>=safeTop+8 && c.top+capH<=vh-reservedBot+8 && !overlaps(c.top,c.left,c.w)) || cands[0] || cands[cands.length-1];
+  cap.style.top=Math.max(8, pick.top)+'px';
+  cap.style.left=Math.max(12, pick.left)+'px';
+  cap.style.right='auto';
+  cap.style.width=Math.min(pick.w, vw-pick.left-safeR-12)+'px';
+  cap.style.bottom='auto';
+}
+
+function tourSpot(el, pad){
+  const hole=$('#tourHole');
+  if(!hole) return null;
+  if(!el){ hole.hidden=true; hole.style.width=0; return null; }
+  const r=el.getBoundingClientRect();
+  const p=pad==null?10:pad;
+  const x=Math.max(4, r.left-p), y=Math.max(4, r.top-p);
+  const w=Math.min(innerWidth-x-4, r.width+p*2), h=Math.min(innerHeight-y-4, r.height+p*2);
+  hole.hidden=false;
+  hole.style.left=x+'px'; hole.style.top=y+'px'; hole.style.width=w+'px'; hole.style.height=h+'px';
+  const box={left:x, top:y, right:x+w, bottom:y+h, width:w, height:h};
+  tourPlaceCaption(box);
+  return box;
+}
+
+function tourSay(text){
+  const cap=$('#tourCaption'); if(!cap) return;
+  cap.textContent=text||'';
+}
+
+function tourSetDots(n){
+  const box=$('#tourDots'); if(!box) return;
+  box.innerHTML=Array.from({length:TOUR_DOTS},(_,i)=>`<span class="tour-dot${i===n?' on':''}${i<n?' done':''}"></span>`).join('');
+}
+
+function tourShowChrome(nextLabel, end){
+  const next=$('#tourNext'), start=$('#tourStart');
+  if(end){
+    if(next) next.hidden=true;
+    if(start) start.hidden=false;
+  }else{
+    if(next){ next.hidden=false; next.textContent=nextLabel||'Next'; }
+    if(start) start.hidden=true;
+  }
+}
+
+function tourEnsureHero(){
+  let hero=document.querySelector('#v-library .continue-hero');
+  if(hero) return hero;
+  const sm=typeof LIB!=='undefined' && LIB.find(m=>m.kind==='sample');
+  const list=$('#docList');
+  if(!sm || !list || typeof heroCard!=='function') return null;
+  const wrap=document.createElement('div');
+  wrap.innerHTML=heroCard(sm);
+  const el=wrap.firstElementChild;
+  if(!el) return null;
+  el.setAttribute('data-tour-hero','1');
+  list.insertAdjacentElement('afterbegin', el);
+  TOUR.tmpHero=el;
+  list.querySelectorAll('.doc[data-open="'+sm.id+'"]:not(.continue-hero)').forEach(c=>c.setAttribute('data-tour-hide','1'));
+  return el;
+}
+
+function tourClearTmpHero(){
+  const el=TOUR.tmpHero || document.querySelector('#v-library [data-tour-hero]');
+  if(el && el.parentNode) el.parentNode.removeChild(el);
+  TOUR.tmpHero=null;
+  document.querySelectorAll('#docList [data-tour-hide]').forEach(c=>c.removeAttribute('data-tour-hide'));
+}
+
+function tourFingerAt(x, y, on){
+  const f=$('#tourFinger'); if(!f) return;
+  if(!on){ f.hidden=true; return; }
+  f.hidden=false;
+  f.style.left=x+'px'; f.style.top=y+'px';
+}
+
+function tourLockApp(on){
+  const app=$('#app');
+  if(app){ if(on) app.setAttribute('inert',''); else app.removeAttribute('inert'); }
+  const ver=$('#htmlVer'); if(ver) ver.hidden=!!on;
+  const badge=$('#verBadge'); if(badge) badge.hidden=!!on;
+}
+
+function tourTrap(e){
+  if(!TOUR.on) return;
+  const root=tourRoot(); if(!root || root.hidden) return;
+  if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); tourEnd(true); return; }
+  if(e.key!=='Tab') return;
+  const els=[...root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(el=>!el.hidden && !el.disabled && el.tabIndex>=0 && !el.closest('[hidden]') && el.getAttribute('aria-hidden')!=='true');
+  if(!els.length) return;
+  const first=els[0], last=els[els.length-1];
+  if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+}
+
+function tourBindSwipe(root){
+  root.addEventListener('touchstart',e=>{
+    if(!TOUR.on || !e.touches[0]) return;
+    TOUR.swiping={x:e.touches[0].clientX, y:e.touches[0].clientY};
+  },{passive:true});
+  root.addEventListener('touchend',e=>{
+    if(!TOUR.on || !TOUR.swiping) return;
+    const t=e.changedTouches && e.changedTouches[0];
+    const s=TOUR.swiping; TOUR.swiping=null;
+    if(!t) return;
+    const dx=t.clientX-s.x, dy=t.clientY-s.y;
+    if(dy>72 && dy>Math.abs(dx)*1.2) tourEnd(true);
+  },{passive:true});
+}
+
+function tourDemo(){ return $('#tourDemo'); }
+
+function tourDemoPages(show){
+  const d=tourDemo(); if(!d) return;
+  d.hidden=!show;
+  if(!show){ d.removeAttribute('data-mode'); return; }
+  d.setAttribute('data-mode','pages');
+  d.classList.remove('chrome-off','speed-on');
+  const word=$('#tourSpeedWord'); if(word) word.hidden=true;
+  const peek=$('#tourPeek'); if(peek) peek.hidden=true;
+  const sel=$('#tourSel'); if(sel) sel.hidden=true;
+  const moment=$('#tourMoment'); if(moment) moment.hidden=true;
+  const pill=$('#tourPill'); if(pill) pill.hidden=true;
+  const p2=$('#tourPageB'); if(p2) p2.hidden=true;
+  const p1=$('#tourPageA'); if(p1) p1.hidden=false;
+}
+
+function tourFocusSkip(){
+  const skip=$('#tourSkip');
+  if(skip) setTimeout(()=>skip.focus(), 30);
+}
+
+async function tourRunStep(n){
+  const tok=++TOUR.token;
+  tourClearTimers();
+  TOUR.step=n;
+  tourSetDots(Math.min(n, TOUR_DOTS-1));
+  const root=tourRoot();
+  if(root) root.setAttribute('data-step', String(n));
+  const finger=$('#tourFinger'); if(finger){ finger.hidden=true; finger.classList.remove('tap'); }
+  document.querySelectorAll('#tour .tour-pulse, #tourTocIcon, #tourSel .tour-more').forEach(el=>el.classList.remove('tour-pulse','tour-pulse-once'));
+  const demo=tourDemo(); if(demo) demo.hidden=true;
+  tourShowChrome('Next', false);
+  $('#v-library') && $('#v-library').classList.remove('tour-grid-dim');
+
+  if(n===0){
+    try{ if(typeof showView==='function') showView('library'); }catch(e){}
+    await tourAfter(40);
+    if(tok!==TOUR.token) return;
+    const hero=tourEnsureHero();
+    tourSay('Pick up exactly where you left off.');
+    await tourAfter(40);
+    if(tok!==TOUR.token) return;
+    tourSpot(hero, 10);
+    /* keep the caption under the hero, above Next, so it never sits on the card */
+    const cap=$('#tourCaption'), hole=$('#tourHole');
+    if(cap && hole && !hole.hidden){
+      const next=$('#tourNext');
+      const safeBot=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab'))||0;
+      const nextH=(next && !next.hidden)?next.getBoundingClientRect().height+16:0;
+      const capH=cap.offsetHeight||72;
+      const bottomY=innerHeight-safeBot-nextH-16-capH;
+      const hr=hole.getBoundingClientRect();
+      if(bottomY>=hr.bottom+8){ cap.style.top=bottomY+'px'; cap.style.left=''; cap.style.right=''; cap.style.width=''; cap.style.paddingLeft=''; }
+    }
+    if(hero && document.querySelector('#docList .doc:not(.continue-hero)'))
+      $('#v-library').classList.add('tour-grid-dim');
+    if(!TOUR.reduced && hero) hero.classList.add('tour-pulse');
+  } else {
+    const hero=document.querySelector('#v-library .continue-hero');
+    if(hero) hero.classList.remove('tour-pulse');
+    $('#v-library') && $('#v-library').classList.remove('tour-grid-dim');
+  }
+
+  if(n===1){
+    tourDemoPages(true);
+    tourSay('Tap the edges to turn.');
+    const edge=$('#tourEdgeR')||$('#tourPageA');
+    const r=(edge||tourDemo()).getBoundingClientRect();
+    tourSpot(edge, 6);
+    if(!TOUR.reduced){
+      tourFingerAt(r.left+r.width*0.5, r.top+r.height*0.55, true);
+      const f=$('#tourFinger'); if(f) f.classList.add('tap');
+      const ok=await tourAfter(TOUR_ANIM_MS);
+      if(!ok || tok!==TOUR.token) return;
+      const a=$('#tourPageA'), b=$('#tourPageB'), top=$('#tourDemoTop');
+      if(a) a.classList.add('turn');
+      if(b){ b.hidden=false; b.classList.add('in'); }
+      if(top) top.classList.add('away');
+      await tourAfter(TOUR_ANIM_MS);
+      if(tok!==TOUR.token) return;
+    }else{
+      const a=$('#tourPageA'), b=$('#tourPageB'), top=$('#tourDemoTop');
+      if(a) a.hidden=true;
+      if(b) b.hidden=false;
+      if(top) top.classList.add('away');
+    }
+    tourSay('Tap the middle for controls.');
+    const mid=$('#tourMid');
+    tourSpot(mid, 8);
+    if(!TOUR.reduced && mid) mid.classList.add('tour-pulse-once');
+    const top=$('#tourDemoTop');
+    if(top) top.classList.remove('away');
+  }
+
+  if(n===2){
+    tourDemoPages(true);
+    const top=$('#tourDemoTop'); if(top) top.classList.remove('away');
+    const ico=$('#tourTocIcon');
+    if(!TOUR.reduced && ico) ico.classList.add('tour-pulse');
+    const peek=$('#tourPeek');
+    if(peek){ peek.hidden=false; peek.classList.toggle('static', TOUR.reduced); }
+    await tourAfter(TOUR.reduced?40:60);
+    if(tok!==TOUR.token) return;
+    tourSay('Search and notes live here.');
+    tourSpot(ico, 10);
+  }
+
+  if(n===3){
+    tourDemoPages(true);
+    tourSay('Hold a word to highlight.');
+    const w=$('#tourHoldWord');
+    tourSpot(w, 8);
+    if(w) w.classList.add('sel');
+    const sel=$('#tourSel');
+    if(sel){
+      sel.hidden=false;
+      const dots=[...sel.querySelectorAll('.dot')];
+      const more=sel.querySelector('.tour-more');
+      dots.forEach(d=>d.classList.remove('pop'));
+      if(!TOUR.reduced){
+        for(let i=0;i<dots.length;i++){
+          const ok=await tourAfter(i===0?200:180);
+          if(!ok || tok!==TOUR.token) return;
+          dots[i].classList.add('pop');
+        }
+        if(more) more.classList.add('tour-pulse');
+        await tourAfter(TOUR_ANIM_MS);
+        if(tok!==TOUR.token) return;
+      }else{
+        dots.forEach(d=>d.classList.add('pop'));
+      }
+    }
+    const moment=$('#tourMoment');
+    if(moment){ moment.hidden=false; moment.classList.toggle('static', TOUR.reduced); }
+    await tourAfter(TOUR.reduced?40:40);
+    if(tok!==TOUR.token) return;
+    tourSpot(w, 8);
+  }
+
+  if(n===4){
+    tourDemoPages(true);
+    const d=tourDemo(); if(d){ d.setAttribute('data-mode','speed'); d.classList.add('speed-on'); }
+    const word=$('#tourSpeedWord'); if(word) word.hidden=false;
+    const chrome=$('#tourDemoTop');
+    tourSay('Speed fades everything but the word.');
+    tourSpot(word, 16);
+    if(!TOUR.reduced && word) word.classList.add('flash');
+    await tourAfter(TOUR.reduced?200:TOUR_ANIM_MS);
+    if(tok!==TOUR.token) return;
+    if(chrome) chrome.classList.add('away');
+    if(d) d.classList.add('chrome-off');
+    await tourAfter(TOUR.reduced?200:700);
+    if(tok!==TOUR.token) return;
+    /* a tap shows chrome return — we play this as the beat, not a real user tap */
+    if(chrome) chrome.classList.remove('away');
+    if(d) d.classList.remove('chrome-off');
+  }
+
+  if(n===5){
+    tourDemoPages(true);
+    document.querySelectorAll('#tourDemo .tour-pulse, #tourTocIcon.tour-pulse').forEach(el=>el.classList.remove('tour-pulse'));
+    const d=tourDemo(); if(d) d.classList.add('chrome-off');
+    const a=$('#tourPageA'), b=$('#tourPageB'); if(a) a.hidden=true; if(b) b.hidden=true;
+    const pill=$('#tourPill');
+    tourSay('Tap to listen hands-free.');
+    if(pill){
+      pill.hidden=false;
+      /* sit above the tour Next button; after v31, prefer the live pill's position if it is higher */
+      pill.style.bottom='calc(108px + var(--sab))';
+      const real=$('#ttsBar');
+      if(real){
+        const cs=getComputedStyle(real);
+        const b=parseFloat(cs.bottom);
+        if(!isNaN(b) && b>108) pill.style.bottom=cs.bottom;
+      }
+      await tourAfter(TOUR.reduced?40:30);
+      if(tok!==TOUR.token) return;
+      tourSpot(pill, 14);
+      if(!TOUR.reduced) pill.classList.add('glide','breathe');
+      else pill.classList.add('static');
+    }
+  }
+
+  if(n>=6){
+    tourDemoPages(false);
+    tourSpot(null);
+    tourSay('That’s it.');
+    const sub=$('#tourSub'); if(sub){ sub.hidden=false; sub.textContent='Replay anytime: Settings → Help.'; }
+    tourShowChrome('', true);
+    tourSetDots(TOUR_DOTS-1);
+    $('#tourDots') && $('#tourDots').classList.add('all-on');
+    tourPlaceCaption(null);
+    const cap=$('#tourCaption'), subEl=$('#tourSub');
+    if(cap && subEl && !subEl.hidden){
+      const r=subEl.getBoundingClientRect();
+      cap.style.top=Math.max(80, r.top-(cap.offsetHeight||48)-10)+'px';
+      cap.style.left='20px';
+      cap.style.width=(innerWidth-40)+'px';
+    }
+    tourFocusSkip();
+    return;
+  }else{
+    const sub=$('#tourSub'); if(sub) sub.hidden=true;
+    $('#tourDots') && $('#tourDots').classList.remove('all-on');
+  }
+
+  tourFocusSkip();
+  if(!TOUR.reduced && n<6){
+    const t=setTimeout(()=>{ if(TOUR.token===tok && TOUR.on) tourAdvance(); }, TOUR_AUTO_MS);
+    TOUR.timers.push(t);
+  }
+}
+
+function tourAdvance(){
+  if(!TOUR.on) return;
+  tourClearTimers();
+  const n=TOUR.step+1;
+  if(n>6){ tourEnd(false); return; }
+  tourRunStep(n);
+}
+
+function tourEnd(skipped){
+  if(!TOUR.on) return;
+  TOUR.on=false;
+  tourClearTimers();
+  TOUR.token++;
+  tourDoneSet();
+  const hero=document.querySelector('#v-library .continue-hero');
+  if(hero) hero.classList.remove('tour-pulse');
+  $('#v-library') && $('#v-library').classList.remove('tour-grid-dim');
+  tourClearTmpHero();
+  const root=tourRoot();
+  if(root){ root.hidden=true; root.removeAttribute('data-step'); }
+  tourDemoPages(false);
+  tourLockApp(false);
+  document.removeEventListener('keydown', tourTrap, true);
+  try{ if(typeof showView==='function') showView('library'); }catch(e){}
+  if(TOUR.lastFocus && typeof TOUR.lastFocus.focus==='function'){
+    try{ TOUR.lastFocus.focus(); }catch(e){}
+  }
+  TOUR.lastFocus=null;
+}
+
+function startTour(opts){
+  const replay=!!(opts&&opts.replay);
+  if(!replay && tourIsDone()) return false;
+  const root=tourRoot(); if(!root) return false;
+  try{ if(typeof closeSheet==='function') closeSheet(); }catch(e){}
+  try{ if(R&&R.meta&&typeof closeReader==='function') closeReader(true); }catch(e){}
+  TOUR.on=true; TOUR.replay=replay; TOUR.reduced=tourReduced(); TOUR.step=0; TOUR.token++;
+  tourClearTimers();
+  TOUR.lastFocus=document.activeElement;
+  if(typeof showView==='function') showView('library');
+  root.hidden=false;
+  root.classList.toggle('reduced', TOUR.reduced);
+  tourLockApp(true);
+  document.addEventListener('keydown', tourTrap, true);
+  tourRunStep(0);
+  return true;
+}
+
+function maybeStartTour(){
+  if(shouldAutoTour()) return startTour({replay:false});
+  return false;
+}
+
+(function bindTour(){
+  const ready=()=>{
+    const root=tourRoot(); if(!root || root._bound) return;
+    root._bound=1;
+    tourBindSwipe(root);
+    root.addEventListener('click',e=>{
+      if(!TOUR.on) return;
+      if(e.target.closest('#tourSkip')){ e.preventDefault(); tourEnd(true); return; }
+      if(e.target.closest('#tourStart')){ e.preventDefault(); tourEnd(false); return; }
+      if(e.target.closest('#tourNext')){ e.preventDefault(); tourAdvance(); return; }
+      /* a tap on the scrim or demo advances; controls already handled */
+      if(e.target.closest('#tourSkip,#tourNext,#tourStart,#tourCaption,#tourDots')) return;
+      if(TOUR.step>=6) return;
+      tourAdvance();
+    });
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ready);
+  else ready();
 })();
 
 
@@ -4927,7 +5603,7 @@ function renderSettings(){
     <h2>Help</h2>
     <div class="group"><div class="set">
       <div class="desc">${LIB.some(m=>m.kind==='sample')?'The tutorial is in your library. When you close it, Tooz asks whether to keep it there or tuck it away here.':'The tutorial walks you through every feature. It’s tucked away here until you want it.'}</div>
-      <div class="row">${LIB.some(m=>m.kind==='sample')?'':'<button class="btn" type="button" id="tutRestore">Restore tutorial to library</button>'}<button class="btn" type="button" id="tutOpen">Open the tutorial</button></div>
+      <div class="row">${LIB.some(m=>m.kind==='sample')?'':'<button class="btn" type="button" id="tutRestore">Restore tutorial to library</button>'}<button class="btn" type="button" id="tutOpen">Open the tutorial</button><button class="btn" type="button" id="tourReplay">Replay the tour</button></div>
     </div></div>
     <div class="group" style="margin-top:10px"><div class="set">
       <div class="hd"><b>Tooz eReader</b><span class="val" style="font-family:var(--f-mono)">Version ${APP_VERSION}</span></div>
@@ -4943,6 +5619,7 @@ function renderSettings(){
   $('#archSet').addEventListener('click',e=>{ const b=e.target.closest('[data-arch]'); if(b) openArchived(+b.dataset.arch); });
   if($('#tutRestore')) $('#tutRestore').onclick=async()=>{ await restoreTutorial(false); renderSettings(); toast('The tutorial is back in your library'); };
   $('#tutOpen').onclick=()=>restoreTutorial(true);
+  if($('#tourReplay')) $('#tourReplay').onclick=()=>startTour({replay:true});
   $('#eraseBtn').onclick=eraseAllSheet;
   $('#storeNote').textContent=Store.db?'':'Storage is unavailable in this view, so documents will disappear when you close the app.';
   $('#sLinkSvc').addEventListener('change',e=>{ S.linkService=e.target.value.trim(); saveSettings(); toast(S.linkService?'Reader service saved':'Reader service cleared'); });
@@ -5377,7 +6054,7 @@ function docOptions(id, keep){
       const pend=normTag($('#edTag').value); if(pend && !has(pend)) draft.tags.push(pend);
       d.title=t; d.author=draft.author.replace(/\s+/g,' ').trim(); d.tags=draft.tags.map(normTag).filter(Boolean);
       touch(d); renderLibrary(); closeSheet(); toast('Saved'); },
-    notes:async()=>{ closeSheet(); if(await openDoc(id)!==false){ R.returnTo='library'; openToc((d.highlights||[]).length?'hls':'marks'); } },
+    notes:async()=>{ closeSheet(); if(await openDoc(id)!==false){ R.returnTo='library'; openToc('hls'); } },
     export:()=>exportSheet(d),
     restart:async()=>{ if(R.meta&&R.meta.id===id&&R.mode) closeReader(); startOver(d); renderLibrary(); closeSheet(); toast('Back to the beginning'); },
     archive:()=>archiveFlow(id),
@@ -5885,28 +6562,55 @@ async function renderNotes(){
     for(const m of sortMoments(all)){
       let quote='';
       if(m.kind==='hl'){ const raw=await snipOf(d.id,m.s,Math.min(m.e,m.s+80)); quote=(m.e>m.s+80 && raw && !raw.endsWith('…'))?raw+'…':(raw||'Highlight'); }
-      else if(m.kind==='bm'){ const sn=await snipOf(d.id,m.s,m.s+9); quote=(m.name||'Bookmark')+(sn?' · '+sn+(sn.endsWith('…')?'':'…'):''); }
+      else if(m.kind==='bm'){ const sn=await snipOf(d.id,m.s,m.s+12); const line=(sn||'').split(/[.?!]/)[0].trim()||sn||''; quote=line?(line.length>80?line.slice(0,80)+'…':line):''; }
       else quote=momentQuote(m);
-      if(!momentMatches(m,q,quote)) continue;
-      const where=Math.round(100*m.s/Math.max(1,(d.count||1)-1))+'% · '+(m.at?new Date(m.at).toLocaleDateString():'');
+      if(!momentMatches(m,q,quote+(m.sentence||'')+(m.def||'')+(m.note||''))) continue;
+      const where=Math.round(100*m.s/Math.max(1,(d.count||1)-1))+'%';
       const more=m.kind==='hl'?`<button class="icon-btn moment-more" type="button" data-ed="${esc(m.id)}" data-book="${esc(d.id)}" aria-label="Edit ${hlName(m.c)} highlight">${ICON.more}</button>`:'';
       rows.push(momentRowHtml(m, quote, where, `data-nb="${esc(d.id)}" data-ni="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}"`, more));
     }
     if(!rows.length) continue;
     shown+=rows.length;
     const collapsed=NOTECOLLAPSE.has(d.id);
-    groups.push(`<div class="nbook" data-book="${esc(d.id)}">
-      <button type="button" class="nbook-toggle" data-toggle="${esc(d.id)}" aria-expanded="${!collapsed}"><span class="nbook-title">${esc(d.title)}</span><span class="nbook-count">${rows.length}</span></button>
-      <div class="nbook-body"${collapsed?' hidden':''}>${rows.join('')}
-        ${LIB.some(x=>x.id===d.id)?`<div class="row" style="margin-top:4px"><button class="btn" type="button" data-copy="${esc(d.id)}">Copy</button><button class="btn" type="button" data-export="${esc(d.id)}">Export…</button></div>`:''}
-      </div>
-    </div>`);
+    const foot=LIB.some(x=>x.id===d.id)?`<div class="row" style="margin-top:4px"><button class="btn" type="button" data-copy="${esc(d.id)}">Copy</button><button class="btn" type="button" data-export="${esc(d.id)}">Export…</button></div>`:'';
+    groups.push({id:d.id, title:d.title, collapsed, rows, foot});
   }
   if(tok!==notesTok) return;
   const count=$('#notesHlCount'); if(count) count.textContent=total?(shown+' of '+total):'';
   const sortBtn=$('#notesSort'); if(sortBtn){ sortBtn.textContent=notesSortLabel(); sortBtn.setAttribute('aria-pressed', NOTESORT==='date'?'true':'false'); }
   const empty=q?'<p class="note">No matches.</p>':'<p class="note">Select text in the book to highlight it. Add a note from More. Bookmarks and words you look up appear here too.</p>';
-  el.innerHTML=groups.length?groups.join(''):empty;
+  if(!groups.length){ el.innerHTML=empty; return; }
+  let budget=typeof MOMENT_PAGE==='number'?MOMENT_PAGE:80;
+  el._rest=[];
+  const html=[];
+  for(const g of groups){
+    const vis=g.rows.slice(0, Math.max(0,budget));
+    const rest=g.rows.slice(vis.length);
+    budget-=vis.length;
+    if(rest.length) el._rest.push({id:g.id, rows:rest, foot:g.foot, done:false});
+    const foot=rest.length?'':g.foot;
+    html.push(`<div class="nbook" data-book="${esc(g.id)}">
+      <button type="button" class="nbook-toggle" data-toggle="${esc(g.id)}" aria-expanded="${!g.collapsed}"><span class="nbook-title">${esc(g.title)}</span><span class="nbook-count">${g.rows.length}</span></button>
+      <div class="nbook-body"${g.collapsed?' hidden':''}>${vis.join('')}${foot}</div>
+    </div>`);
+  }
+  el.innerHTML=html.join('');
+  if(!el._lazyBound){
+    el._lazyBound=1;
+    const scroller=el.closest('.view')||el;
+    scroller.addEventListener('scroll',()=>{
+      if(!el._rest || !el._rest.length) return;
+      if(scroller.scrollTop+scroller.clientHeight < scroller.scrollHeight-160) return;
+      const g=el._rest[0];
+      const take=g.rows.splice(0, typeof MOMENT_PAGE==='number'?MOMENT_PAGE:80);
+      const body=el.querySelector('.nbook[data-book="'+CSS.escape(g.id)+'"] .nbook-body');
+      if(body && take.length) body.insertAdjacentHTML('beforeend', take.join(''));
+      if(!g.rows.length){
+        if(g.foot && body) body.insertAdjacentHTML('beforeend', g.foot);
+        el._rest.shift();
+      }
+    },{passive:true});
+  }
 }
 
 function swipeRows(host, onDelete){
@@ -5958,13 +6662,26 @@ $('#notesHl').addEventListener('click',async e=>{
     return;
   }
   if(e.target.closest('.swdel')) return;
+  const expBtn=e.target.closest('.moment-exp, [data-act=expand]');
+  if(expBtn){ const row=expBtn.closest('.moment-row'); if(row){ const on=row.classList.toggle('open'); expBtn.setAttribute('aria-expanded', on?'true':'false'); } return; }
+  const more=e.target.closest('.nt-more');
+  if(more){ const nt=more.parentElement && more.parentElement.querySelector('.nt-clamp'); if(nt) nt.classList.remove('nt-clamp'); more.remove(); return; }
   const rm=e.target.closest('.moment-rm');
   if(rm){ const m=momentFromRow(rm.closest('.moment-row')); if(m) removeMoment(m, LIB.find(x=>x.id===m.bookId)); return; }
   const copy=e.target.closest('[data-copy]');
   if(copy){
     const d=LIB.find(x=>x.id===copy.dataset.copy); if(!d) return;
+    const quoteOf=async m=>{
+      if(m.kind==='hl') return await snipOf(d.id,m.s,m.e);
+      if(m.kind==='bm') return await snipOf(d.id,m.s,m.s+12);
+      return m.sentence||'';
+    };
     const lines=[d.title];
-    for(const h of d.highlights||[]){ const q=await snipOf(d.id,h.s,h.e); lines.push('“'+q+'”'+(h.note?'\nNote: '+h.note:'')); }
+    for(const m of sortMoments(bookMoments(d))){
+      if(m.kind==='hl'){ const q=await quoteOf(m); lines.push('“'+q+'”'+(m.note?'\nNote: '+m.note:'')); }
+      else if(m.kind==='bm'){ const q=await quoteOf(m); lines.push('Bookmark · '+Math.round(100*m.s/Math.max(1,(d.count||1)-1))+'%'+(q?'\n“'+q+'”':'')); }
+      else if(m.kind==='word'){ lines.push('Word · '+(m.word||'')+(m.def?' — '+m.def:'')+(m.sentence?'\n“'+m.sentence+'”':'')); }
+    }
     try{ await navigator.clipboard.writeText(lines.join('\n\n')); toast('Copied'); }catch(err){ toast('Couldn’t copy on this device.'); }
     return;
   }
@@ -5984,6 +6701,8 @@ $('#notesHl').addEventListener('click',async e=>{
 });
 $('#notesFind')&&$('#notesFind').addEventListener('input',()=>{ renderNotes(); });
 $('#notesSort')&&$('#notesSort').addEventListener('click',()=>{ NOTESORT=NOTESORT==='date'?'pos':'date'; LS.set('notesSort',NOTESORT); renderNotes(); });
+function renderWords(){ if(typeof renderNotes==='function') renderNotes(); }
+
 
 /* ---------- sheet, toast, views ---------- */
 let sheetActs={}, sheetAt=0;
@@ -6036,10 +6755,10 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=23;
+const SAMPLE_V=24;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
-<p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
+<p>The first time you open Tooz, a short tour walks through the shelf, a page turn, notes, Speed and listen. Skip it whenever you like, or replay it later from <strong>Settings → Help</strong>. This book stays in your library as a longer guide; when you close it, Tooz asks whether to keep it there or tuck it away in <strong>Settings → Tutorial</strong>.</p>
 <p>Swipe left, or tap the right edge of the page, to turn it. Tap the left edge to go back. Tap the <em>middle</em> of the page to show or hide the controls.</p>
 <p>While you read, the controls stay out of the way. The chapter name sits at the top and your page number at the bottom.</p>
 <h2>Three ways to read</h2>
@@ -6076,9 +6795,9 @@ const SAMPLE_HTML=`
 <p>The list icon at the top opens the contents. At the top of that sheet you can search this book, or open this book’s highlights, notes and bookmarks. In very long books, like the Bible, the contents show the books first; tap one to see its chapters. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book. Tap the middle of a page to hide or show the bars while you read.</p>
 <p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
 <h2>Read aloud</h2>
-<p>Tap the speaker at the bottom to open the audio controls. Nothing plays yet: tap a word to choose where to start, then press <strong>play</strong>. Each word is marked as it is spoken and the page turns by itself. Tap another word while it plays to jump there. The arrows go back or forward a sentence, and the slider sets the speed. The controls stay on screen until you tap the speaker again to close them.</p>
+<p>Tap the speaker at the bottom to open a small floating pill with play and speed. Nothing plays yet: tap a word to choose where to start, then press play. The spoken sentence is softly marked and the page keeps up. Tap another word while it plays to jump there. Swipe the pill left or right to skip a sentence, and touch and hold it to choose a voice or download one. The pill stays on screen until you tap the speaker again to close it.</p>
 <p>Read aloud skips footnote numbers and the notes themselves, pauses a little longer before a new heading, and reads Bible references in full: Rom. 8:28 is read as “Romans chapter 8 verse 28”, and 1 Cor. 10:31 as “First Corinthians chapter 10 verse 31”. Abbreviations like e.g. and Dr. are read as words. While it reads in Scroll, the page moves so the spoken word stays near the middle of the screen.</p>
-<p>Tap the <strong>voice</strong> button on the audio controls to choose a voice. There are two kinds. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
+<p>Touch and hold the pill to choose a voice. There are two kinds. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
 <p>To listen with the screen locked, open the voice settings and tap <strong>Download this book’s audio</strong> under <strong>Listen offline</strong>. Tooz makes the audio while the app is open and saves it on your phone, then plays it from the saved copy with the screen locked, with play, pause and skip on the lock screen. <strong>Save as audio files</strong> exports one MP3 per chapter, so you can play the book in the Files app or another audio app even with Tooz closed.</p>
 <h2>Helpful extras</h2>
 <ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li><li><strong>Your year in books</strong>, also on Stats, lists the books you finished each year, your longest streak, and a goal for how many books to finish this year.</li></ul>
@@ -6170,14 +6889,25 @@ function showSwUpdate(){
     window.addEventListener('resize', positionSwUpdate);
   }
 }
+function isBundledSample(m){ return !!(m && m.kind==='sample'); }
+async function refreshOutdatedSample(m){
+  /* only the bundled tutorial book may be rewritten; a user book is never touched */
+  if(!isBundledSample(m) || m.sv===SAMPLE_V) return false;
+  const d=sampleDoc();
+  await Store.put('texts',sampleText(m.id,d));
+  Object.assign(m,{title:d.title, count:d.words.length, chapters:d.chapters, pos:0, finished:false, bookmarks:[], highlights:[], sv:SAMPLE_V});
+  try{ localStorage.removeItem('rf.pos.'+m.id); }catch(e){}
+  touch(m);
+  return true;
+}
 async function boot(){
   applyLook(); setWpm(S.wpm); asUI();
   await Store.open();
   try{ LIB=await Store.all('meta'); }catch(e){ LIB=[]; }
   LIB=LIB.filter(m=>m.id!=='__probe');
   const hadData=LIB.length>0 || LS.get('seeded',false);
-  /* an older sample book is replaced by the current tour */
-  for(const m of LIB){ if(m.kind==='sample' && m.sv!==SAMPLE_V){ try{ const d=sampleDoc(); await Store.put('texts',sampleText(m.id,d)); Object.assign(m,{title:d.title, count:d.words.length, chapters:d.chapters, pos:0, finished:false, bookmarks:[], highlights:[], sv:SAMPLE_V}); try{ localStorage.removeItem('rf.pos.'+m.id); }catch(e){} touch(m); }catch(e){} } }
+  /* an older bundled sample book is replaced by the current tour — never a user's own book */
+  for(const m of LIB){ if(isBundledSample(m) && m.sv!==SAMPLE_V){ try{ await refreshOutdatedSample(m); }catch(e){} } }
   for(const m of LIB){ if(applySavedPos(m)) Store.put('meta',m).catch(()=>{}); }
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
   try{
@@ -6203,10 +6933,10 @@ async function boot(){
   onHash(); window.addEventListener('hashchange', onHash);
   if(document.fonts) document.fonts.ready.then(()=>{ if(R.mode==='speed'&&!$('#v-reader').hidden) showChunk(R.pos); });
   showView('library');
-  /* the first time Tooz opens, the tutorial opens with it */
   checkUpdated(hadData && !firstRun);
-  if(firstRun && !keepTutorial()) openDoc(firstRun);
-  else if(LS.get('tutOpen',false) && !keepTutorial()){ LS.set('tutOpen',false); const sm=LIB.find(m=>m.kind==='sample'); if(sm) setTimeout(()=>tutorialPrompt(sm.id), 700); }
+  const touring=typeof maybeStartTour==='function' && maybeStartTour();
+  if(!touring && firstRun && !keepTutorial()) openDoc(firstRun);
+  else if(!touring && LS.get('tutOpen',false) && !keepTutorial()){ LS.set('tutOpen',false); const sm=LIB.find(m=>m.kind==='sample'); if(sm) setTimeout(()=>tutorialPrompt(sm.id), 700); }
 }
 boot();
 </script>

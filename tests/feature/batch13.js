@@ -76,8 +76,8 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   let txt=''; if(dl2) txt=require('fs').readFileSync(await dl2.path(),'utf8');
   ok('export txt', txt.includes('Note: A test note') && txt.includes('[Bookmark] Mark A'), txt.slice(0,300));
   // notes tab export button
-  await pg.evaluate(()=>{ NOTESEG='hl'; showView('words'); }); await sleep(800);
-  ok('notes export btn', await pg.evaluate(()=>!!document.querySelector('[data-exp]')));
+  await pg.evaluate(()=>{ showView('words'); }); await sleep(800);
+  ok('notes export btn', await pg.evaluate(()=>!!document.querySelector('[data-export]')));
   // archived export + year stats
   await pg.evaluate(()=>{ const now=Date.now(); ARCH.list().unshift({id:'x1',title:'Old Book',author:'A. Writer',tags:[],kind:'epub',count:1000,status:'finished',finishedAt:new Date(2025,4,3).getTime(),archivedAt:now,rating:4,review:'',kept:{progress:null,bookmarks:[],highlights:[{s:5,e:9,c:1,at:now,note:'n1',q:'quoted words',noteOnly:false}]}});
     ARCH.list().unshift({id:'x2',title:'New Book',author:'B',tags:[],kind:'epub',count:1000,status:'finished',finishedAt:Date.now()-86400000,archivedAt:now,rating:5,review:'',kept:{progress:null,bookmarks:[],highlights:[]}}); ARCH.save();

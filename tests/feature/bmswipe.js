@@ -6,7 +6,7 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   const pg=await (await b.newContext({viewport:{width:393,height:852},serviceWorkers:'block',hasTouch:true,isMobile:true})).newPage(); await pg.addInitScript(()=>{window.__toozKeepSample=true});
   const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(1500);
-  await pg.evaluate(()=>{ closeSheet(); const d=LIB.find(x=>x.kind==='sample'); d.bookmarks=[{i:10,name:'First',at:1},{i:50,name:'Second',at:2}]; touch(d); showView('notes'); renderNotes(); });
+  await pg.evaluate(()=>{ closeSheet(); const d=LIB.find(x=>x.kind==='sample'); d.bookmarks=[{i:10,name:'First',at:1},{i:50,name:'Second',at:2}]; touch(d); showView('words'); renderNotes(); });
   await sleep(1200);
   const swipe=async(sel,dx)=>pg.evaluate(([sel,dx])=>{ const el=document.querySelector(sel); const r=el.getBoundingClientRect(); const y=r.top+r.height/2, x=r.right-30;
     const T=(cx)=>new Touch({identifier:1,target:el,clientX:cx,clientY:y});

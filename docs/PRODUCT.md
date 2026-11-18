@@ -42,7 +42,7 @@ and move items out of **Pending changes** once they're built.
 - Fonts include dyslexia-friendly Lexend and OpenDyslexic. Paragraph styles: Indented, Spaced, Spaced and indented.
 - **Light** settings (dim, warmth, night theme) are app-wide, so they live in app Settings, not Aa.
 - App Settings holds only app-wide items: Reading (idle limit, what the bottom line shows, reset), Light, Backup and
-  restore, Storage, Library, Adding books, Help (tutorial, version, What's new), Erase.
+  restore, Storage, Library, Adding books, Help (first-run tour, tutorial book, version, What’s new), Erase.
 - Bottom bars (tab bar and in-book bar) are tall enough and fill the home-indicator area.
 - Reader top bar: Back, Contents and Aa. Search and this book’s notes live at the top of the Contents sheet. The bars hide while he reads (on a page turn or scroll) and come back on a tap in the middle of the page. Hiding them does not change the page layout; thin reserved strips at the top and bottom keep the running title and page label off the text.
 - The OpenDyslexic title must not overflow the font picker.
@@ -68,7 +68,7 @@ and move items out of **Pending changes** once they're built.
 ## Notes, highlights, bookmarks
 
 - Highlights (four colours) with notes; copy with citation; quote image cards; export per book. Each book has one Notes stream of highlights, bookmarks and looked-up words (one-line moments, in book order, searchable); colour dots and type labels so colour is never the only signal; tap a moment to jump there (paused), swipe or use the remove button to delete it with Undo, or More on a highlight to recolour or edit the note. The Notes tab searches across books and groups the same stream by title. The selection bar shows the four colours and More; Define, Note, Copy and Share are in the More menu, kept off the selected text.
-- The tutorial book opens on first launch; leaving it asks whether to keep it in the library or tuck it in Settings.
+- A short first-run tour (about 30 seconds) shows the shelf, a page turn, notes, Speed and listen; Skip is always available. It never writes to the library or notes. Replay it from Settings → Help. The tutorial book is still there as a longer guide; leaving it asks whether to keep it in the library or tuck it in Settings.
 - Notes stream (book and library): **swipe left to delete** any moment, with Undo. A 44px remove button is also there for keyboard and pointer use.
 - A highlight must be able to stop right before a dash (dash-joined words are separate words).
 
