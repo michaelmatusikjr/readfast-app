@@ -1,5 +1,5 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.18';
+const APP_VERSION='2026.11.18.19-shelf';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
@@ -279,4 +279,24 @@ function yearHTML(st, met){
   }, true);
   // Show chrome briefly on open
   setTimeout(showChrome, 400);
+})();
+
+
+/* === REIMAGINE: promote Continue reading to a hero card === */
+(function(){
+  const orig = window.renderLibrary;
+  if(!orig) return;
+  window.renderLibrary = function(){
+    orig.apply(this, arguments);
+    const cont = document.querySelector('#v-library .section');
+    if(!cont) return;
+    const first = cont.querySelector('.doc');
+    if(first && !document.querySelector('.continue-hero')){
+      const hero = document.createElement('div');
+      hero.className = 'continue-hero';
+      hero.innerHTML = '<div class="eyebrow">Continue reading</div>' + first.innerHTML;
+      cont.parentNode.insertBefore(hero, cont);
+      first.style.display = 'none';
+    }
+  };
 })();
