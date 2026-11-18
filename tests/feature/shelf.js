@@ -9,7 +9,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   let direct=0, proxied=0;
   await ctx.route(/^https:\/\/www\.gutenberg\.org/,r=>{ direct++; r.abort(); });   // pretend the phone is blocked from Gutenberg
-  await ctx.route(/allorigins/,r=>{ proxied++; const u=decodeURIComponent(r.request().url().split('url=')[1]); if(u.includes('gutendex')) r.fulfill({contentType:'application/json', body:JSON.stringify({results:[{id:1342,title:'Pride and Prejudice',authors:[{name:'Austen, Jane'}],formats:{'application/epub+zip':'x'}},{id:99,title:'No epub',authors:[],formats:{}}]})}); else r.fulfill({path:'authored.epub', contentType:'application/epub+zip'}); });
+  await ctx.route(/allorigins/,r=>{ proxied++; const u=decodeURIComponent(r.request().url().split('url=')[1]); if(u.includes('gutendex')) r.fulfill({contentType:'application/json', body:JSON.stringify({results:[{id:1342,title:'Pride and Prejudice',authors:[{name:'Austen, Jane'}],formats:{'application/epub+zip':'x'}},{id:99,title:'No epub',authors:[],formats:{}}]})}); else r.fulfill({path:__E.FEAT+'authored.epub', contentType:'application/epub+zip'}); });
   await ctx.route(/^https:\/\/gutendex/,r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(1500);

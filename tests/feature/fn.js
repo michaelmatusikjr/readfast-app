@@ -8,7 +8,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await ctx.route(/cdnjs/,r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',contentType:'application/javascript'}));
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(1200);
-  await pg.evaluate(async(b64)=>{ const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const d=await parseFile(new File([bin],'fn.epub')); const m=await addDoc(d); S.mode='pages'; saveSettings(); await openDoc(m.id); }, fs.readFileSync('fn.epub').toString('base64'));
+  await pg.evaluate(async(b64)=>{ const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const d=await parseFile(new File([bin],'fn.epub')); const m=await addDoc(d); S.mode='pages'; saveSettings(); await openDoc(m.id); }, fs.readFileSync(__E.FEAT+'fn.epub').toString('base64'));
   await sleep(800);
   console.log('maps', await pg.evaluate(()=>[[...R.notes].map(([a,t])=>`${a}:${R.words[a]}->${t}:${R.words[t]}`), [...R.backTo], [...R.back]]));
   const ref=await pg.evaluate(()=>[...R.notes.keys()].find(a=>R.words[a]==='4' && a<20));

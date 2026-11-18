@@ -20,7 +20,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   // epub with author via file input
   await pg.click('#addBtn'); await sleep(500);
   const [fc]=await Promise.all([pg.waitForEvent('filechooser'), pg.click('#sheet [data-act=file]')]);
-  await fc.setFiles('authored.epub'); await sleep(2500);
+  await fc.setFiles(__E.FEAT+'authored.epub'); await sleep(2500);
   console.log('epub meta', await pg.evaluate(()=>{ const m=LIB.find(x=>x.kind==='epub'); return m&&[m.title,m.author,m.category,m.tags]; }));
   await pg.evaluate(async()=>{ const mk=(t,a,c,tg)=>addDoc({title:t, kind:'paste', ...fromPlainText('Some words here. '.repeat(40)), author:a, category:c}).then(m=>{ m.tags=tg; touch(m); });
     await mk('The Hobbit','J. R. R. Tolkien','Fiction',['favorites','fantasy']); await mk('Emma','Jane Austen','Fiction',['classics']); await mk('A Brief History of Time','Stephen Hawking','Science',['favorites']); await mk('Work notes','','',[]); renderLibrary(); });
