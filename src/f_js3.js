@@ -1243,3 +1243,30 @@ boot();
     }).join('');
   };
 })();
+
+/* fill missing definitions on app open when online */
+(function fillMissingDefs(){
+  if(!navigator.onLine) return;
+  const missing = WORDS.filter(x => !x.def);
+  if(!missing.length) return;
+  (async () => {
+    let changed = false;
+    for(const item of missing){
+      try{
+        const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(item.word.toLowerCase()));
+        if(r.ok){
+          const data = await r.json();
+          const meaning = data[0] && data[0].meanings && data[0].meanings[0] && data[0].meanings[0].definitions && data[0].meanings[0].definitions[0] && data[0].meanings[0].definitions[0].definition;
+          if(meaning){
+            item.def = meaning;
+            changed = true;
+          }
+        }
+      }catch(e){}
+    }
+    if(changed){
+      saveWords();
+      if(typeof renderWords === 'function') renderWords();
+    }
+  })();
+})();

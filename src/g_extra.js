@@ -1,6 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.6';
+const APP_VERSION='2026.11.18.7';
 const WHATSNEW=[
+  ['Missing definitions filled later','If you define a word while offline, the definition is added automatically the next time you open the app online.'],
   ['Definitions in Words','When you define a word it now looks up and saves the definition with the word in your Notes → Words list.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
   ['Clearer empty library','When filters or search leave nothing, the empty state is clearer and offers a one-tap Clear filters button.'],

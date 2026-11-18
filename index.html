@@ -3718,8 +3718,9 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.6';
+const APP_VERSION='2026.11.18.7';
 const WHATSNEW=[
+  ['Missing definitions filled later','If you define a word while offline, the definition is added automatically the next time you open the app online.'],
   ['Definitions in Words','When you define a word it now looks up and saves the definition with the word in your Notes → Words list.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
   ['Clearer empty library','When filters or search leave nothing, the empty state is clearer and offers a one-tap Clear filters button.'],
@@ -5265,4 +5266,31 @@ boot();
       return '<div class="wcard" data-id="' + x.id + '"><span class="del-under">Remove</span><div class="winner"><div class="grow" data-look="' + x.id + '"><div class="w">' + esc(x.word) + '</div>' + def + '<div class="s">' + s + '</div><div class="src">' + esc(x.docTitle) + ' · ' + new Date(x.at).toLocaleDateString() + '</div></div><button class="icon-btn wdel" type="button" data-wdel="' + x.id + '" aria-label="Remove ' + esc(x.word) + '">' + ICON.trash + '</button></div></div>';
     }).join('');
   };
+})();
+
+/* fill missing definitions on app open when online */
+(function fillMissingDefs(){
+  if(!navigator.onLine) return;
+  const missing = WORDS.filter(x => !x.def);
+  if(!missing.length) return;
+  (async () => {
+    let changed = false;
+    for(const item of missing){
+      try{
+        const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(item.word.toLowerCase()));
+        if(r.ok){
+          const data = await r.json();
+          const meaning = data[0] && data[0].meanings && data[0].meanings[0] && data[0].meanings[0].definitions && data[0].meanings[0].definitions[0] && data[0].meanings[0].definitions[0].definition;
+          if(meaning){
+            item.def = meaning;
+            changed = true;
+          }
+        }
+      }catch(e){}
+    }
+    if(changed){
+      saveWords();
+      if(typeof renderWords === 'function') renderWords();
+    }
+  })();
 })();
