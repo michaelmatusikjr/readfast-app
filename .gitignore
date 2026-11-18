@@ -5,3 +5,4 @@ tests/fixtures/*.EPUB
 tests/fixtures/*.pdf
 /*.png
 !/icon-*.png
+*.out
