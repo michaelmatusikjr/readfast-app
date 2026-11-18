@@ -23,6 +23,22 @@ function tourAfter(ms){
   });
 }
 
+function tourMeasureRfoot(){
+  const vr=$('#v-reader'), foot=$('#rFoot');
+  if(!foot) return 96;
+  let h=vr?parseFloat(getComputedStyle(vr).getPropertyValue('--rfoot-h')):0;
+  if(h) return Math.round(h);
+  const wasHidden=vr && vr.hidden;
+  const css=vr?vr.style.cssText:'';
+  if(vr && wasHidden){
+    vr.hidden=false;
+    vr.style.cssText='position:fixed;left:-9999px;top:0;width:100%;height:100%;opacity:0;pointer-events:none;z-index:-1';
+  }
+  h=Math.round(foot.getBoundingClientRect().height)||96;
+  if(vr && wasHidden){ vr.hidden=true; vr.style.cssText=css; }
+  return h;
+}
+
 function tourObstacles(){
   const ids=['tourSkip','tourNext','tourStart','tourSub','tourDots','tourPeek','tourMoment','tourPill','tourSel','tourFinger'];
   const out=[];
@@ -200,6 +216,8 @@ function tourDemoPages(show){
   const sel=$('#tourSel'); if(sel) sel.hidden=true;
   const moment=$('#tourMoment'); if(moment) moment.hidden=true;
   const pill=$('#tourPill'); if(pill) pill.hidden=true;
+  const tourRoot=$('#tour'); if(tourRoot) tourRoot.classList.remove('tour-listen');
+  const td=$('#tourDots'); if(td) td.style.bottom='';
   const p2=$('#tourPageB'); if(p2) p2.hidden=true;
   const p1=$('#tourPageA'); if(p1) p1.hidden=false;
 }
@@ -351,18 +369,18 @@ async function tourRunStep(n){
     document.querySelectorAll('#tourDemo .tour-pulse, #tourTocIcon.tour-pulse').forEach(el=>el.classList.remove('tour-pulse'));
     const d=tourDemo(); if(d) d.classList.add('chrome-off');
     const a=$('#tourPageA'), b=$('#tourPageB'); if(a) a.hidden=true; if(b) b.hidden=true;
+    const root=$('#tour'); if(root) root.classList.add('tour-listen');
     const pill=$('#tourPill');
     tourSay('Tap to listen hands-free.');
     if(pill){
       pill.hidden=false;
-      /* sit above the tour Next button; after v31, prefer the live pill's position if it is higher */
-      pill.style.bottom='calc(108px + var(--sab))';
-      const real=$('#ttsBar');
-      if(real){
-        const cs=getComputedStyle(real);
-        const b=parseFloat(cs.bottom);
-        if(!isNaN(b) && b>108) pill.style.bottom=cs.bottom;
-      }
+      /* match live #ttsBar: bottom = 12px + footer height (includes safe area). Never open TTS. */
+      const h=tourMeasureRfoot();
+      const root=$('#tour');
+      if(root) root.style.setProperty('--rfoot-h', h+'px');
+      pill.style.bottom='calc(12px + '+h+'px)';
+      const dots=$('#tourDots');
+      if(dots) dots.style.bottom=(12+h+62+18)+'px';
       await tourAfter(TOUR.reduced?40:30);
       if(tok!==TOUR.token) return;
       tourSpot(pill, 14);
@@ -373,6 +391,8 @@ async function tourRunStep(n){
 
   if(n>=6){
     tourDemoPages(false);
+    const tourRoot=$('#tour'); if(tourRoot) tourRoot.classList.remove('tour-listen');
+  const td=$('#tourDots'); if(td) td.style.bottom='';
     tourSpot(null);
     tourSay('That’s it.');
     const sub=$('#tourSub'); if(sub){ sub.hidden=false; sub.textContent='Replay anytime: Settings → Help.'; }

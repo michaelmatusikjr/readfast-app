@@ -670,14 +670,18 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourSpeedWord.flash{animation:tourFlash .8s ease-out}
 @keyframes tourFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(.92)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1}}
 #tourDemo.speed-on .tour-page,#tourDemo.speed-on #tourSel,#tourDemo.speed-on #tourPeek,#tourDemo.speed-on #tourMoment{display:none}
-#tourPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--sab));z-index:6;display:flex;align-items:center;gap:2px;width:max-content;padding:4px 6px 8px 4px;border-radius:32px;background:color-mix(in srgb,var(--page-bg,#fff) 94%,var(--page-ink,#111));color:var(--page-ink,#111);border:1px solid var(--page-line,#ddd);box-shadow:0 4px 18px rgba(0,0,0,.18)}
+#tourPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(12px + var(--rfoot-h,96px));z-index:6;display:flex;align-items:center;gap:2px;width:max-content;max-width:calc(100% - 24px);padding:4px 4px 8px 4px;border-radius:32px;background:color-mix(in srgb,var(--page-bg,#fff) 94%,var(--page-ink,#111));color:var(--page-ink,#111);border:1px solid var(--page-line,#ddd);box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 #tourPill.glide{animation:tourGlide .8s ease-out}
 @keyframes tourGlide{from{transform:translateX(-50%) translateY(24px);opacity:0}to{transform:translateX(-50%);opacity:1}}
 #tourPill.breathe{animation:tourGlide .8s ease-out, tourBreathe .9s ease-out .8s}
 @keyframes tourBreathe{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.06)}}
-.tour-pill-play{width:48px;height:48px;border-radius:50%;background:var(--accent);display:inline-block;position:relative;flex:none}
-.tour-pill-play::after{content:"";position:absolute;left:18px;top:14px;border-style:solid;border-width:10px 0 10px 16px;border-color:transparent transparent transparent var(--accent-ink,#fff)}
-.tour-pill-speed{font-family:var(--f-mono),monospace;font-size:.78rem;font-weight:700;min-width:2.4em}
+#tourPill .tour-pill-play{width:48px;height:48px;flex:none;border-radius:50%;background:var(--accent);color:var(--accent-ink,#fff)}
+#tourPill .tour-pill-play svg{width:24px;height:24px}
+#tourPill .tour-pill-speed{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 12px;border-radius:22px;font:600 15px/1.15 system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums;color:var(--page-ink,#111)}
+#tourPill .tour-pill-close{width:44px;height:44px;flex:none;border-radius:50%;color:var(--page-ink,#111)}
+#tourPill .tour-pill-close svg{width:16px;height:16px}
+#tourPill .tour-pill-track{position:absolute;left:14px;right:14px;bottom:4px;height:2px;border-radius:1px;background:color-mix(in srgb,var(--page-ink,#111) 16%,transparent);pointer-events:none}
+#tour.tour-listen #tourDots{bottom:calc(12px + var(--rfoot-h,96px) + 68px)}
 #tourFinger{position:absolute;z-index:7;width:28px;height:28px;margin:-6px 0 0 -14px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none}
 #tourFinger.tap{animation:tourTap .8s ease-out}
 @keyframes tourTap{0%{transform:scale(1);opacity:1}40%{transform:scale(.72);opacity:1}100%{transform:scale(1);opacity:.4}}
@@ -897,8 +901,10 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
       </div>
     </div>
     <div id="tourPill" hidden role="presentation">
-      <span class="tour-pill-play" aria-hidden="true"></span>
+      <span class="icon-btn play tour-pill-play" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg></span>
       <span class="tour-pill-speed">1.0×</span>
+      <span class="icon-btn tour-pill-close" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+      <span class="tour-pill-track" aria-hidden="true"></span>
     </div>
   </div>
   <div id="tourFinger" hidden aria-hidden="true"></div>
@@ -4945,6 +4951,22 @@ function tourAfter(ms){
   });
 }
 
+function tourMeasureRfoot(){
+  const vr=$('#v-reader'), foot=$('#rFoot');
+  if(!foot) return 96;
+  let h=vr?parseFloat(getComputedStyle(vr).getPropertyValue('--rfoot-h')):0;
+  if(h) return Math.round(h);
+  const wasHidden=vr && vr.hidden;
+  const css=vr?vr.style.cssText:'';
+  if(vr && wasHidden){
+    vr.hidden=false;
+    vr.style.cssText='position:fixed;left:-9999px;top:0;width:100%;height:100%;opacity:0;pointer-events:none;z-index:-1';
+  }
+  h=Math.round(foot.getBoundingClientRect().height)||96;
+  if(vr && wasHidden){ vr.hidden=true; vr.style.cssText=css; }
+  return h;
+}
+
 function tourObstacles(){
   const ids=['tourSkip','tourNext','tourStart','tourSub','tourDots','tourPeek','tourMoment','tourPill','tourSel','tourFinger'];
   const out=[];
@@ -5122,6 +5144,8 @@ function tourDemoPages(show){
   const sel=$('#tourSel'); if(sel) sel.hidden=true;
   const moment=$('#tourMoment'); if(moment) moment.hidden=true;
   const pill=$('#tourPill'); if(pill) pill.hidden=true;
+  const tourRoot=$('#tour'); if(tourRoot) tourRoot.classList.remove('tour-listen');
+  const td=$('#tourDots'); if(td) td.style.bottom='';
   const p2=$('#tourPageB'); if(p2) p2.hidden=true;
   const p1=$('#tourPageA'); if(p1) p1.hidden=false;
 }
@@ -5273,18 +5297,18 @@ async function tourRunStep(n){
     document.querySelectorAll('#tourDemo .tour-pulse, #tourTocIcon.tour-pulse').forEach(el=>el.classList.remove('tour-pulse'));
     const d=tourDemo(); if(d) d.classList.add('chrome-off');
     const a=$('#tourPageA'), b=$('#tourPageB'); if(a) a.hidden=true; if(b) b.hidden=true;
+    const root=$('#tour'); if(root) root.classList.add('tour-listen');
     const pill=$('#tourPill');
     tourSay('Tap to listen hands-free.');
     if(pill){
       pill.hidden=false;
-      /* sit above the tour Next button; after v31, prefer the live pill's position if it is higher */
-      pill.style.bottom='calc(108px + var(--sab))';
-      const real=$('#ttsBar');
-      if(real){
-        const cs=getComputedStyle(real);
-        const b=parseFloat(cs.bottom);
-        if(!isNaN(b) && b>108) pill.style.bottom=cs.bottom;
-      }
+      /* match live #ttsBar: bottom = 12px + footer height (includes safe area). Never open TTS. */
+      const h=tourMeasureRfoot();
+      const root=$('#tour');
+      if(root) root.style.setProperty('--rfoot-h', h+'px');
+      pill.style.bottom='calc(12px + '+h+'px)';
+      const dots=$('#tourDots');
+      if(dots) dots.style.bottom=(12+h+62+18)+'px';
       await tourAfter(TOUR.reduced?40:30);
       if(tok!==TOUR.token) return;
       tourSpot(pill, 14);
@@ -5295,6 +5319,8 @@ async function tourRunStep(n){
 
   if(n>=6){
     tourDemoPages(false);
+    const tourRoot=$('#tour'); if(tourRoot) tourRoot.classList.remove('tour-listen');
+  const td=$('#tourDots'); if(td) td.style.bottom='';
     tourSpot(null);
     tourSay('That’s it.');
     const sub=$('#tourSub'); if(sub){ sub.hidden=false; sub.textContent='Replay anytime: Settings → Help.'; }
@@ -6795,7 +6821,7 @@ const SAMPLE_HTML=`
 <p>The list icon at the top opens the contents. At the top of that sheet you can search this book, or open this book’s highlights, notes and bookmarks. In very long books, like the Bible, the contents show the books first; tap one to see its chapters. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book. Tap the middle of a page to hide or show the bars while you read.</p>
 <p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
 <h2>Read aloud</h2>
-<p>Tap the speaker at the bottom to open a small floating pill with play and speed. Nothing plays yet: tap a word to choose where to start, then press play. The spoken sentence is softly marked and the page keeps up. Tap another word while it plays to jump there. Swipe the pill left or right to skip a sentence, and touch and hold it to choose a voice or download one. The pill stays on screen until you tap the speaker again to close it.</p>
+<p>Tap the speaker at the bottom to open a small floating pill with play, speed and a close button. Nothing plays yet: tap a word to choose where to start, then press play. The spoken sentence is softly marked and the page keeps up. Tap another word while it plays to jump there. Swipe the pill left or right to skip a sentence, and touch and hold it to choose a voice or download one. The pill stays on screen until you tap the close button on it, or tap the speaker again.</p>
 <p>Read aloud skips footnote numbers and the notes themselves, pauses a little longer before a new heading, and reads Bible references in full: Rom. 8:28 is read as “Romans chapter 8 verse 28”, and 1 Cor. 10:31 as “First Corinthians chapter 10 verse 31”. Abbreviations like e.g. and Dr. are read as words. While it reads in Scroll, the page moves so the spoken word stays near the middle of the screen.</p>
 <p>Touch and hold the pill to choose a voice. There are two kinds. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
 <p>To listen with the screen locked, open the voice settings and tap <strong>Download this book’s audio</strong> under <strong>Listen offline</strong>. Tooz makes the audio while the app is open and saves it on your phone, then plays it from the saved copy with the screen locked, with play, pause and skip on the lock screen. <strong>Save as audio files</strong> exports one MP3 per chapter, so you can play the book in the Files app or another audio app even with Tooz closed.</p>

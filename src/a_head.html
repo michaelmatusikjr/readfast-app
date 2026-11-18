@@ -670,14 +670,18 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourSpeedWord.flash{animation:tourFlash .8s ease-out}
 @keyframes tourFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(.92)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1}}
 #tourDemo.speed-on .tour-page,#tourDemo.speed-on #tourSel,#tourDemo.speed-on #tourPeek,#tourDemo.speed-on #tourMoment{display:none}
-#tourPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--sab));z-index:6;display:flex;align-items:center;gap:2px;width:max-content;padding:4px 6px 8px 4px;border-radius:32px;background:color-mix(in srgb,var(--page-bg,#fff) 94%,var(--page-ink,#111));color:var(--page-ink,#111);border:1px solid var(--page-line,#ddd);box-shadow:0 4px 18px rgba(0,0,0,.18)}
+#tourPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(12px + var(--rfoot-h,96px));z-index:6;display:flex;align-items:center;gap:2px;width:max-content;max-width:calc(100% - 24px);padding:4px 4px 8px 4px;border-radius:32px;background:color-mix(in srgb,var(--page-bg,#fff) 94%,var(--page-ink,#111));color:var(--page-ink,#111);border:1px solid var(--page-line,#ddd);box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 #tourPill.glide{animation:tourGlide .8s ease-out}
 @keyframes tourGlide{from{transform:translateX(-50%) translateY(24px);opacity:0}to{transform:translateX(-50%);opacity:1}}
 #tourPill.breathe{animation:tourGlide .8s ease-out, tourBreathe .9s ease-out .8s}
 @keyframes tourBreathe{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.06)}}
-.tour-pill-play{width:48px;height:48px;border-radius:50%;background:var(--accent);display:inline-block;position:relative;flex:none}
-.tour-pill-play::after{content:"";position:absolute;left:18px;top:14px;border-style:solid;border-width:10px 0 10px 16px;border-color:transparent transparent transparent var(--accent-ink,#fff)}
-.tour-pill-speed{font-family:var(--f-mono),monospace;font-size:.78rem;font-weight:700;min-width:2.4em}
+#tourPill .tour-pill-play{width:48px;height:48px;flex:none;border-radius:50%;background:var(--accent);color:var(--accent-ink,#fff)}
+#tourPill .tour-pill-play svg{width:24px;height:24px}
+#tourPill .tour-pill-speed{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 12px;border-radius:22px;font:600 15px/1.15 system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums;color:var(--page-ink,#111)}
+#tourPill .tour-pill-close{width:44px;height:44px;flex:none;border-radius:50%;color:var(--page-ink,#111)}
+#tourPill .tour-pill-close svg{width:16px;height:16px}
+#tourPill .tour-pill-track{position:absolute;left:14px;right:14px;bottom:4px;height:2px;border-radius:1px;background:color-mix(in srgb,var(--page-ink,#111) 16%,transparent);pointer-events:none}
+#tour.tour-listen #tourDots{bottom:calc(12px + var(--rfoot-h,96px) + 68px)}
 #tourFinger{position:absolute;z-index:7;width:28px;height:28px;margin:-6px 0 0 -14px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none}
 #tourFinger.tap{animation:tourTap .8s ease-out}
 @keyframes tourTap{0%{transform:scale(1);opacity:1}40%{transform:scale(.72);opacity:1}100%{transform:scale(1);opacity:.4}}
