@@ -197,6 +197,8 @@ function decorate(sec){
     if(h.e<a || h.s>=b) continue;
     for(let k=Math.max(h.s,a); k<=Math.min(h.e,b-1); k++){ const w=sec._ws[k-a]; if(w){ w.classList.add('hl'+h.c); if(h.note) w.classList.add('hn'); const d=k<h.e&&dashOf(w); if(d){ d.classList.add('hl'+h.c); if(h.note) d.classList.add('hn'); } } }
   }
+  sec.querySelectorAll('w.tts,w.ttssent,w.ttspick').forEach(x=>x.classList.remove('tts','ttssent','ttspick'));
+  if(TTS.on && TTS.sentA!=null){ for(let k=Math.max(TTS.sentA,a); k<=Math.min(TTS.sentB,b-1); k++){ const w=sec._ws[k-a]; if(w) w.classList.add('ttssent'); } }
   if(TTS.on && TTS.cur>=a && TTS.cur<b){ const w=sec._ws[TTS.cur-a]; if(w) w.classList.add('tts'); }
   if(TTS.pick!=null && TTS.pick>=a && TTS.pick<b){ const w=sec._ws[TTS.pick-a]; if(w) w.classList.add('ttspick'); }
   if(typeof TS!=='undefined' && TS.on) for(let k=Math.max(TS.a,a); k<=Math.min(TS.b,b-1); k++){ const w=sec._ws[k-a]; if(w){ w.classList.add('tsel'); const d=k<TS.b&&dashOf(w); if(d) d.classList.add('tsel'); } }
@@ -522,7 +524,6 @@ document.addEventListener('touchmove',e=>{ if(e.touches.length>1) e.preventDefau
 
 /* ---------- moving around ---------- */
 function setChrome(on){
-  if(TTS.mode) on=true; /* the audio controls stay on screen in voice mode */
   if(R.mode==='speed') on=true; /* Speed keeps the top bar; quiet-Speed fades it while playing */
   const was=R.chrome;
   R.chrome=on;
@@ -534,7 +535,9 @@ function setChrome(on){
   }
   const foot=$('#rFoot');
   if(foot) v.style.setProperty('--rfoot-h', Math.round(foot.getBoundingClientRect().height)+'px');
-  /* Insets are fixed; toggling the overlay bars must not relayout or repaginate. */
+  /* Insets are fixed; toggling the overlay bars must not relayout or repaginate.
+     Exception: with the read-aloud pill open, the reserved strip follows the pill (anchored on the first visible word). */
+  if(TTS.mode && R.mode!=='speed') requestAnimationFrame(()=>ttsReserveSync());
   if(was && !on && R.mode && R.mode!=='speed') maybeHintBar();
 }
 function maybeHintBar(){
@@ -1442,7 +1445,7 @@ function flashFound(i,len){
 }
 
 /* ---------- read aloud ---------- */
-const TTS={on:false, utt:null, cur:-1, voices:[], seq:0, mode:false, pick:null};
+const TTS={on:false, utt:null, cur:-1, voices:[], seq:0, mode:false, pick:null, sentA:null, sentB:null};
 function voiceTier(v){ const u=(v.voiceURI+' '+v.name).toLowerCase(); if(/premium|enhanced|neural|natural/.test(u)) return 0; if(/eloquence|speech\.synthesis\.voice|bells|bubbles|zarvox|whisper|trinoids|organ|cellos|bahh|boing|jester|superstar|wobble|albert|bad news|good news/.test(u)) return 2; return 1; }
 function voiceLabel(v){ let n=v.name.replace(/\s*\((Enhanced|Premium)\)/i,''); const u=(v.voiceURI+' '+v.name).toLowerCase(); const q=/premium/.test(u)?'Premium':/enhanced/.test(u)?'Enhanced':''; const reg=(v.lang||'').split(/[-_]/)[1]; return n+(q?' · '+q:'')+(reg?' ('+reg.toUpperCase()+')':'')+(v.localService===false?' · online':''); }
 function voicePreview(){ try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance('This is how your books will sound when Tooz reads them aloud.'); const v=TTS.voices.find(x=>x.voiceURI===S.ttsVoice); if(v){ u.voice=v; u.lang=v.lang; } u.rate=S.ttsRate||1; speechSynthesis.speak(u); }catch(e){ toast('Read aloud isn’t available here.'); } }
@@ -1450,10 +1453,15 @@ function ttsVoices(){ try{ TTS.voices=speechSynthesis.getVoices()||[]; }catch(e)
 if('speechSynthesis' in window){ ttsVoices(); try{ speechSynthesis.addEventListener('voiceschanged',ttsVoices); }catch(e){} }
 function ttsStart(){
   if(R.mode==='speed') return;
-  const nat=S.ttsEngine!=='system';
-  if(!nat && !('speechSynthesis' in window)){ toast('Read aloud isn’t available on this device.'); return; }
-  stopActivity(); selClear(); TTS.mode=true; ttsPickMark(null); TTS.on=true; TTS.seq++; TTS.nat=nat; requestWake(); updateChrome(); asUI();
-  if(nat){ natStart(); return; }
+  ttsDismissHint();
+  const wantNat=S.ttsEngine!=='system';
+  if(!wantNat && !('speechSynthesis' in window)){ toast('Read aloud isn’t available on this device.'); return; }
+  stopActivity(); selClear(); TTS.mode=true; ttsPickMark(null); TTS.on=true; TTS.seq++; requestWake(); updateChrome(); asUI();
+  /* Natural voice if it's already on the phone (or this book already has saved audio). Otherwise start with the
+     phone's own voice right away and offer the better one without blocking. */
+  if(wantNat && (natReady() || LS.get('pipReady.'+pipVoice(), false))){ TTS.nat=true; natStart(); return; }
+  if(wantNat){ ttsStartPreferNat(); return; }
+  TTS.nat=false;
   try{ speechSynthesis.cancel(); }catch(e){}
   ttsSpeakFrom(R.pos, TTS.seq);
 }
@@ -1478,14 +1486,26 @@ function ttsSpeakFrom(i, seq){
   TTS.utt=u; ttsMark(i); speechSynthesis.speak(u);
 }
 let ttsMoveT=0;
+function ttsSentOf(i){ const a=sentStartOf(i); let b=i; while(b<R.n-1 && !isSentEnd(b)) b++; return [a,b]; }
+function ttsSentClear(){ if(TTS.sentA==null) return; for(let k=TTS.sentA;k<=TTS.sentB;k++){ const w=wordEl(k); if(w) w.classList.remove('ttssent'); } TTS.sentA=TTS.sentB=null; }
+function ttsSentPaint(i){
+  if(i==null || i<0){ ttsSentClear(); return; }
+  const [a,b]=ttsSentOf(i);
+  if(TTS.sentA===a && TTS.sentB===b){
+    for(let k=a;k<=b;k++){ const w=wordEl(k); if(w && !w.classList.contains('ttssent')) w.classList.add('ttssent'); }
+    return;
+  }
+  ttsSentClear(); TTS.sentA=a; TTS.sentB=b;
+  for(let k=a;k<=b;k++){ const w=wordEl(k); if(w) w.classList.add('ttssent'); }
+}
 async function ttsMark(k){
   const prev=TTS.cur; TTS.cur=k;
   if(prev>=0){ const p=wordEl(prev); if(p) p.classList.remove('tts'); }
-  if(k<0) return;
+  if(k<0){ ttsSentPaint(-1); return; }
   R.pos=k;
   let w=wordEl(k);
   if(!w){ if(R.mode==='pages') await pgShow(k); else if(R.mode==='scroll') await scShow(k); w=wordEl(k); }
-  if(!w) return; w.classList.add('tts');
+  if(!w) return; w.classList.add('tts'); ttsSentPaint(k);
   if(R.mode==='pages'){ const pg=pgPageOfEl(w); if(pg!==P.page){ pgSet(pg,true); } }
   else if(R.mode==='scroll'){
     /* keep the spoken word no lower than the middle of the screen; only the end of the book lets it go further down */
@@ -1495,21 +1515,88 @@ async function ttsMark(k){
   const now=performance.now(); if(now-ttsMoveT>800){ ttsMoveT=now; updateChrome(); if(now-R.lastSave>3000) saveProgress(); }
 }
 /* ---------- read-aloud controls ----------
-   The speaker button opens the audio controls (in place of the auto-scroll controls). Nothing plays until Play.
-   While the controls are open, tapping a word chooses where to start (or jumps there if already playing). */
+   The speaker button opens a small floating pill (play/pause and a speed chip). Nothing plays until Play.
+   While the pill is open, tapping a word chooses where to start (or jumps there if already playing).
+   Swipe the pill to skip a sentence; a long-press opens voice choice and downloads.
+   The text clip shrinks by the pill's reserved strip, anchored on the first visible word. */
+const TTS_RATES=[0.75,1,1.25,1.5,2];
+function ttsRateLabel(v){ const n=+(v||1); return (Math.abs(n-Math.round(n))<1e-9?n.toFixed(1):String(n))+'×'; }
+function ttsCycleRate(){
+  const cur=+(S.ttsRate||1);
+  const eq=TTS_RATES.findIndex(r=>Math.abs(r-cur)<1e-9);
+  const next=eq>=0 ? TTS_RATES[(eq+1)%TTS_RATES.length] : (TTS_RATES.find(r=>r>cur+1e-9)||TTS_RATES[0]);
+  ttsSetRate(next);
+}
+function ttsHintUI(){
+  const el=$('#ttsHint'); if(!el) return;
+  const show=TTS.mode && R.mode!=='speed' && !TTS.on && !LS.get('ttsHintSeen', false);
+  if(!show){
+    if(el.classList.contains('fade')) return;
+    el.classList.remove('show'); el.hidden=true; el.classList.remove('fade');
+    return;
+  }
+  el.hidden=false;
+  requestAnimationFrame(()=>el.classList.add('show'));
+}
+function ttsDismissHint(){
+  LS.set('ttsHintSeen', 1);
+  const el=$('#ttsHint'); if(!el) return;
+  el.classList.remove('show');
+  const go=()=>{ el.hidden=true; el.classList.remove('fade','show'); };
+  if(el.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches){ go(); return; }
+  el.classList.add('fade');
+  setTimeout(go, 500);
+}
+let ttsResPx=-1;
+function ttsMeasureReservePx(){
+  const v=$('#v-reader'), b=$('#ttsBar');
+  if(!v || !b || b.hidden) return 0;
+  const cur=parseFloat(v.style.getPropertyValue('--tts-reserve'))||0;
+  const clip=R.mode==='pages'?$('#pgClip'): scView;
+  if(!clip) return 0;
+  const defaultBottom=clip.getBoundingClientRect().bottom + cur;
+  let top=b.getBoundingClientRect().top;
+  for(const id of ['ttsHint','ttsNatChip']){
+    const el=$('#'+id); if(!el || el.hidden || el.classList.contains('fade')) continue;
+    const r=el.getBoundingClientRect();
+    if(r.height>2) top=Math.min(top, r.top);
+  }
+  return Math.max(0, Math.round(defaultBottom - (top - 8)));
+}
+function ttsReserveSync(){
+  const v=$('#v-reader'), b=$('#ttsBar');
+  const on=!!(TTS.mode && R.mode!=='speed' && b && !b.hidden);
+  if(v) v.classList.toggle('tts-pill-on', on);
+  document.body.classList.toggle('tts-pill-on', on);
+  const next=on?ttsMeasureReservePx():0;
+  if(next===ttsResPx) return;
+  ttsResPx=next;
+  if(v) v.style.setProperty('--tts-reserve', next+'px');
+  if(R.mode==='pages' || R.mode==='scroll'){ holdPlace(); relayoutSoon(); }
+}
 function ttsModeOn(){
   if(R.mode==='speed') return;
   if(SC.auto) asStop(true);
   selClear(); TTS.mode=true; TTS.pick=null; setChrome(true); updateChrome(); asUI();
-  /* with "hide controls" on, the page normally runs under the controls; make room for them while they stay up */
-  if($('#v-reader').classList.contains('overlay')){ holdPlace(); $('#v-reader').classList.remove('overlay'); relayoutSoon(); }
+  requestAnimationFrame(()=>ttsReserveSync());
 }
-function ttsModeOff(quiet){ ttsStop(); ttsPickMark(null); TTS.mode=false; updateChrome(); asUI();
-  if(!quiet && S.focus && R.mode && R.mode!=='speed' && !$('#v-reader').classList.contains('overlay')){ holdPlace(); $('#v-reader').classList.add('overlay'); relayoutSoon(); } }
+function ttsModeOff(quiet){ ttsStop(); ttsPickMark(null); TTS.mode=false; ttsHideNatChip(true); const t=$('#toast'); if(t) t.hidden=true; updateChrome(); asUI(); ttsReserveSync(); }
 function ttsBarUI(){
-  const b=$('#ttsBar'); b.hidden=!TTS.mode || R.mode==='speed'; $('#ttsHint').hidden=b.hidden || TTS.on || TTS.pick!=null; if(b.hidden) return;
+  const b=$('#ttsBar'); if(!b) return;
+  const was=b.hidden;
+  b.hidden=!TTS.mode || R.mode==='speed';
+  document.body.classList.toggle('tts-pill-on', !b.hidden);
+  const vr=$('#v-reader'); if(vr) vr.classList.toggle('tts-pill-on', !b.hidden);
+  ttsHintUI();
+  if(b.hidden){ ttsReserveSync(); return; }
   $('#ttsPlay').innerHTML=TTS.on?ICON.pause:ICON.play; $('#ttsPlay').setAttribute('aria-label',TTS.on?'Pause':'Play');
-  $('#ttsSpeed').value=S.ttsRate||1; $('#ttsLabel').textContent=(+(S.ttsRate||1)).toFixed(2).replace(/0$/,'')+'×';
+  const label=ttsRateLabel(S.ttsRate||1);
+  const lab=$('#ttsLabel'); if(lab) lab.textContent=label;
+  $('#ttsSpeed').setAttribute('aria-label','Speaking speed '+label);
+  const tr=$('#ttsTrackBar');
+  if(tr && R.n){ const i=TTS.on&&TTS.cur>=0?TTS.cur:R.pos; tr.style.width=(100*Math.max(0,i)/Math.max(1,R.n-1))+'%'; }
+  if(was) requestAnimationFrame(()=>ttsReserveSync());
+  else ttsReserveSync();
 }
 async function ttsPickMark(k){
   if(TTS.pick!=null){ const w=wordEl(TTS.pick); if(w) w.classList.remove('ttspick'); }
@@ -1547,7 +1634,7 @@ $('#ttsPlay').onclick=ttsPlayPause;
 $('#ttsPrev').onclick=()=>ttsSkip(-1);
 $('#ttsNext').onclick=()=>ttsSkip(1);
 $('#ttsVoice').onclick=openVoiceSheet;
-$('#ttsSpeed').addEventListener('input',e=>ttsSetRate(+e.target.value));
+$('#ttsSpeed').onclick=()=>{ if(!TTS.pillLock) ttsCycleRate(); };
 $('#ttsPrev').innerHTML=ICON.bsent; $('#ttsNext').innerHTML=ICON.fsent; $('#ttsVoice').innerHTML=ICON.voice;
 /* Scroll: the auto-scroll button shows or hides the auto-scroll controls (like the speaker does for read aloud) */
 $('#rAs').innerHTML=ICON.autoscroll; $('#asMore').innerHTML=ICON.more; $('#spOpts').innerHTML=ICON.gear;
@@ -1668,7 +1755,7 @@ function asOptsHTML(){ return `<div class="group">
 function openAsOpts(){ openSheet('Auto-scroll options', asOptsHTML(), {}); $('#sheet .sheet-body').dataset.sheet='as'; bindPanel(); }
 /* audio controls → voice button */
 function voiceSheetHTML(){ const lang=(document.documentElement.lang||'en').slice(0,2).toLowerCase(); return voiceSectionHTML(lang)+(R.meta?abSectionHTML():''); }
-function openVoiceSheet(){ openSheet('Voice', voiceSheetHTML(), Object.assign({},READ_ACTS,AB_ACTS)); $('#sheet .sheet-body').dataset.sheet='voice'; bindPanel(); setTimeout(()=>{ natStateUI(); abUI(); },0); }
+function openVoiceSheet(){ const t=$('#toast'); if(t) t.hidden=true; if(typeof ttsHideNatChip==='function') ttsHideNatChip(true); openSheet('Voice', voiceSheetHTML(), Object.assign({},READ_ACTS,AB_ACTS)); $('#sheet .sheet-body').dataset.sheet='voice'; bindPanel(); setTimeout(()=>{ natStateUI(); abUI(); },0); }
 /* actions shared by the Aa menu and the reading section of Settings */
 const READ_ACTS={
   vprev:()=>{ if(TTS.on) ttsStop(); if(S.ttsEngine!=='system') natPreview(); else voicePreview(); },

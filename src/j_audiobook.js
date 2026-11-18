@@ -157,7 +157,7 @@ async function abPlayPart(p, i, seq){
 }
 
 /* ---- the Listen offline section of the Voice sheet ---- */
-function abSectionHTML(){ return `<div class="panel-sec"><div class="group"><div class="set"><div class="hd"><b>Listen offline</b></div><div id="abSec" class="desc" style="color:var(--ink)">Checking…</div></div></div></div>`; }
+function abSectionHTML(){ return `<details class="aadet" id="abFold"><summary>Listen offline</summary><div class="aadet-b"><div id="abSec" class="desc" style="color:var(--ink)">Checking…</div></div></details>`; }
 async function abUI(){
   const el=$('#abSec'); if(!el || !R.meta) return;
   if(S.ttsEngine==='system'){ el.innerHTML=`<p class="note" style="margin:0">Downloading a book’s audio needs a <b>Natural</b> voice (iPhone voices can’t be saved).</p>`; return; }
@@ -249,3 +249,93 @@ async function shareFiles(fs){
   /* no share menu: download them one by one */
   for(const f of fs){ const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },4000); }
 }
+
+/* ---------- floating read-aloud pill (play/pause + speed) ----------
+   Swipe left/right to skip a sentence. A long-press opens voice choice and downloads.
+   If the chosen natural voice is not on the phone yet, playback starts on the iPhone voice
+   and the better one is offered without blocking. Listen offline is unchanged. */
+function ttsNatName(){ const id=pipVoice(); for(const [,L] of PIP_VOICES){ for(const [vid,n] of L){ if(vid===id) return n; } } return 'Natural'; }
+async function ttsStartPreferNat(){
+  const seq=TTS.seq;
+  natUnlock();
+  try{ await abManifest(); }catch(e){}
+  if(!TTS.on || seq!==TTS.seq) return;
+  if(abPartAt(R.pos) || natReady() || await natDownloaded()){ TTS.nat=true; natStart(); return; }
+  TTS.nat=false;
+  try{ speechSynthesis.cancel(); }catch(e){}
+  ttsSpeakFrom(R.pos, TTS.seq);
+  ttsOfferIfNeeded();
+}
+async function ttsOfferIfNeeded(){
+  if(S.ttsEngine==='system') return;
+  if(natReady() || LS.get('pipReady.'+pipVoice(), false) || await natDownloaded()) return;
+  ttsOfferNatural();
+}
+let ttsChipT=0;
+function ttsOfferNatural(){
+  const id=R.meta&&R.meta.id; if(!id) return;
+  const key='ttsNatChip.'+id;
+  if(LS.get(key, false)) return;
+  LS.set(key, 1);
+  ttsShowNatChip();
+}
+function ttsShowNatChip(){
+  const el=$('#ttsNatChip'); if(!el) return;
+  el.hidden=false; el.classList.remove('fade');
+  requestAnimationFrame(()=>{ el.classList.add('show'); ttsReserveSync(); });
+  clearTimeout(ttsChipT);
+  ttsChipT=setTimeout(()=>ttsHideNatChip(), 6000);
+}
+function ttsHideNatChip(immediate){
+  const el=$('#ttsNatChip'); if(!el) return;
+  clearTimeout(ttsChipT); ttsChipT=0;
+  el.classList.remove('show');
+  const go=()=>{ el.hidden=true; el.classList.remove('fade','show'); ttsReserveSync(); };
+  if(immediate || el.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches){ go(); return; }
+  el.classList.add('fade');
+  setTimeout(go, 500);
+}
+async function ttsDownloadNatural(){
+  const name=ttsNatName();
+  const ok=await natEnsure();
+  if(!ok) return;
+  if(TTS.on && !TTS.nat){
+    toast(name+' is ready.', {label:'Switch', fn:()=>{
+      const k=TTS.on && TTS.cur>=0 ? TTS.cur : (TTS.pick!=null?TTS.pick:R.pos);
+      if(TTS.on) ttsStop();
+      TTS.mode=true; if(k>=0) R.pos=k;
+      ttsStart();
+    }}, 7000);
+  } else toast(name+' is ready. It will be used the next time you press play.');
+}
+(function ttsPillBind(){
+  const bar=$('#ttsBar'); if(!bar) return;
+  let sx=0, sy=0, t0=0, pid=0, moved=false, longed=false, longT=0, tracking=false;
+  const cancelLong=()=>{ clearTimeout(longT); longT=0; };
+  bar.addEventListener('pointerdown',e=>{
+    if(e.button && e.button!==0) return;
+    tracking=true; sx=e.clientX; sy=e.clientY; t0=performance.now(); pid=e.pointerId; moved=false; longed=false;
+    try{ bar.setPointerCapture(e.pointerId); }catch(_){}
+    longT=setTimeout(()=>{ longed=true; TTS.pillLock=true; ttsHideNatChip(true); openVoiceSheet(); }, 520);
+  });
+  bar.addEventListener('pointermove',e=>{
+    if(!tracking || e.pointerId!==pid) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if(Math.abs(dx)>10 || Math.abs(dy)>10){ moved=true; cancelLong(); }
+  });
+  const end=e=>{
+    if(!tracking || (e.pointerId!=null && e.pointerId!==pid)) return;
+    cancelLong(); tracking=false;
+    const dx=(e.clientX||sx)-sx, dy=(e.clientY||sy)-sy;
+    if(longed){ TTS.pillLock=true; setTimeout(()=>{ TTS.pillLock=false; }, 400); return; }
+    if(Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy)*1.15){ TTS.pillLock=true; ttsSkip(dx<0?1:-1); setTimeout(()=>{ TTS.pillLock=false; }, 400); }
+  };
+  bar.addEventListener('pointerup',end);
+  bar.addEventListener('pointercancel',end);
+  bar.addEventListener('click',e=>{
+    if(!TTS.pillLock) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    TTS.pillLock=false;
+  }, true);
+})();
+$('#ttsNatChip')&&$('#ttsNatChip').addEventListener('click',()=>{ ttsHideNatChip(true); openVoiceSheet(); });

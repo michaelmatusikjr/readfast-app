@@ -1,8 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.30-notes-stream';
+const APP_VERSION='2026.11.18.31-read-aloud-pill';
 const WHATSNEW=[
-  ['One notes stream','Highlights, bookmarks and words you look up now share one list per book, in the order they appear. Search it, tap a moment to jump there, swipe to remove, or use the remove button. The Notes tab searches every book and groups the same stream by title.'],
-  ['A more careful selection bar','The More menu can be moved with the arrow keys, and a new highlight is not created if your finger is still coming off the page.']
+  ['A floating read-aloud pill','The speaker now opens a small floating pill with play/pause and speed, instead of replacing the bottom bar. Nothing plays until you press play. Tap a word to choose where to start, or to jump while it is reading. Swipe the pill to skip a sentence, and touch and hold it for voice options. If the natural voice is not downloaded yet, Tooz starts with the iPhone voice and offers the better one without waiting.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

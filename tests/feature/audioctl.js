@@ -25,32 +25,70 @@ const fs=require('fs');
   await pg.evaluate(async()=>{ closeSheet(); S.mode='scroll'; S.autoScroll=true; saveSettings(); await openDoc(LIB.find(x=>x.kind==='sample').id); }); await sleep(1000);
   ok('scroll: auto-scroll bar shown first', await pg.evaluate(()=>!$('#asBar').hidden && $('#ttsBar').hidden));
   await pg.evaluate(()=>$('#rTts').click()); await sleep(300);
-  ok('speaker opens audio bar in place of auto-scroll, nothing plays', await pg.evaluate(()=>$('#asBar').hidden && !$('#ttsBar').hidden && !TTS.on && TTS.mode));
+  ok('speaker opens floating pill without playing', await pg.evaluate(()=>{
+    const b=$('#ttsBar'), foot=$('#rFoot');
+    const st=getComputedStyle(b);
+    return $('#asBar').hidden && !b.hidden && !TTS.on && TTS.mode && !foot.contains(b) && st.position==='absolute' && b.getBoundingClientRect().width>40 && b.getBoundingClientRect().width<360 && !$('#ttsPlay').classList.contains('sr-only') && $('#ttsVoice').classList.contains('sr-only') && $('#ttsPrev').classList.contains('sr-only');
+  }));
   // tap a word to pick
   const pick=await pg.evaluate(()=>{ const ws=[...scFlow.querySelectorAll('w')].filter(w=>{const r=w.getBoundingClientRect(); return r.top>300&&r.top<500&&r.width>0;}); const w=ws[2]; readerTap({target:w, clientX:0, clientY:0}); return idxOf(w); });
   await sleep(200);
   ok('tap word picks start', await pg.evaluate(p=>TTS.pick===p && !!document.querySelector('w.ttspick') && !TTS.on, pick), pick);
-  await pg.evaluate(()=>$('#ttsPlay').click()); await sleep(2500);
-  const r1=await pg.evaluate(()=>[TTS.on, TTS.cur, $('#ttsPlay').getAttribute('aria-label'), !document.querySelector('w.ttspick')]);
-  ok('play starts at picked word', r1[0] && r1[1]>=pick && r1[1]<pick+40 && r1[2]==='Pause' && r1[3], [pick,r1]);
+  // natural voice is not downloaded yet: play must start on the phone voice without blocking
+  await pg.evaluate(()=>$('#ttsPlay').click()); await sleep(800);
+  const fb=await pg.evaluate(()=>[TTS.on, TTS.nat, TTS.cur, ($('#ttsNatChip').hidden?'' : ($('#ttsNatChip').textContent||'')), $('#ttsPlay').getAttribute('aria-label'), ($('#toast').hidden || !/more natural voice/i.test($('#toastMsg').textContent||''))]);
+  ok('play without download uses the phone voice and offers the better one', fb[0] && fb[1]===false && fb[2]>=pick && fb[4]==='Pause' && /Better voice available/.test(fb[3]) && fb[5], [pick,fb]);
+  await pg.evaluate(()=>$('#ttsPlay').click()); await sleep(300);
+  ok('pause after phone-voice start', await pg.evaluate(()=>!TTS.on && TTS.mode));
+  ok('natural voice still not forced-downloaded', await pg.evaluate(async()=>!(await natDownloaded())));
+  // now download (fake piper in this test) and continue on the natural path
+  ok('download natural voice', await pg.evaluate(async()=>!!(await natEnsure())));
+  await pg.evaluate(()=>{ if(TTS.pick==null && pick!=null) ttsPickMark(pick); $('#ttsPlay').click(); }); await sleep(2500);
+  const r1=await pg.evaluate(()=>[TTS.on, TTS.nat, TTS.cur, $('#ttsPlay').getAttribute('aria-label'), !document.querySelector('w.ttspick')]);
+  ok('play starts at picked word on the natural voice', r1[0] && r1[1] && r1[2]>=pick && r1[2]<pick+40 && r1[3]==='Pause' && r1[4], [pick,r1]);
   // jump by tapping word while playing
   const jump=await pg.evaluate(()=>{ const ws=[...scFlow.querySelectorAll('w')].filter(w=>{const r=w.getBoundingClientRect(); return r.top>550&&r.width>0;}); const w=ws[5]||ws[0]; readerTap({target:w, clientX:0, clientY:0}); return idxOf(w); });
   await sleep(1500);
   ok('tap word while playing jumps there', await pg.evaluate(j=>TTS.on && TTS.cur>=j && TTS.cur<j+40, jump), [jump, await pg.evaluate(()=>TTS.cur)]);
   // speed live
-  await pg.evaluate(()=>{ $('#ttsSpeed').value='1.1'; $('#ttsSpeed').dispatchEvent(new Event('input')); }); await sleep(200);
-  ok('speed up applies live', await pg.evaluate(()=>Math.abs(S.ttsRate-1.1)<1e-9 && NAT.audio.playbackRate===1 && $('#ttsLabel').textContent==='1.1×'), await pg.evaluate(()=>[S.ttsRate,NAT.audio.playbackRate,$('#ttsLabel').textContent]));
-  await pg.evaluate(()=>{ $('#ttsSpeed').value='1'; $('#ttsSpeed').dispatchEvent(new Event('input')); });
-  // next sentence
-  const c0=await pg.evaluate(()=>TTS.cur); await pg.evaluate(()=>$('#ttsNext').click()); await sleep(1200);
+  await pg.evaluate(()=>$('#ttsSpeed').click()); await sleep(200);
+  ok('speed chip cycles to the next rate', await pg.evaluate(()=>Math.abs(S.ttsRate-1.25)<1e-9 && $('#ttsLabel').textContent==='1.25×'), await pg.evaluate(()=>[S.ttsRate, $('#ttsLabel').textContent]));
+  await pg.evaluate(()=>ttsSetRate(1));
+  // next sentence: swipe left on the pill (hidden next button remains for assistive use)
+  const c0=await pg.evaluate(()=>TTS.cur);
+  await pg.evaluate(()=>{
+    const el=$('#ttsLabel'); const r=el.getBoundingClientRect(); const x=r.left+r.width/2, y=r.top+r.height/2;
+    const bar=$('#ttsBar');
+    bar.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:21,clientX:x,clientY:y}));
+    bar.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:21,clientX:x-80,clientY:y}));
+    bar.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:21,clientX:x-80,clientY:y}));
+  });
+  await sleep(1200);
   const c1=await pg.evaluate(()=>[TTS.cur, isSentEnd(sentStartOf(TTS.cur)-1)]);
-  ok('next sentence', c1[0]>c0, [c0,c1]);
+  ok('next sentence by swipe', c1[0]>c0, [c0,c1]);
   // pause keeps place
   await pg.evaluate(()=>$('#ttsPlay').click()); await sleep(300);
   const pz=await pg.evaluate(()=>[TTS.on, TTS.pick, !$('#ttsBar').hidden, $('#ttsPlay').getAttribute('aria-label')]);
   ok('pause keeps controls and place', !pz[0] && pz[1]>=c1[0] && pz[2] && pz[3]==='Play', pz);
-  await pg.evaluate(()=>$('#ttsPrev').click()); await sleep(300);
-  ok('previous sentence while paused moves the start', await pg.evaluate(p=>TTS.pick<p, pz[1]));
+  await pg.evaluate(()=>{
+    const el=$('#ttsLabel'); const r=el.getBoundingClientRect(); const x=r.left+r.width/2, y=r.top+r.height/2;
+    const bar=$('#ttsBar');
+    bar.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:22,clientX:x,clientY:y}));
+    bar.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:22,clientX:x+80,clientY:y}));
+    bar.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:22,clientX:x+80,clientY:y}));
+  }); await sleep(300);
+  ok('previous sentence by swipe while paused moves the start', await pg.evaluate(p=>TTS.pick<p, pz[1]));
+  // long-press opens the voice sheet
+  await pg.evaluate(async()=>{
+    const el=$('#ttsLabel'); const r=el.getBoundingClientRect(); const x=r.left+4, y=r.top+r.height/2;
+    const bar=$('#ttsBar');
+    bar.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:23,clientX:x,clientY:y}));
+    await new Promise(res=>setTimeout(res, 650));
+    bar.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:23,clientX:x,clientY:y}));
+  });
+  await sleep(400);
+  ok('long-press opens voice sheet', await pg.evaluate(()=>!$('#sheet').hidden && /Voice/.test($('#sheet').innerText||'')));
+  await pg.evaluate(()=>closeSheet()); await sleep(200);
   // close
   await pg.evaluate(()=>$('#rTts').click()); await sleep(300);
   ok('speaker again closes controls, auto-scroll bar back', await pg.evaluate(()=>$('#ttsBar').hidden && !$('#asBar').hidden && !TTS.mode && !document.querySelector('w.ttspick')));
