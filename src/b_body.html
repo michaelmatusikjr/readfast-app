@@ -1,5 +1,5 @@
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.22</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.23</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -8,7 +8,8 @@
       </div>
       <button class="btn primary block" id="addBtn" type="button">+ Add to library</button>
       <div id="libTools">
-        <div class="libbar"><input class="input" id="libFind" type="search" placeholder="Search titles, authors and tags" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" aria-label="Search your library"><button class="icon-btn tbtn" id="sortBtn" type="button" aria-label="Sort"></button><button class="icon-btn tbtn" id="filterBtn" type="button" aria-label="Filter"></button></div>
+        <div class="libtools-head"><button class="icon-btn tbtn" id="libSearchBtn" type="button" aria-label="Search, sort and filter" aria-expanded="false" aria-controls="libBar"></button></div>
+        <div class="libbar" id="libBar"><input class="input" id="libFind" type="search" placeholder="Search titles, authors and tags" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" aria-label="Search your library"><button class="icon-btn tbtn" id="sortBtn" type="button" aria-label="Sort"></button><button class="icon-btn tbtn" id="filterBtn" type="button" aria-label="Filter"></button></div>
         <div class="chips" id="libSug" hidden></div>
         <div class="chips" id="libPills" hidden></div>
       </div>
@@ -148,4 +149,4 @@
 <input type="file" id="fileIn" accept=".epub,.pdf,.txt,.md,.markdown,.html,.htm,.xhtml,application/epub+zip,application/pdf,text/plain,text/markdown,text/html" hidden>
 <input type="file" id="restoreIn" accept=".json,application/json" hidden>
 
-<div id="verBadge" style="position:fixed;top:max(8px,env(safe-area-inset-top));right:8px;z-index:9999;background:rgba(0,0,0,.7);color:#fff;font:700 10px/1 system-ui,sans-serif;padding:3px 7px;border-radius:6px;pointer-events:none">v…</div>
+<button type="button" id="verBadge" aria-label="What’s new">v…</button>

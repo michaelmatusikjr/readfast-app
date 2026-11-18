@@ -1,24 +1,9 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.22-parsefix';
+const APP_VERSION='2026.11.18.23-hero';
 const WHATSNEW=[
-  ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
-  ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
-  ['Clearer empty library','When filters or search leave nothing, the empty state is clearer and offers a one-tap Clear filters button.'],
-  ['Quieter Speed mode','Speed mode hides extra hints and keeps the focus on the word.'],
-  ['Update banner','When a new version is ready, a blue “Update available — Reload” bar appears at the bottom so you can pick it up immediately.'],
-  ['Preview badge','A small version number now sits in the top-right corner so you can tell when the app has updated. Drag it out of the way; tap it to see what’s new (newest first).'],
-  ['Where you left off, in Scroll','Whenever you leave a book in Scroll mode, even for a moment, the page shows a tear when you come back: what you’d read sits above it, marked Previously read, and the tear is in the middle of the screen so you can pick up right below it.'],
-  ['One pause for an ellipsis','Three dots in a row (..., . . . or …) are read as a single pause instead of three.'],
-  ['Delete bookmarks with a swipe','In Notes → Bookmarks, swipe a bookmark to the left and tap Delete. Undo brings it back.'],
-  ['Shorter pauses between sentences','When a natural voice reads live, the only pause between sentences is the moment it takes to move to the next one. Saved audio (Listen offline) keeps a short, even pause.'],
-  ['Supertonic voices removed','The Supertonic test voices were too slow on iPhone, so they’re gone and their download is deleted. The natural voices are the Piper voices again.'],
-  ['Listen offline','Download a book’s audio with a natural voice (Voice → Listen offline). Saved audio keeps playing with the screen locked, with controls on the lock screen, and can be saved as one MP3 per chapter to play in other apps, even with Tooz closed.'],
-  ['Smoother reading aloud','Natural voices now read one sentence at a time with even pauses: the same short pause after every sentence, a longer one between paragraphs and around headings. Long sentences break at a comma instead of mid-phrase, and the speed setting is given to the voice itself, so faster reading still sounds natural.'],
-  ['Abbreviations read letter by letter','Read aloud now spells out initials like NIV, KJV, ESV, NASB, FBI and CIA, while words like NASA and FEMA are still said as words.'],
-  ['Highlight up to a dash','Words joined by a dash, like “me—and”, are now separate words, and a highlight can stop just before the dash. Books you already have update the first time you open them; your place, highlights and bookmarks stay put.'],
-  ['Pauses at dashes and semicolons','Read aloud pauses at a dash the way it does at a comma, and at a semicolon the way it does at the end of a sentence.'],
-  ['Verse ranges','“Phil. 3:7–8” is read as “Philippians chapter 3 verses 7 through 8” again; number ranges are kept as one word again, including in Speed mode.'],
-  ['References before a dash','Read aloud now says “Isaiah chapter 26 verse 8” even when the reference is followed straight away by a dash.']
+  ['A Continue reading card','The book you were last reading sits at the top as a large card, with your progress and a Continue button. The rest of the shelf is quieter, and finished books sit at the bottom.'],
+  ['Search when you need it','Search, sort and filter stay behind a search button until you tap it.'],
+  ['Version badge stays out of the way','The small version number sits under the status bar and hides while you read, so it doesn’t cover Search or Aa.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -210,99 +195,11 @@ function yearHTML(st, met){
     </div>`;
 }
 
-/* floating version badge */
+/* version badge: a small fixed chip, hidden by CSS while a book is open */
 (function(){
   const b=$('#verBadge'); if(!b) return;
   b.textContent='v'+APP_VERSION;
-  let x=parseFloat(LS.get('verX'))||null, y=parseFloat(LS.get('verY'))||null;
-  if(x!=null && y!=null){ b.style.left=x+'px'; b.style.top=y+'px'; b.style.right='auto'; }
-  let sx,sy,ox,oy,moved=false;
-  const down=e=>{
-    moved=false;
-    const t=e.touches?e.touches[0]:e;
-    sx=t.clientX; sy=t.clientY;
-    const r=b.getBoundingClientRect();
-    ox=t.clientX-r.left; oy=t.clientY-r.top;
-    b.style.cursor='grabbing';
-    e.preventDefault();
-  };
-  const move=e=>{
-    if(sx==null) return;
-    const t=e.touches?e.touches[0]:e;
-    if(Math.hypot(t.clientX-sx,t.clientY-sy)>6) moved=true;
-    let nx=t.clientX-ox, ny=t.clientY-oy;
-    nx=Math.max(0, Math.min(nx, innerWidth-b.offsetWidth));
-    ny=Math.max(0, Math.min(ny, innerHeight-b.offsetHeight));
-    b.style.left=nx+'px'; b.style.top=ny+'px'; b.style.right='auto';
-    e.preventDefault();
-  };
-  const up=e=>{
-    if(sx==null) return;
-    if(!moved) whatsNewSheet();
-    else { LS.set('verX', parseFloat(b.style.left)); LS.set('verY', parseFloat(b.style.top)); }
-    sx=null; b.style.cursor='grab';
-  };
-  b.addEventListener('pointerdown', down);
-  b.addEventListener('pointermove', move);
-  b.addEventListener('pointerup', up);
-  b.addEventListener('pointercancel', up);
-})();
-
-
-/* === REIMAGINE PROTOTYPE (disabled for now) === */
-/*
-(function(){
-  const v = document.getElementById('v-reader');
-  if(!v) return;
-  // v.classList.add('reimagine'); // disabled
-  let hideTimer = null;
-  function showChrome(){
-    v.classList.add('chrome-on');
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(()=>v.classList.remove('chrome-on'), 3200);
-  }
-  // Center-tap zone (middle 40% of the stage)
-  document.addEventListener('click', function(e){
-    if(v.hidden) return;
-    const stage = document.getElementById('stage') || document.getElementById('scrollView') || document.getElementById('speedView');
-    if(!stage || !stage.contains(e.target)) return;
-    const r = stage.getBoundingClientRect();
-    const x = e.clientX - r.left, y = e.clientY - r.top;
-    const midX = r.width * 0.3 < x && x < r.width * 0.7;
-    const midY = r.height * 0.3 < y && y < r.height * 0.7;
-    if(midX && midY){
-      e.stopPropagation();
-      if(v.classList.contains('chrome-on')) v.classList.remove('chrome-on');
-      else showChrome();
-    }
-  }, true);
-  // Show chrome briefly on open
-  setTimeout(showChrome, 400);
-})();
-
-
-/* === REIMAGINE: promote Continue reading to a hero card (fixed) === */
-(function(){
-  const orig = window.renderLibrary;
-  if(!orig) return;
-  window.renderLibrary = function(){
-    orig.apply(this, arguments);
-    const list = document.getElementById('docList');
-    if(!list) return;
-    // Remove any previous hero
-    document.querySelectorAll('.continue-hero').forEach(el=>el.remove());
-    const cont = list.querySelector('.doc');
-    if(!cont) return;
-    const hero = document.createElement('div');
-    hero.className = 'continue-hero';
-    hero.innerHTML = '<div class="eyebrow" style="font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Continue reading</div>';
-    hero.appendChild(cont.cloneNode(true));
-    list.parentNode.insertBefore(hero, list);
-    cont.style.display = 'none';
-    // Make the hero tappable the same way
-    const id = cont.dataset.id;
-    if(id) hero.onclick = ()=> openBook(id);
-  };
+  b.addEventListener('click', ()=>whatsNewSheet());
 })();
 
 

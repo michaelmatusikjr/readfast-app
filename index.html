@@ -4,29 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
-
-/* === REIMAGINE PROTOTYPE: bare reading surface === */
-#v-reader.reimagine #rTop,
-#v-reader.reimagine #rFoot { opacity:0; pointer-events:none; transition:opacity .25s; }
-#v-reader.reimagine.chrome-on #rTop,
-#v-reader.reimagine.chrome-on #rFoot { opacity:1; pointer-events:auto; }
-#v-reader.reimagine .run { display:none; }
-#v-reader.reimagine #speedView { padding-top: env(safe-area-inset-top, 0px); }
-
-
-/* === REIMAGINE: library shelf === */
-#v-library .continue-hero {
-  background: var(--raise);
-  border-radius: 16px;
-  padding: 16px;
-  margin: 8px 0 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.06);
-}
-#v-library .continue-hero .title { font-size: 1.15rem; font-weight: 700; margin: 0 0 4px; }
-#v-library .continue-hero .meta { color: var(--muted); font-size: .85rem; }
-#v-library .lib-quiet .libbar { opacity: .7; }
-
-
 /* === REIMAGINE: quiet Speed mode === */
 #v-speed.playing .speed-chrome { opacity: 0; pointer-events: none; transition: opacity .3s; }
 #v-speed.playing:hover .speed-chrome, #v-speed.playing.paused .speed-chrome { opacity: 1; pointer-events: auto; }
@@ -502,37 +479,42 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 /* phones: Tooz does its own selection in a book, so the phone's selection and menu stay off */
 @media (hover:none),(pointer:coarse){ #pagesView,#pagesView *,#scFlow,#scFlow *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important} }
 
-/* === REIMAGINE PROTOTYPE: bare reading surface === */
-#v-reader.reimagine #rTop,
-#v-reader.reimagine #rFoot { opacity:0; pointer-events:none; transition:opacity .25s; }
-#v-reader.reimagine.chrome-on #rTop,
-#v-reader.reimagine.chrome-on #rFoot { opacity:1; pointer-events:auto; }
-#v-reader.reimagine .run { display:none; }
-#v-reader.reimagine #speedView { padding-top: env(safe-area-inset-top, 0px); }
-
-
-/* === REIMAGINE: library shelf === */
-#v-library .continue-hero {
-  background: var(--raise);
-  border-radius: 16px;
-  padding: 16px;
-  margin: 8px 0 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+/* Continue reading hero + quieter shelf */
+#v-library .continue-hero{
+  display:grid;grid-template-columns:1fr auto;gap:4px 8px;
+  background:linear-gradient(90deg,var(--fill) 0,var(--fill) var(--p,0%),var(--raise) var(--p,0%));
+  border:1px solid var(--line);border-radius:16px;padding:18px 14px 16px 18px;
+  margin:4px 0 14px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer;text-align:left;
 }
-#v-library .continue-hero .title { font-size: 1.15rem; font-weight: 700; margin: 0 0 4px; }
-#v-library .continue-hero .meta { color: var(--muted); font-size: .85rem; }
-#v-library .lib-quiet .libbar { opacity: .7; }
-
+#v-library .continue-hero .eyebrow{grid-column:1;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 4px}
+#v-library .continue-hero .t{font-size:1.4rem;font-weight:700;line-height:1.25;margin:0;min-width:0;overflow-wrap:anywhere}
+#v-library .continue-hero .a{grid-column:1;font-size:.95rem;color:var(--ink);opacity:.8;margin:2px 0 0}
+#v-library .continue-hero .m{grid-column:1;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+#v-library .continue-hero .more{grid-row:1/3;grid-column:2;align-self:start}
+#v-library .continue-hero .hero-go{grid-column:1/-1;min-height:44px;margin-top:12px;width:100%}
+#v-library.lib-quiet #docList .doc:not(.continue-hero){padding:10px 8px 10px 14px;opacity:.8}
+#v-library.lib-quiet #docList .doc:not(.continue-hero) .t{font-size:.95rem;font-weight:600}
+#v-library.lib-quiet #docList .doc:not(.continue-hero) .a,#v-library.lib-quiet #docList .doc:not(.continue-hero) .m{font-size:.8rem;opacity:.85}
+#v-library.lib-quiet #docList .doc.is-finished{opacity:.55}
+#libSearchBtn{flex:none}
+#libTools:not(.open) #libBar,#libTools:not(.open) #libSug{display:none}
+#libTools .libtools-head{display:flex;justify-content:flex-end;align-items:center;min-height:44px}
+#libTools.open .libtools-head{margin-bottom:2px}
 
 /* === REIMAGINE: quiet Speed mode === */
 #v-speed.playing .speed-chrome { opacity: 0; pointer-events: none; transition: opacity .3s; }
 #v-speed.playing:hover .speed-chrome, #v-speed.playing.paused .speed-chrome { opacity: 1; pointer-events: auto; }
 
+
+/* Version chip: under the status bar, hidden while a book is open so it never covers Search/Aa */
+#verBadge{position:fixed;top:max(8px,calc(env(safe-area-inset-top,0px) + 4px));right:max(8px,env(safe-area-inset-right,0px));z-index:20;background:rgba(0,0,0,.7);color:#fff;font:700 10px/1 system-ui,sans-serif;padding:3px 7px;border-radius:6px;border:0;cursor:pointer}
+body:has(#v-reader:not([hidden])) #verBadge{display:none}
+
 </style>
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.22</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.23</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -541,7 +523,8 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
       </div>
       <button class="btn primary block" id="addBtn" type="button">+ Add to library</button>
       <div id="libTools">
-        <div class="libbar"><input class="input" id="libFind" type="search" placeholder="Search titles, authors and tags" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" aria-label="Search your library"><button class="icon-btn tbtn" id="sortBtn" type="button" aria-label="Sort"></button><button class="icon-btn tbtn" id="filterBtn" type="button" aria-label="Filter"></button></div>
+        <div class="libtools-head"><button class="icon-btn tbtn" id="libSearchBtn" type="button" aria-label="Search, sort and filter" aria-expanded="false" aria-controls="libBar"></button></div>
+        <div class="libbar" id="libBar"><input class="input" id="libFind" type="search" placeholder="Search titles, authors and tags" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" aria-label="Search your library"><button class="icon-btn tbtn" id="sortBtn" type="button" aria-label="Sort"></button><button class="icon-btn tbtn" id="filterBtn" type="button" aria-label="Filter"></button></div>
         <div class="chips" id="libSug" hidden></div>
         <div class="chips" id="libPills" hidden></div>
       </div>
@@ -681,7 +664,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 <input type="file" id="fileIn" accept=".epub,.pdf,.txt,.md,.markdown,.html,.htm,.xhtml,application/epub+zip,application/pdf,text/plain,text/markdown,text/html" hidden>
 <input type="file" id="restoreIn" accept=".json,application/json" hidden>
 
-<div id="verBadge" style="position:fixed;top:max(8px,env(safe-area-inset-top));right:8px;z-index:9999;background:rgba(0,0,0,.7);color:#fff;font:700 10px/1 system-ui,sans-serif;padding:3px 7px;border-radius:6px;pointer-events:none">v…</div>
+<button type="button" id="verBadge" aria-label="What’s new">v…</button>
 
 <script>
 'use strict';
@@ -3771,26 +3754,11 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.22-parsefix';
+const APP_VERSION='2026.11.18.23-hero';
 const WHATSNEW=[
-  ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
-  ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
-  ['Clearer empty library','When filters or search leave nothing, the empty state is clearer and offers a one-tap Clear filters button.'],
-  ['Quieter Speed mode','Speed mode hides extra hints and keeps the focus on the word.'],
-  ['Update banner','When a new version is ready, a blue “Update available — Reload” bar appears at the bottom so you can pick it up immediately.'],
-  ['Preview badge','A small version number now sits in the top-right corner so you can tell when the app has updated. Drag it out of the way; tap it to see what’s new (newest first).'],
-  ['Where you left off, in Scroll','Whenever you leave a book in Scroll mode, even for a moment, the page shows a tear when you come back: what you’d read sits above it, marked Previously read, and the tear is in the middle of the screen so you can pick up right below it.'],
-  ['One pause for an ellipsis','Three dots in a row (..., . . . or …) are read as a single pause instead of three.'],
-  ['Delete bookmarks with a swipe','In Notes → Bookmarks, swipe a bookmark to the left and tap Delete. Undo brings it back.'],
-  ['Shorter pauses between sentences','When a natural voice reads live, the only pause between sentences is the moment it takes to move to the next one. Saved audio (Listen offline) keeps a short, even pause.'],
-  ['Supertonic voices removed','The Supertonic test voices were too slow on iPhone, so they’re gone and their download is deleted. The natural voices are the Piper voices again.'],
-  ['Listen offline','Download a book’s audio with a natural voice (Voice → Listen offline). Saved audio keeps playing with the screen locked, with controls on the lock screen, and can be saved as one MP3 per chapter to play in other apps, even with Tooz closed.'],
-  ['Smoother reading aloud','Natural voices now read one sentence at a time with even pauses: the same short pause after every sentence, a longer one between paragraphs and around headings. Long sentences break at a comma instead of mid-phrase, and the speed setting is given to the voice itself, so faster reading still sounds natural.'],
-  ['Abbreviations read letter by letter','Read aloud now spells out initials like NIV, KJV, ESV, NASB, FBI and CIA, while words like NASA and FEMA are still said as words.'],
-  ['Highlight up to a dash','Words joined by a dash, like “me—and”, are now separate words, and a highlight can stop just before the dash. Books you already have update the first time you open them; your place, highlights and bookmarks stay put.'],
-  ['Pauses at dashes and semicolons','Read aloud pauses at a dash the way it does at a comma, and at a semicolon the way it does at the end of a sentence.'],
-  ['Verse ranges','“Phil. 3:7–8” is read as “Philippians chapter 3 verses 7 through 8” again; number ranges are kept as one word again, including in Speed mode.'],
-  ['References before a dash','Read aloud now says “Isaiah chapter 26 verse 8” even when the reference is followed straight away by a dash.']
+  ['A Continue reading card','The book you were last reading sits at the top as a large card, with your progress and a Continue button. The rest of the shelf is quieter, and finished books sit at the bottom.'],
+  ['Search when you need it','Search, sort and filter stay behind a search button until you tap it.'],
+  ['Version badge stays out of the way','The small version number sits under the status bar and hides while you read, so it doesn’t cover Search or Aa.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -3982,99 +3950,11 @@ function yearHTML(st, met){
     </div>`;
 }
 
-/* floating version badge */
+/* version badge: a small fixed chip, hidden by CSS while a book is open */
 (function(){
   const b=$('#verBadge'); if(!b) return;
   b.textContent='v'+APP_VERSION;
-  let x=parseFloat(LS.get('verX'))||null, y=parseFloat(LS.get('verY'))||null;
-  if(x!=null && y!=null){ b.style.left=x+'px'; b.style.top=y+'px'; b.style.right='auto'; }
-  let sx,sy,ox,oy,moved=false;
-  const down=e=>{
-    moved=false;
-    const t=e.touches?e.touches[0]:e;
-    sx=t.clientX; sy=t.clientY;
-    const r=b.getBoundingClientRect();
-    ox=t.clientX-r.left; oy=t.clientY-r.top;
-    b.style.cursor='grabbing';
-    e.preventDefault();
-  };
-  const move=e=>{
-    if(sx==null) return;
-    const t=e.touches?e.touches[0]:e;
-    if(Math.hypot(t.clientX-sx,t.clientY-sy)>6) moved=true;
-    let nx=t.clientX-ox, ny=t.clientY-oy;
-    nx=Math.max(0, Math.min(nx, innerWidth-b.offsetWidth));
-    ny=Math.max(0, Math.min(ny, innerHeight-b.offsetHeight));
-    b.style.left=nx+'px'; b.style.top=ny+'px'; b.style.right='auto';
-    e.preventDefault();
-  };
-  const up=e=>{
-    if(sx==null) return;
-    if(!moved) whatsNewSheet();
-    else { LS.set('verX', parseFloat(b.style.left)); LS.set('verY', parseFloat(b.style.top)); }
-    sx=null; b.style.cursor='grab';
-  };
-  b.addEventListener('pointerdown', down);
-  b.addEventListener('pointermove', move);
-  b.addEventListener('pointerup', up);
-  b.addEventListener('pointercancel', up);
-})();
-
-
-/* === REIMAGINE PROTOTYPE (disabled for now) === */
-/*
-(function(){
-  const v = document.getElementById('v-reader');
-  if(!v) return;
-  // v.classList.add('reimagine'); // disabled
-  let hideTimer = null;
-  function showChrome(){
-    v.classList.add('chrome-on');
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(()=>v.classList.remove('chrome-on'), 3200);
-  }
-  // Center-tap zone (middle 40% of the stage)
-  document.addEventListener('click', function(e){
-    if(v.hidden) return;
-    const stage = document.getElementById('stage') || document.getElementById('scrollView') || document.getElementById('speedView');
-    if(!stage || !stage.contains(e.target)) return;
-    const r = stage.getBoundingClientRect();
-    const x = e.clientX - r.left, y = e.clientY - r.top;
-    const midX = r.width * 0.3 < x && x < r.width * 0.7;
-    const midY = r.height * 0.3 < y && y < r.height * 0.7;
-    if(midX && midY){
-      e.stopPropagation();
-      if(v.classList.contains('chrome-on')) v.classList.remove('chrome-on');
-      else showChrome();
-    }
-  }, true);
-  // Show chrome briefly on open
-  setTimeout(showChrome, 400);
-})();
-
-
-/* === REIMAGINE: promote Continue reading to a hero card (fixed) === */
-(function(){
-  const orig = window.renderLibrary;
-  if(!orig) return;
-  window.renderLibrary = function(){
-    orig.apply(this, arguments);
-    const list = document.getElementById('docList');
-    if(!list) return;
-    // Remove any previous hero
-    document.querySelectorAll('.continue-hero').forEach(el=>el.remove());
-    const cont = list.querySelector('.doc');
-    if(!cont) return;
-    const hero = document.createElement('div');
-    hero.className = 'continue-hero';
-    hero.innerHTML = '<div class="eyebrow" style="font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Continue reading</div>';
-    hero.appendChild(cont.cloneNode(true));
-    list.parentNode.insertBefore(hero, list);
-    cont.style.display = 'none';
-    // Make the hero tappable the same way
-    const id = cont.dataset.id;
-    if(id) hero.onclick = ()=> openBook(id);
-  };
+  b.addEventListener('click', ()=>whatsNewSheet());
 })();
 
 
@@ -4103,6 +3983,7 @@ function yearHTML(st, met){
 (function setEarlyIcons(){
   try{
     if(typeof ICON==='undefined') return;
+    const qb=document.getElementById('libSearchBtn'); if(qb) qb.innerHTML=ICON.search||'⌕';
     const sb=document.getElementById('sortBtn'); if(sb) sb.innerHTML=ICON.sort||'↕';
     const fb=document.getElementById('filterBtn'); if(fb) fb.innerHTML=ICON.filter||'☰';
     const ab=document.getElementById('addBtn'); if(ab && !ab.textContent.trim()) ab.innerHTML=(ICON.plus||'+')+' Add to library';
@@ -4495,6 +4376,7 @@ async function initBackups(){
 /* ---------- library: sort, filter, search ---------- */
 const LIBSORTS=[['recent','Recently read'],['title','Title A–Z'],['author','Author A–Z']];
 let LIBV={sort:LS.get('libSort','recent'), q:''};
+let LIBTOOLS_OPEN=false;
 if(!LIBSORTS.some(([k])=>k===LIBV.sort)) LIBV.sort='recent';
 /* opened and not finished = in progress */
 const isReading=d=>!d.pending && !d.finished && ((d.pos||0)>0 || (d.lastRead||0)>0);
@@ -4509,14 +4391,25 @@ function docCard(d){
   const pct=d.finished?100:Math.round(100*d.pos/Math.max(1,d.count-1));
   const left=fmtMins((d.count-d.pos)/(S.measuredWpm||230));
   const tg=tagsOf(d); const sz=d.pending&&SHELF_SIZE[d.id];
-  const fin = d.finished ? ' style="opacity:.85"' : '';
   const finMark = d.finished ? ' <span class="tag" style="background:#2f9e6e;color:#fff">Finished</span>' : '';
-  return `<div class="doc" data-open="${d.id}" role="button" tabindex="0" style="--p:${d.pending?0:pct}%"${fin}>
+  return `<div class="doc${d.finished?' is-finished':''}" data-open="${d.id}" role="button" tabindex="0" style="--p:${d.pending?0:pct}%">
       <div class="t"><span class="tag">${KIND[d.kind]||'Text'}</span>${esc(d.title)}${finMark}</div>
       <button class="icon-btn more" type="button" data-more="${d.id}" aria-label="Edit or organize ${esc(d.title)}">${ICON.more}</button>
       ${d.author?`<div class="a">${esc(d.author)}</div>`:''}
       <div class="m">${d.pending? 'Free book · tap to download'+(sz?' ('+sz+')':'') : d.count.toLocaleString()+' words · '+(d.finished?'Finished':pct+'% · '+left+' left')}</div>
       ${tg.length?`<div class="tg">${tg.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}</div>`;
+}
+function heroCard(d){
+  const pct=Math.round(100*d.pos/Math.max(1,d.count-1));
+  const left=fmtMins((d.count-d.pos)/(S.measuredWpm||230));
+  return `<div class="continue-hero doc" data-open="${d.id}" role="button" tabindex="0" aria-label="Continue reading ${esc(d.title)}" style="--p:${pct}%">
+      <div class="eyebrow">Continue reading</div>
+      <button class="icon-btn more" type="button" data-more="${d.id}" aria-label="Edit or organize ${esc(d.title)}">${ICON.more}</button>
+      <div class="t">${esc(d.title)}</div>
+      ${d.author?`<div class="a">${esc(d.author)}</div>`:''}
+      <div class="m">${(d.count||0).toLocaleString()} words · ${pct}% · ${left} left</div>
+      <button class="btn primary hero-go" type="button" data-open="${d.id}">Continue</button>
+    </div>`;
 }
 /* "Jane Austen" sorts under Austen */
 function authorKey(a){ const first=a.split(/,|&| and /)[0].trim(); if(a.includes(',')&&!/,.*,/.test(a)&&first.split(' ').length===1) return a.toLowerCase(); const p=first.split(/\s+/); return (p.length>1?p[p.length-1]+' '+p.slice(0,-1).join(' '):first).toLowerCase(); }
@@ -4559,7 +4452,13 @@ function clearFilters(){ for(const [k] of FSEC) F[k].clear(); }
 /* drop picks that no longer exist (a deleted book or tag) */
 function pruneFilters(){ for(const k of [...F.ti]) if(!LIB.some(d=>d.id===k)) F.ti.delete(k); for(const k of [...F.au]) if(!LIB.some(d=>authorOf(d).toLowerCase()===k)) F.au.delete(k); for(const k of [...F.tg]) if(!LIB.some(d=>tagsOf(d).some(t=>t.toLowerCase()===k))) F.tg.delete(k); }
 const SECCLS={st:'f-st',ti:'f-ti',au:'f-au',tg:'f-tg'}, SECKEY={st:'Status',ti:'Title',au:'Author',tg:'Tag'};
+function syncLibTools(){
+  if(fCount() || (LIBV.q||'').trim()) LIBTOOLS_OPEN=true;
+  const box=$('#libTools'); if(box) box.classList.toggle('open', !!LIBTOOLS_OPEN);
+  const b=$('#libSearchBtn'); if(b){ b.innerHTML=ICON.search; b.setAttribute('aria-expanded', LIBTOOLS_OPEN?'true':'false'); }
+}
 function renderLibTools(){
+  syncLibTools();
   $('#sortBtn').innerHTML=ICON.sort; const n=fCount();
   $('#filterBtn').innerHTML=ICON.filter+(n?`<span class="badge">${n}</span>`:''); $('#filterBtn').classList.toggle('on',!!n);
   const pills=[]; for(const [sec] of FSEC) for(const k of F[sec]) pills.push(`<button class="pill ${SECCLS[sec]}" type="button" data-unf="${sec}" data-k="${esc(k)}" aria-label="Remove ${SECKEY[sec]} filter ${esc(labelOf(sec,k))}"><span class="x">✕</span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(labelOf(sec,k))}</span></button>`);
@@ -4580,23 +4479,45 @@ function renderLibrary(){
   const el=$('#docList');
   pruneFilters(); renderLibTools();
   $('#libTools').hidden=LIB.length<2 && !fCount();
+  $('#v-library').classList.remove('lib-quiet');
   if(!LIB.length){ el.innerHTML=`<div class="empty">Nothing here yet. Tap <b>Add to library</b> to paste text, load a link or open a book file.</div>`; return; }
   const q=LIBV.q.trim().toLowerCase();
   let docs=LIB.filter(d=>matchAll(d));
   if(q) docs=docs.filter(d=>[d.title,d.author,...tagsOf(d)].some(x=>(x||'').toLowerCase().includes(q)));
   if(!docs.length){ el.innerHTML=`<div class="empty" style="padding:40px 20px"><div style="font-size:2.2rem;margin-bottom:8px">📚</div><div style="font-weight:700;margin-bottom:6px">No books match</div><div class="small">${q?'Nothing matches “'+esc(LIBV.q.trim())+'”. ':''}${fCount()?'Try clearing the filters.':''}</div>${fCount()?'<button class="btn primary" type="button" data-unf="all" style="margin-top:16px">Clear filters</button>':''}</div>`; return; }
-  /* books in progress sit on top under Continue reading, but only while nothing is filtered or searched */
-  let top='';
-  if(!fCount() && !q){ const cont=docs.filter(isReading).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0)); if(cont.length && cont.length<docs.length){ top=`<h3 class="grp">Continue reading <span>${cont.length}</span></h3>`+cont.map(docCard).join('')+'<h3 class="grp">Everything else</h3>'; docs=docs.filter(d=>!isReading(d)); } }
   const recent=(a,b)=>(b.lastRead||b.added)-(a.lastRead||a.added);
   const titleSort=(a,b)=>byName(sortKey(a.title),sortKey(b.title));
-  if(LIBV.sort==='title'){ el.innerHTML=top+docs.sort(titleSort).map(docCard).join(''); return; }
+  const sortDocs=list=>{
+    if(LIBV.sort==='title') return list.slice().sort(titleSort);
+    if(LIBV.sort==='author') return list.slice().sort((a,b)=>{
+      const ak=authorOf(a)===NOAUTH?'￿':authorKey(authorOf(a));
+      const bk=authorOf(b)===NOAUTH?'￿':authorKey(authorOf(b));
+      const c=byName(ak,bk); return c||titleSort(a,b);
+    });
+    return list.slice().sort(recent);
+  };
+  /* one large Continue card for the most recently read unfinished book; never when searching or filtering */
+  let hero='';
+  if(!fCount() && !q){
+    const cont=docs.filter(isReading).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0));
+    if(cont.length){
+      hero=heroCard(cont[0]);
+      docs=docs.filter(d=>d.id!==cont[0].id);
+      if(docs.length) $('#v-library').classList.add('lib-quiet');
+    }
+  }
+  if(hero){
+    const rest=docs.filter(d=>!d.finished), fin=docs.filter(d=>!!d.finished);
+    el.innerHTML=hero+sortDocs(rest).concat(sortDocs(fin)).map(docCard).join('');
+    return;
+  }
+  if(LIBV.sort==='title'){ el.innerHTML=docs.sort(titleSort).map(docCard).join(''); return; }
   if(LIBV.sort==='author'){
     const groups=new Map(); for(const d of docs){ const a=authorOf(d); const k=a.toLowerCase(); if(!groups.has(k)) groups.set(k,{name:a,docs:[]}); groups.get(k).docs.push(d); }
     const keys=[...groups.values()].sort((a,b)=> a.name===NOAUTH?1 : b.name===NOAUTH?-1 : byName(authorKey(a.name),authorKey(b.name)));
-    el.innerHTML=top+keys.map(g=>`<h3 class="grp">${esc(g.name)} <span>${g.docs.length}</span></h3>`+g.docs.sort(titleSort).map(docCard).join('')).join(''); return;
+    el.innerHTML=keys.map(g=>`<h3 class="grp">${esc(g.name)} <span>${g.docs.length}</span></h3>`+g.docs.sort(titleSort).map(docCard).join('')).join(''); return;
   }
-  el.innerHTML=top+docs.sort(recent).map(docCard).join('');
+  el.innerHTML=docs.sort(recent).map(docCard).join('');
 }
 function openSort(){
   openSheet('Sort by', LIBSORTS.map(([k,l])=>`<button class="sortopt" type="button" data-act="pick" data-s="${k}" aria-pressed="${LIBV.sort===k}">${LIBV.sort===k?'✓ ':''}${l}</button>`).join(''), {
@@ -4632,12 +4553,24 @@ document.addEventListener('click',e=>{
 });
 $('#sortBtn').onclick=openSort;
 $('#filterBtn').onclick=openFilter;
+$('#libSearchBtn').onclick=()=>{
+  if($('#libTools').classList.contains('open') && !fCount() && !(LIBV.q||'').trim()) LIBTOOLS_OPEN=false;
+  else LIBTOOLS_OPEN=true;
+  renderLibTools();
+  if(LIBTOOLS_OPEN) setTimeout(()=>{ const i=$('#libFind'); if(i) i.focus(); }, 30);
+};
+$('#docList').addEventListener('keydown',e=>{
+  if(e.key!==' ' && e.key!=='Spacebar') return;
+  const o=e.target.closest('[data-open]'); if(!o || e.target.closest('[data-more],input,textarea')) return;
+  e.preventDefault(); openDoc(o.dataset.open);
+});
 $('#v-library').addEventListener('click',e=>{
   const u=e.target.closest('[data-unf]'); if(u){ if(u.dataset.unf==='all') clearFilters(); else toggleFilter(u.dataset.unf,u.dataset.k,false); renderLibrary(); return; }
   if(e.target.closest('[data-fts]')){ searchAllBooks(LIBV.q); return; }
   const g=e.target.closest('[data-sug]'); if(g){ toggleFilter(g.dataset.sug,g.dataset.k,true); LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
 });
-$('#libFind').addEventListener('input',e=>{ LIBV.q=e.target.value; renderLibrary(); });
+$('#libFind').addEventListener('input',e=>{ LIBV.q=e.target.value; if((LIBV.q||'').trim()) LIBTOOLS_OPEN=true; renderLibrary(); });
+$('#libFind').addEventListener('search',e=>{ if(!(e.target.value||'').trim() && !fCount()){ LIBTOOLS_OPEN=false; renderLibTools(); } });
 $('#addBtn').innerHTML=ICON.plus+'Add to library';
 $('#addBtn').onclick=()=>openSheet('Add to library', `
   <button class="addopt" type="button" data-act="file">${ICON.file}<span><b>Open a file</b><small>EPUB, PDF, TXT, Markdown or HTML</small></span></button>
@@ -5233,7 +5166,15 @@ function openSheet(title, body, acts, cls){
 function closeSheet(){ $('#sheet').hidden=true; $('#backdrop').hidden=true; sheetActs={}; }
 $('#sheet').addEventListener('click',e=>{ if(ghost()){ e.preventDefault(); return; } const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act; if(a==='__close'){ closeSheet(); return; } const fn=sheetActs[a]; if(fn) fn(b,e); });
 $('#backdrop').onclick=()=>{ if(!ghost()) closeSheet(); };
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!$('#sheet').hidden) closeSheet(); else if($('#imgOverlay')) $('#imgOverlay').remove(); } });
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if(!$('#sheet').hidden) closeSheet();
+  else if($('#imgOverlay')) $('#imgOverlay').remove();
+  else if(!$('#v-library').hidden && $('#libTools') && $('#libTools').classList.contains('open')){
+    if(LIBV.q){ LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
+    else if(!fCount()){ LIBTOOLS_OPEN=false; renderLibTools(); }
+  }
+});
 function toast(msg, action, ms, progress){
   $('#toastMsg').textContent=msg; const a=$('#toastAct'); const prog=$('#toastProg'); const bar=$('#toastBar');
   if(action){ a.hidden=false; a.textContent=action.label; a.onclick=()=>{ action.fn(); $('#toast').hidden=true; }; } else a.hidden=true;
@@ -5255,7 +5196,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=17;
+const SAMPLE_V=18;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -5305,8 +5246,8 @@ const SAMPLE_HTML=`
 <ul><li>The clock stops when you switch to another app, lock the phone or close the book, and the page you were on when you closed it still counts.</li><li>If you don’t touch the screen for 5 minutes, Tooz assumes you may have stepped away and counts only as long as that stretch usually takes you. Change the limit to 3 or 10 minutes in Settings.</li><li>Auto-scroll and Speed pause after 10 minutes without a touch and ask <em>Still reading?</em></li></ul>
 <h2>Your library</h2>
 <p>Tap <strong>Add to library</strong> to open a file, paste a link or some text, or find free books. Twenty-eight classics and two Bibles are already waiting on your shelf; each downloads the first time you open it.</p>
-<p>Books you have started sit at the top under <strong>Continue reading</strong>, and each tile fills with colour from left to right as you read.</p>
-<p>The <strong>sort</strong> button beside the search bar orders the library by recently read, title or author. The <strong>filter</strong> button opens four sections: reading status, title, author and tags. Pick as many as you like: books matching any choice in a section are shown, and every section you use must match. Once you pick something, the other sections only offer choices that still have books.</p>
+<p>The book you were last reading sits at the top as a large <strong>Continue reading</strong> card, with a Continue button and a fill that shows your progress. The rest of the shelf is quieter, and finished books sit at the bottom.</p>
+<p>Tap the <strong>search</strong> button to search, sort or filter. The <strong>sort</strong> button orders the library by recently read, title or author. The <strong>filter</strong> button opens four sections: reading status, title, author and tags. Pick as many as you like: books matching any choice in a section are shown, and every section you use must match. Once you pick something, the other sections only offer choices that still have books.</p>
 <p>To find words inside your books, type three letters or more and tap <strong>Search inside books</strong>. You see every book that has them, with each passage; tap one to open the book right there.</p>
 <p>Start typing in the search bar and matching titles, authors and tags appear underneath; tap one to filter by it. Each filter shows as a coloured pill under the search bar; tap its ✕ to remove it. Filters clear when you close the app.</p>
 <p>If a book is 98% read but not marked finished, Tooz asks whether you finished it when you come back to the library.</p>

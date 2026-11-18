@@ -3,6 +3,7 @@
 (function setEarlyIcons(){
   try{
     if(typeof ICON==='undefined') return;
+    const qb=document.getElementById('libSearchBtn'); if(qb) qb.innerHTML=ICON.search||'⌕';
     const sb=document.getElementById('sortBtn'); if(sb) sb.innerHTML=ICON.sort||'↕';
     const fb=document.getElementById('filterBtn'); if(fb) fb.innerHTML=ICON.filter||'☰';
     const ab=document.getElementById('addBtn'); if(ab && !ab.textContent.trim()) ab.innerHTML=(ICON.plus||'+')+' Add to library';
@@ -316,6 +317,7 @@ async function initBackups(){
 /* ---------- library: sort, filter, search ---------- */
 const LIBSORTS=[['recent','Recently read'],['title','Title A–Z'],['author','Author A–Z']];
 let LIBV={sort:LS.get('libSort','recent'), q:''};
+let LIBTOOLS_OPEN=false;
 if(!LIBSORTS.some(([k])=>k===LIBV.sort)) LIBV.sort='recent';
 /* opened and not finished = in progress */
 const isReading=d=>!d.pending && !d.finished && ((d.pos||0)>0 || (d.lastRead||0)>0);
@@ -330,14 +332,25 @@ function docCard(d){
   const pct=d.finished?100:Math.round(100*d.pos/Math.max(1,d.count-1));
   const left=fmtMins((d.count-d.pos)/(S.measuredWpm||230));
   const tg=tagsOf(d); const sz=d.pending&&SHELF_SIZE[d.id];
-  const fin = d.finished ? ' style="opacity:.85"' : '';
   const finMark = d.finished ? ' <span class="tag" style="background:#2f9e6e;color:#fff">Finished</span>' : '';
-  return `<div class="doc" data-open="${d.id}" role="button" tabindex="0" style="--p:${d.pending?0:pct}%"${fin}>
+  return `<div class="doc${d.finished?' is-finished':''}" data-open="${d.id}" role="button" tabindex="0" style="--p:${d.pending?0:pct}%">
       <div class="t"><span class="tag">${KIND[d.kind]||'Text'}</span>${esc(d.title)}${finMark}</div>
       <button class="icon-btn more" type="button" data-more="${d.id}" aria-label="Edit or organize ${esc(d.title)}">${ICON.more}</button>
       ${d.author?`<div class="a">${esc(d.author)}</div>`:''}
       <div class="m">${d.pending? 'Free book · tap to download'+(sz?' ('+sz+')':'') : d.count.toLocaleString()+' words · '+(d.finished?'Finished':pct+'% · '+left+' left')}</div>
       ${tg.length?`<div class="tg">${tg.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}</div>`;
+}
+function heroCard(d){
+  const pct=Math.round(100*d.pos/Math.max(1,d.count-1));
+  const left=fmtMins((d.count-d.pos)/(S.measuredWpm||230));
+  return `<div class="continue-hero doc" data-open="${d.id}" role="button" tabindex="0" aria-label="Continue reading ${esc(d.title)}" style="--p:${pct}%">
+      <div class="eyebrow">Continue reading</div>
+      <button class="icon-btn more" type="button" data-more="${d.id}" aria-label="Edit or organize ${esc(d.title)}">${ICON.more}</button>
+      <div class="t">${esc(d.title)}</div>
+      ${d.author?`<div class="a">${esc(d.author)}</div>`:''}
+      <div class="m">${(d.count||0).toLocaleString()} words · ${pct}% · ${left} left</div>
+      <button class="btn primary hero-go" type="button" data-open="${d.id}">Continue</button>
+    </div>`;
 }
 /* "Jane Austen" sorts under Austen */
 function authorKey(a){ const first=a.split(/,|&| and /)[0].trim(); if(a.includes(',')&&!/,.*,/.test(a)&&first.split(' ').length===1) return a.toLowerCase(); const p=first.split(/\s+/); return (p.length>1?p[p.length-1]+' '+p.slice(0,-1).join(' '):first).toLowerCase(); }
@@ -380,7 +393,13 @@ function clearFilters(){ for(const [k] of FSEC) F[k].clear(); }
 /* drop picks that no longer exist (a deleted book or tag) */
 function pruneFilters(){ for(const k of [...F.ti]) if(!LIB.some(d=>d.id===k)) F.ti.delete(k); for(const k of [...F.au]) if(!LIB.some(d=>authorOf(d).toLowerCase()===k)) F.au.delete(k); for(const k of [...F.tg]) if(!LIB.some(d=>tagsOf(d).some(t=>t.toLowerCase()===k))) F.tg.delete(k); }
 const SECCLS={st:'f-st',ti:'f-ti',au:'f-au',tg:'f-tg'}, SECKEY={st:'Status',ti:'Title',au:'Author',tg:'Tag'};
+function syncLibTools(){
+  if(fCount() || (LIBV.q||'').trim()) LIBTOOLS_OPEN=true;
+  const box=$('#libTools'); if(box) box.classList.toggle('open', !!LIBTOOLS_OPEN);
+  const b=$('#libSearchBtn'); if(b){ b.innerHTML=ICON.search; b.setAttribute('aria-expanded', LIBTOOLS_OPEN?'true':'false'); }
+}
 function renderLibTools(){
+  syncLibTools();
   $('#sortBtn').innerHTML=ICON.sort; const n=fCount();
   $('#filterBtn').innerHTML=ICON.filter+(n?`<span class="badge">${n}</span>`:''); $('#filterBtn').classList.toggle('on',!!n);
   const pills=[]; for(const [sec] of FSEC) for(const k of F[sec]) pills.push(`<button class="pill ${SECCLS[sec]}" type="button" data-unf="${sec}" data-k="${esc(k)}" aria-label="Remove ${SECKEY[sec]} filter ${esc(labelOf(sec,k))}"><span class="x">✕</span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(labelOf(sec,k))}</span></button>`);
@@ -401,23 +420,45 @@ function renderLibrary(){
   const el=$('#docList');
   pruneFilters(); renderLibTools();
   $('#libTools').hidden=LIB.length<2 && !fCount();
+  $('#v-library').classList.remove('lib-quiet');
   if(!LIB.length){ el.innerHTML=`<div class="empty">Nothing here yet. Tap <b>Add to library</b> to paste text, load a link or open a book file.</div>`; return; }
   const q=LIBV.q.trim().toLowerCase();
   let docs=LIB.filter(d=>matchAll(d));
   if(q) docs=docs.filter(d=>[d.title,d.author,...tagsOf(d)].some(x=>(x||'').toLowerCase().includes(q)));
   if(!docs.length){ el.innerHTML=`<div class="empty" style="padding:40px 20px"><div style="font-size:2.2rem;margin-bottom:8px">📚</div><div style="font-weight:700;margin-bottom:6px">No books match</div><div class="small">${q?'Nothing matches “'+esc(LIBV.q.trim())+'”. ':''}${fCount()?'Try clearing the filters.':''}</div>${fCount()?'<button class="btn primary" type="button" data-unf="all" style="margin-top:16px">Clear filters</button>':''}</div>`; return; }
-  /* books in progress sit on top under Continue reading, but only while nothing is filtered or searched */
-  let top='';
-  if(!fCount() && !q){ const cont=docs.filter(isReading).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0)); if(cont.length && cont.length<docs.length){ top=`<h3 class="grp">Continue reading <span>${cont.length}</span></h3>`+cont.map(docCard).join('')+'<h3 class="grp">Everything else</h3>'; docs=docs.filter(d=>!isReading(d)); } }
   const recent=(a,b)=>(b.lastRead||b.added)-(a.lastRead||a.added);
   const titleSort=(a,b)=>byName(sortKey(a.title),sortKey(b.title));
-  if(LIBV.sort==='title'){ el.innerHTML=top+docs.sort(titleSort).map(docCard).join(''); return; }
+  const sortDocs=list=>{
+    if(LIBV.sort==='title') return list.slice().sort(titleSort);
+    if(LIBV.sort==='author') return list.slice().sort((a,b)=>{
+      const ak=authorOf(a)===NOAUTH?'￿':authorKey(authorOf(a));
+      const bk=authorOf(b)===NOAUTH?'￿':authorKey(authorOf(b));
+      const c=byName(ak,bk); return c||titleSort(a,b);
+    });
+    return list.slice().sort(recent);
+  };
+  /* one large Continue card for the most recently read unfinished book; never when searching or filtering */
+  let hero='';
+  if(!fCount() && !q){
+    const cont=docs.filter(isReading).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0));
+    if(cont.length){
+      hero=heroCard(cont[0]);
+      docs=docs.filter(d=>d.id!==cont[0].id);
+      if(docs.length) $('#v-library').classList.add('lib-quiet');
+    }
+  }
+  if(hero){
+    const rest=docs.filter(d=>!d.finished), fin=docs.filter(d=>!!d.finished);
+    el.innerHTML=hero+sortDocs(rest).concat(sortDocs(fin)).map(docCard).join('');
+    return;
+  }
+  if(LIBV.sort==='title'){ el.innerHTML=docs.sort(titleSort).map(docCard).join(''); return; }
   if(LIBV.sort==='author'){
     const groups=new Map(); for(const d of docs){ const a=authorOf(d); const k=a.toLowerCase(); if(!groups.has(k)) groups.set(k,{name:a,docs:[]}); groups.get(k).docs.push(d); }
     const keys=[...groups.values()].sort((a,b)=> a.name===NOAUTH?1 : b.name===NOAUTH?-1 : byName(authorKey(a.name),authorKey(b.name)));
-    el.innerHTML=top+keys.map(g=>`<h3 class="grp">${esc(g.name)} <span>${g.docs.length}</span></h3>`+g.docs.sort(titleSort).map(docCard).join('')).join(''); return;
+    el.innerHTML=keys.map(g=>`<h3 class="grp">${esc(g.name)} <span>${g.docs.length}</span></h3>`+g.docs.sort(titleSort).map(docCard).join('')).join(''); return;
   }
-  el.innerHTML=top+docs.sort(recent).map(docCard).join('');
+  el.innerHTML=docs.sort(recent).map(docCard).join('');
 }
 function openSort(){
   openSheet('Sort by', LIBSORTS.map(([k,l])=>`<button class="sortopt" type="button" data-act="pick" data-s="${k}" aria-pressed="${LIBV.sort===k}">${LIBV.sort===k?'✓ ':''}${l}</button>`).join(''), {
@@ -453,12 +494,24 @@ document.addEventListener('click',e=>{
 });
 $('#sortBtn').onclick=openSort;
 $('#filterBtn').onclick=openFilter;
+$('#libSearchBtn').onclick=()=>{
+  if($('#libTools').classList.contains('open') && !fCount() && !(LIBV.q||'').trim()) LIBTOOLS_OPEN=false;
+  else LIBTOOLS_OPEN=true;
+  renderLibTools();
+  if(LIBTOOLS_OPEN) setTimeout(()=>{ const i=$('#libFind'); if(i) i.focus(); }, 30);
+};
+$('#docList').addEventListener('keydown',e=>{
+  if(e.key!==' ' && e.key!=='Spacebar') return;
+  const o=e.target.closest('[data-open]'); if(!o || e.target.closest('[data-more],input,textarea')) return;
+  e.preventDefault(); openDoc(o.dataset.open);
+});
 $('#v-library').addEventListener('click',e=>{
   const u=e.target.closest('[data-unf]'); if(u){ if(u.dataset.unf==='all') clearFilters(); else toggleFilter(u.dataset.unf,u.dataset.k,false); renderLibrary(); return; }
   if(e.target.closest('[data-fts]')){ searchAllBooks(LIBV.q); return; }
   const g=e.target.closest('[data-sug]'); if(g){ toggleFilter(g.dataset.sug,g.dataset.k,true); LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
 });
-$('#libFind').addEventListener('input',e=>{ LIBV.q=e.target.value; renderLibrary(); });
+$('#libFind').addEventListener('input',e=>{ LIBV.q=e.target.value; if((LIBV.q||'').trim()) LIBTOOLS_OPEN=true; renderLibrary(); });
+$('#libFind').addEventListener('search',e=>{ if(!(e.target.value||'').trim() && !fCount()){ LIBTOOLS_OPEN=false; renderLibTools(); } });
 $('#addBtn').innerHTML=ICON.plus+'Add to library';
 $('#addBtn').onclick=()=>openSheet('Add to library', `
   <button class="addopt" type="button" data-act="file">${ICON.file}<span><b>Open a file</b><small>EPUB, PDF, TXT, Markdown or HTML</small></span></button>
@@ -1054,7 +1107,15 @@ function openSheet(title, body, acts, cls){
 function closeSheet(){ $('#sheet').hidden=true; $('#backdrop').hidden=true; sheetActs={}; }
 $('#sheet').addEventListener('click',e=>{ if(ghost()){ e.preventDefault(); return; } const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act; if(a==='__close'){ closeSheet(); return; } const fn=sheetActs[a]; if(fn) fn(b,e); });
 $('#backdrop').onclick=()=>{ if(!ghost()) closeSheet(); };
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!$('#sheet').hidden) closeSheet(); else if($('#imgOverlay')) $('#imgOverlay').remove(); } });
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if(!$('#sheet').hidden) closeSheet();
+  else if($('#imgOverlay')) $('#imgOverlay').remove();
+  else if(!$('#v-library').hidden && $('#libTools') && $('#libTools').classList.contains('open')){
+    if(LIBV.q){ LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
+    else if(!fCount()){ LIBTOOLS_OPEN=false; renderLibTools(); }
+  }
+});
 function toast(msg, action, ms, progress){
   $('#toastMsg').textContent=msg; const a=$('#toastAct'); const prog=$('#toastProg'); const bar=$('#toastBar');
   if(action){ a.hidden=false; a.textContent=action.label; a.onclick=()=>{ action.fn(); $('#toast').hidden=true; }; } else a.hidden=true;
@@ -1076,7 +1137,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=17;
+const SAMPLE_V=18;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1126,8 +1187,8 @@ const SAMPLE_HTML=`
 <ul><li>The clock stops when you switch to another app, lock the phone or close the book, and the page you were on when you closed it still counts.</li><li>If you don’t touch the screen for 5 minutes, Tooz assumes you may have stepped away and counts only as long as that stretch usually takes you. Change the limit to 3 or 10 minutes in Settings.</li><li>Auto-scroll and Speed pause after 10 minutes without a touch and ask <em>Still reading?</em></li></ul>
 <h2>Your library</h2>
 <p>Tap <strong>Add to library</strong> to open a file, paste a link or some text, or find free books. Twenty-eight classics and two Bibles are already waiting on your shelf; each downloads the first time you open it.</p>
-<p>Books you have started sit at the top under <strong>Continue reading</strong>, and each tile fills with colour from left to right as you read.</p>
-<p>The <strong>sort</strong> button beside the search bar orders the library by recently read, title or author. The <strong>filter</strong> button opens four sections: reading status, title, author and tags. Pick as many as you like: books matching any choice in a section are shown, and every section you use must match. Once you pick something, the other sections only offer choices that still have books.</p>
+<p>The book you were last reading sits at the top as a large <strong>Continue reading</strong> card, with a Continue button and a fill that shows your progress. The rest of the shelf is quieter, and finished books sit at the bottom.</p>
+<p>Tap the <strong>search</strong> button to search, sort or filter. The <strong>sort</strong> button orders the library by recently read, title or author. The <strong>filter</strong> button opens four sections: reading status, title, author and tags. Pick as many as you like: books matching any choice in a section are shown, and every section you use must match. Once you pick something, the other sections only offer choices that still have books.</p>
 <p>To find words inside your books, type three letters or more and tap <strong>Search inside books</strong>. You see every book that has them, with each passage; tap one to open the book right there.</p>
 <p>Start typing in the search bar and matching titles, authors and tags appear underneath; tap one to filter by it. Each filter shows as a coloured pill under the search bar; tap its ✕ to remove it. Filters clear when you close the app.</p>
 <p>If a book is 98% read but not marked finished, Tooz asks whether you finished it when you come back to the library.</p>
