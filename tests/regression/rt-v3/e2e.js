@@ -34,9 +34,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const [W,Hh]=(process.argv[2]|
  const selw=async(a,bb)=>{ await pg.evaluate(([a,bb])=>{ const r=document.createRange(); r.setStart(wordEl(a).firstChild||wordEl(a),0); const e=wordEl(bb); r.setEnd(e.lastChild||e,(e.lastChild||e).length||0); const s=getSelection(); s.removeAllRanges(); s.addRange(r); },[a,bb]); await sleep(500); };
  const p0=(await st()).pos; await selw(p0+3,p0+8); await shot('selbar'); log('selbar',await pg.evaluate(()=>[!$('#selBar').hidden,JSON.stringify(SEL)]));
  await tapSel('#selBar [data-hl="2"]'); log('hl',await pg.evaluate(()=>R.meta.highlights.map(h=>[h.s,h.e,h.c])));
- await selw(p0+12,p0+14); await tapSel('#selBar [data-sel="note"]'); await sleep(300); await pg.fill('#hlNote','A note with <b>html</b> & stuff'); await shot('note_sheet'); await tapSel('#sheet [data-act="save"]'); log('note',await pg.evaluate(()=>R.meta.highlights.map(h=>[h.s,h.e,h.c,h.note])), await st());
- await selw(p0+20,p0+22); await tapSel('#selBar [data-sel="copy"]'); log('copy',await st());
- await selw(p0+25,p0+25); await tapSel('#selBar [data-sel="define"]'); await sleep(300); log('define',await st(), await pg.evaluate(()=>WORDS.map(w=>w.word))); await shot('define'); await tapSel('#sheet [data-act="__close"]');
+ await selw(p0+12,p0+14); await tapSel('#selMore'); await tapSel('#selMenu [data-sel="note"]'); await sleep(300); await pg.fill('#hlNote','A note with <b>html</b> & stuff'); await shot('note_sheet'); await tapSel('#sheet [data-act="save"]'); log('note',await pg.evaluate(()=>R.meta.highlights.map(h=>[h.s,h.e,h.c,h.note])), await st());
+ await selw(p0+20,p0+22); await tapSel('#selMore'); await tapSel('#selMenu [data-sel="copy"]'); log('copy',await st());
+ await selw(p0+25,p0+25); await tapSel('#selMore'); await tapSel('#selMenu [data-sel="define"]'); await sleep(300); log('define',await st(), await pg.evaluate(()=>WORDS.map(w=>w.word))); await shot('define'); await tapSel('#sheet [data-act="__close"]');
  await shot('rich_hl');
  // search
  await pg.evaluate(()=>setChrome(true)); await tapSel('#rToc'); await sleep(300); await tapSel('#tocSearch'); await sleep(300); await pg.fill('#srchIn','scene break'); await sleep(600); await shot('search'); log('search',await pg.evaluate(()=>$('#srchMeta').textContent)); await tapSel('#srchOut .result'); await sleep(700); log('after search',await st(), await pg.evaluate(()=>document.querySelectorAll('w.found').length)); await shot('search_jump');

@@ -897,13 +897,121 @@ function selCheck(){
   const rg=s.getRangeAt(0); const host=hostEl(); if(!host||!host.contains(rg.commonAncestorContainer)){ selHide(); return; }
   let a=nodeIdx(rg.startContainer, rg.startOffset, true), b=nodeIdx(rg.endContainer, rg.endOffset, false);
   if(a==null||b==null){ selHide(); return; } if(b<a) [a,b]=[b,a];
-  SEL={s:a,e:b, text:s.toString()}; $('#selBar').hidden=false; if(SC.auto) asStop();
+  SEL={s:a,e:b, text:s.toString()}; $('#selBar').hidden=false; if(SC.auto) asStop(); placeSelBar();
 }
-function selHide(){ $('#selBar').hidden=true; SEL=null; if(TS.on){ TS.on=false; tsPaint(); } }
+function selMenuIsOpen(){ const m=$('#selMenu'); return !!(m && !m.hidden); }
+function closeSelMenu(focusMore){
+  const m=$('#selMenu'), btn=$('#selMore');
+  if(m) m.hidden=true;
+  if(btn){ btn.setAttribute('aria-expanded','false'); if(focusMore) btn.focus(); }
+  placeSelBar();
+}
+function openSelMenu(){
+  const m=$('#selMenu'), btn=$('#selMore'); if(!m||!btn) return;
+  m.hidden=false; btn.setAttribute('aria-expanded','true');
+  placeSelBar();
+}
+function toggleSelMenu(){ if(selMenuIsOpen()) closeSelMenu(false); else openSelMenu(); }
+function cssVarPx(name){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name))||0; }
+function selSafeBox(){
+  const pad=8;
+  const L=cssVarPx('--sal')+pad, T=cssVarPx('--sat')+pad, R=cssVarPx('--sar')+pad, B=cssVarPx('--sab')+pad;
+  const W=innerWidth, H=innerHeight;
+  return {l:L, t:T, r:W-R, b:H-B, w:W-L-R, h:H-T-B};
+}
+function selRangeRect(){
+  const rects=[];
+  if(TS.on){
+    for(let i=TS.a;i<=TS.b;i++){
+      const el=wordEl(i); if(!el) continue;
+      for(const r of el.getClientRects()) if(r.width>0 && r.height>0) rects.push(r);
+    }
+  }
+  if(!rects.length){
+    try{
+      const s=getSelection();
+      if(s&&s.rangeCount&&!s.isCollapsed){ for(const r of s.getRangeAt(0).getClientRects()) if(r.width>0 && r.height>0) rects.push(r); }
+    }catch(e){}
+  }
+  if(!rects.length) return null;
+  let l=Infinity,t=Infinity,r=-Infinity,b=-Infinity;
+  for(const q of rects){ l=Math.min(l,q.left); t=Math.min(t,q.top); r=Math.max(r,q.right); b=Math.max(b,q.bottom); }
+  return {left:l, top:t, right:r, bottom:b, width:r-l, height:b-t};
+}
+function overlaps(a,b,pad){
+  pad=pad||0;
+  return !(a.right<=b.left-pad || a.left>=b.right+pad || a.bottom<=b.top-pad || a.top>=b.bottom+pad);
+}
+function placeSelBar(){
+  const bar=$('#selBar'); if(!bar || bar.hidden) return;
+  const menu=$('#selMenu'), menuOpen=menu && !menu.hidden;
+  const box=selSafeBox(), sel=selRangeRect(), gap=8;
+  const barW=bar.offsetWidth, barH=bar.offsetHeight;
+  const menuW=menuOpen?menu.offsetWidth:0, menuH=menuOpen?menu.offsetHeight:0;
+  let barLeft, barTop;
+  if(!sel){
+    barLeft=Math.max(box.l, Math.min((innerWidth-barW)/2, box.r-barW));
+    barTop=box.b-barH;
+  } else {
+    const mid=(sel.left+sel.right)/2;
+    barLeft=Math.max(box.l, Math.min(mid-barW/2, box.r-barW));
+    const below=sel.bottom+gap, above=sel.top-gap-barH;
+    const belowFits=below+barH<=box.b+0.5, aboveFits=above>=box.t-0.5;
+    if(belowFits) barTop=below;
+    else if(aboveFits) barTop=above;
+    else {
+      const roomBelow=box.b-(sel.bottom+gap), roomAbove=(sel.top-gap)-box.t;
+      barTop=roomBelow>=roomAbove ? Math.max(box.t, Math.min(below, box.b-barH)) : Math.max(box.t, Math.min(above, box.b-barH));
+    }
+  }
+  bar.classList.add('placed');
+  bar.style.left=Math.round(barLeft)+'px';
+  bar.style.top=Math.round(barTop)+'px';
+  bar.style.bottom='auto';
+  bar.style.right='auto';
+  if(!menuOpen) return;
+  const br={left:barLeft, top:barTop, right:barLeft+barW, bottom:barTop+barH};
+  const more=($('#selMore')||bar).getBoundingClientRect();
+  const area=r=>Math.max(0, Math.min(r.right,sel?sel.right:r.left)-Math.max(r.left,sel?sel.left:r.right))*Math.max(0, Math.min(r.bottom,sel?sel.bottom:r.top)-Math.max(r.top,sel?sel.top:r.bottom));
+  const candidates=[];
+  const add=(l,t,kind)=>{
+    l=Math.max(box.l, Math.min(l, box.r-menuW));
+    t=Math.max(box.t, Math.min(t, box.b-menuH));
+    const r={left:l, top:t, right:l+menuW, bottom:t+menuH};
+    const overSel=sel && overlaps(r, sel, 1);
+    const overBar=overlaps(r, br, 1);
+    const off=r.left<box.l-1||r.top<box.t-1||r.right>box.r+1||r.bottom>box.b+1;
+    const pref={below:0, above:1, right:2, left:3, 'right-end':4, 'left-end':5}[kind]||6;
+    candidates.push({l,t,kind, overSel, overBar, off, overlap:sel?area(r):0, score:(off?500:0)+(overSel?100:0)+(overBar?25:0)+pref});
+  };
+  add(more.left, br.bottom+gap, 'below');
+  add(more.left, br.top-gap-menuH, 'above');
+  add(br.right+gap, br.top, 'right');
+  add(br.left-gap-menuW, br.top, 'left');
+  add(br.right+gap, br.bottom-menuH, 'right-end');
+  add(br.left-gap-menuW, br.bottom-menuH, 'left-end');
+  candidates.sort((a,b)=>a.score-b.score || a.overlap-b.overlap);
+  const best=candidates[0];
+  menu.style.left=Math.round(best.l)+'px';
+  menu.style.top=Math.round(best.t)+'px';
+}
+function selHide(){
+  closeSelMenu(false);
+  const bar=$('#selBar');
+  bar.hidden=true; bar.classList.remove('placed'); bar.style.left=bar.style.top=bar.style.bottom=bar.style.right='';
+  SEL=null; if(TS.on){ TS.on=false; tsPaint(); }
+}
 function selClear(){ selHide(); try{ const s=getSelection(); if(s&&!s.isCollapsed) s.removeAllRanges(); }catch(e){} }
+$('#selMore').innerHTML=(ICON.more||'')+'More';
+for(const [act,icon,label] of [['define','define','Define'],['note','note','Note'],['copy','copy','Copy'],['share','share','Share']]){
+  const b=document.querySelector('#selMenu [data-sel="'+act+'"]'); if(b) b.innerHTML=(ICON[icon]||'')+label;
+}
 $('#selBar').addEventListener('mousedown',e=>e.preventDefault());
+$('#selMenu').addEventListener('mousedown',e=>e.preventDefault());
 $('#selBar').addEventListener('click',e=>{
-  const b=e.target.closest('button'); if(!b||!SEL) return; const {s,e:en}=SEL;
+  const b=e.target.closest('button'); if(!b||!SEL) return;
+  if(b.id==='selMore'){ toggleSelMenu(); return; }
+  const {s,e:en}=SEL;
   if(b.dataset.hl){ addHighlight(s,en,+b.dataset.hl); selClear(); return; }
   const act=b.dataset.sel; selClear();
   if(act==='copy') copyQuote(s,en);
@@ -911,6 +1019,11 @@ $('#selBar').addEventListener('click',e=>{
   else if(act==='define'){ const k=defineIdx(s,en); const w=clean(R.words[k]); if(w) defineWord(w,k); }
   else if(act==='share') quoteImage(s,en);
 });
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape' || !selMenuIsOpen()) return;
+  e.preventDefault(); e.stopPropagation();
+  closeSelMenu(true);
+}, true);
 /* the word to define: the first real word in the selection (skipping note numbers and stray punctuation) */
 function defineIdx(s,e){ for(let k=s;k<=e;k++){ if(R.wf && (R.wf[k]&F_N)) continue; if(clean(R.words[k])) return k; } return s; }
 /* "quote" — Author, Title, chapter */
@@ -932,6 +1045,7 @@ function tsPaint(){
   if(wa){ const b=bandOf(wa, wa.getClientRects()[0]||wa.getBoundingClientRect()); A.style.setProperty('--stem',b.h+'px'); A.style.left=b.l+'px'; A.style.top=(b.top-13)+'px'; A.hidden=false; } else A.hidden=true;
   if(wb){ const rs=wb.getClientRects(); const b=bandOf(wb, rs[rs.length-1]||wb.getBoundingClientRect()); B.style.setProperty('--stem',b.h+'px'); B.style.left=b.r+'px'; B.style.top=b.top+'px'; B.hidden=false; } else B.hidden=true;
   TS.bh=wb?bandOf(wb, wb.getBoundingClientRect()).h:22;
+  if(TS.on) placeSelBar();
 }
 function tsSet(a,b){ TS.on=true; TS.a=Math.min(a,b); TS.b=Math.max(a,b); SEL={s:TS.a, e:TS.b}; $('#selBar').hidden=false; if(SC.auto) asStop(); tsPaint(); }
 function wordAtPoint(x,y){ const el=document.elementFromPoint(x,y); const w=el&&el.closest?el.closest('w'):null; if(!w || !hostEl() || !hostEl().contains(w)) return null; return idxOf(w); }
@@ -1011,7 +1125,14 @@ for(const id of ['tsA','tsB']){
   h.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 }
 /* a tap anywhere else lets go of the selection */
-document.addEventListener('pointerdown',e=>{ if(!TS.on || TS.extending) return; if(e.target.closest('#selBar,.tsh,#sheet')) return; if(performance.now()-(TS.justSelected||0)<350) return; selClear(); TS.clearedAt=performance.now(); }, true);
+document.addEventListener('pointerdown',e=>{
+  if(selMenuIsOpen() && !e.target.closest('#selBar,#selMenu,.tsh,#sheet')){ closeSelMenu(true); e.stopPropagation(); return; }
+  if(!TS.on || TS.extending) return; if(e.target.closest('#selBar,#selMenu,.tsh,#sheet')) return; if(performance.now()-(TS.justSelected||0)<350) return; selClear(); TS.clearedAt=performance.now();
+}, true);
+const selReposition=()=>{ if($('#selBar').hidden) return; placeSelBar(); };
+scView.addEventListener('scroll', selReposition, {passive:true});
+window.addEventListener('resize', selReposition);
+try{ visualViewport.addEventListener('resize', selReposition); visualViewport.addEventListener('scroll', selReposition); }catch(e){}
 
 /* ---------- share a quote as an image ---------- */
 function quoteImage(s,e, style){

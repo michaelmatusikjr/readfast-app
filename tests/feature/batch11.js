@@ -59,9 +59,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   console.log('cleared', await pg.evaluate(()=>[fCount(), !!document.querySelector('#docList .grp')]));
   // status filter + continue reading hidden
   await pg.evaluate(()=>{ const m=LIB.find(x=>x.title==='Dash test'); m.pos=5; m.lastRead=Date.now(); touch(m); renderLibrary(); });
-  console.log('continue reading shown', await pg.evaluate(()=>$('#docList .grp').textContent));
+  console.log('continue reading shown', await pg.evaluate(()=>[!!$('#docList .continue-hero'), ($('#docList .continue-hero .t')||{}).textContent, ($('#docList .hero-go')||{}).textContent]));
   await pg.evaluate(()=>{ toggleFilter('st','reading',true); renderLibrary(); });
-  console.log('status filter', await pg.evaluate(()=>[document.querySelectorAll('#docList .doc').length, [...document.querySelectorAll('#docList .grp')].map(g=>g.textContent)]));
+  console.log('status filter', await pg.evaluate(()=>[document.querySelectorAll('#docList .doc').length, !!document.querySelector('#docList .continue-hero'), [...document.querySelectorAll('#libPills .pill')].map(p=>p.textContent)]));
   // filters don't survive a reload; sort does
   await pg.reload(); await sleep(1500);
   console.log('after reload', await pg.evaluate(()=>[fCount(), LIBV.sort]));

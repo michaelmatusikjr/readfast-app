@@ -1,5 +1,5 @@
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.28</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.29</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -12,6 +12,7 @@
         <div class="libbar" id="libBar"><input class="input" id="libFind" type="search" placeholder="Search titles, authors and tags" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" aria-label="Search your library"><button class="icon-btn tbtn" id="sortBtn" type="button" aria-label="Sort"></button><button class="icon-btn tbtn" id="filterBtn" type="button" aria-label="Filter"></button></div>
         <div class="chips" id="libSug" hidden></div>
         <div class="chips" id="libPills" hidden></div>
+        <div id="libPillsLive" class="sr-only" role="status" aria-live="polite"></div>
       </div>
       <div id="docList" class="wrap" style="gap:10px"></div>
       <p class="note" id="fileNote">Opens EPUB, PDF, TXT, Markdown and HTML files. Books bought in Apple Books are copy-protected and can't be opened here.</p>
@@ -132,15 +133,18 @@
 
 <div id="tsA" class="tsh" hidden></div><div id="tsB" class="tsh" hidden></div>
 <div id="selBar" hidden role="toolbar" aria-label="Selected text">
-  <button class="dot" type="button" data-hl="1" aria-label="Yellow highlight"></button>
-  <button class="dot" type="button" data-hl="2" aria-label="Green highlight"></button>
-  <button class="dot" type="button" data-hl="3" aria-label="Blue highlight"></button>
-  <button class="dot" type="button" data-hl="4" aria-label="Pink highlight"></button>
+  <button class="dot" type="button" data-hl="1" aria-label="Highlight yellow"></button>
+  <button class="dot" type="button" data-hl="2" aria-label="Highlight green"></button>
+  <button class="dot" type="button" data-hl="3" aria-label="Highlight blue"></button>
+  <button class="dot" type="button" data-hl="4" aria-label="Highlight pink"></button>
   <span class="sep"></span>
-  <button class="tb" type="button" data-sel="note">Note</button>
-  <button class="tb" type="button" data-sel="copy">Copy</button>
-  <button class="tb" type="button" data-sel="define">Define</button>
-  <button class="tb" type="button" data-sel="share">Share</button>
+  <button class="tb" type="button" id="selMore" aria-label="More" aria-haspopup="menu" aria-expanded="false" aria-controls="selMenu">More</button>
+  <div id="selMenu" hidden role="menu" aria-label="Selection actions">
+    <button class="tb" type="button" role="menuitem" data-sel="define">Define</button>
+    <button class="tb" type="button" role="menuitem" data-sel="note">Note</button>
+    <button class="tb" type="button" role="menuitem" data-sel="copy">Copy</button>
+    <button class="tb" type="button" role="menuitem" data-sel="share">Share</button>
+  </div>
 </div>
 <div id="shade" aria-hidden="true"></div>
 <div id="backdrop" hidden></div>

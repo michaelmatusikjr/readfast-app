@@ -28,6 +28,8 @@
   --f-ui:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --focus:#E0303F; --rfont:var(--f-ui); --rsize:44px;
+  --sat:env(safe-area-inset-top,0px); --sar:env(safe-area-inset-right,0px);
+  --sab:env(safe-area-inset-bottom,0px); --sal:env(safe-area-inset-left,0px);
   --img-bg:#FFFFFF; /* book art is drawn for white pages, so images keep a white ground in every theme */
   /* page (reader) tokens: JS sets these from the chosen reading theme */
   --page-bg:#FFFFFF; --page-ink:#1B1B1B; --page-muted:#6B6B6B; --page-line:#E2E2E2; --page-link:#2456C7;
@@ -54,6 +56,7 @@ h1{font-size:1.9rem;font-weight:800}
 h2{font-size:1.15rem;font-weight:600}
 .eyebrow{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .muted{color:var(--muted)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:4px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:700;text-decoration:none;color:var(--ink)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -72,7 +75,6 @@ h2{font-size:1.15rem;font-weight:600}
 #libFind{flex:1;min-width:0;box-sizing:border-box}
 .tbtn{flex:none;position:relative;width:46px;height:46px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .tbtn.on{border-color:var(--accent);color:var(--accent)}
-.tbtn .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:var(--surface);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
 #libSug,#libPills{gap:6px}
 #libPills{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:2px}
 #libPills::-webkit-scrollbar{display:none}
@@ -366,11 +368,20 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 #v-reader:not(.chrome-off):not([data-mode="speed"]) #backPill{bottom:calc(8px + var(--rfoot-h,96px))}
 #backPill button{background:none;border:0;color:inherit;font-weight:700;font-size:.85rem;padding:9px 6px 9px 14px;cursor:pointer}
 #backPill button+button{padding:9px 12px 9px 6px;opacity:.7}
-#selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;gap:2px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:4px 6px;box-shadow:0 8px 28px rgba(0,0,0,.22);max-width:calc(100% - 16px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))}
-#selBar .dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;margin:0 3px;flex:none}
-#selBar .dot[data-hl="1"]{background:var(--hl1)} #selBar .dot[data-hl="2"]{background:var(--hl2)} #selBar .dot[data-hl="3"]{background:var(--hl3)} #selBar .dot[data-hl="4"]{background:var(--hl4)}
-#selBar .tb{border:0;background:none;font-weight:700;font-size:.86rem;padding:8px 8px;cursor:pointer;color:var(--ink);white-space:nowrap}
+#selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;gap:2px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:2px 6px;box-shadow:0 8px 28px rgba(0,0,0,.22);max-width:calc(100% - 16px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));box-sizing:border-box}
+#selBar.placed{transform:none}
+#selBar .dot{position:relative;width:44px;height:44px;border:0;background:none;cursor:pointer;margin:0;flex:none;padding:0}
+#selBar .dot::after{content:"";position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--hc);box-shadow:0 0 0 1px var(--line);border:2px solid var(--surface)}
+#selBar .dot[data-hl="1"]{--hc:var(--hl1)} #selBar .dot[data-hl="2"]{--hc:var(--hl2)} #selBar .dot[data-hl="3"]{--hc:var(--hl3)} #selBar .dot[data-hl="4"]{--hc:var(--hl4)}
+#selBar .tb,#selMore{border:0;background:none;font-weight:700;font-size:.86rem;padding:0 10px;cursor:pointer;color:var(--ink);white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:44px;min-height:44px}
+#selMore svg{width:18px;height:18px;flex:none}
 #selBar .sep{width:1px;align-self:stretch;background:var(--line);margin:4px 3px}
+#selMenu{position:fixed;z-index:13;min-width:11.5rem;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.22);padding:4px;display:flex;flex-direction:column;box-sizing:border-box}
+#selMenu[hidden]{display:none!important}
+#selMenu .tb{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:44px;width:100%;padding:0 12px;border:0;background:none;border-radius:8px;font:inherit;font-weight:700;font-size:.9rem;color:var(--ink);cursor:pointer;text-align:left}
+#selMenu .tb:focus-visible,#selMenu .tb:hover{background:var(--raise)}
+#selMenu .tb svg{width:20px;height:20px;flex:none}
+@media (prefers-reduced-motion:reduce){#selBar,#selMenu{transition:none}}
 #shade{position:fixed;inset:0;pointer-events:none;z-index:40;display:none}
 #imgOverlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
 #imgOverlay img{background:var(--img-bg);max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;transform-origin:center center;will-change:transform;-webkit-user-drag:none;-webkit-touch-callout:none}
@@ -564,7 +575,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.28</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.29</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -577,6 +588,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
         <div class="libbar" id="libBar"><input class="input" id="libFind" type="search" placeholder="Search titles, authors and tags" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" aria-label="Search your library"><button class="icon-btn tbtn" id="sortBtn" type="button" aria-label="Sort"></button><button class="icon-btn tbtn" id="filterBtn" type="button" aria-label="Filter"></button></div>
         <div class="chips" id="libSug" hidden></div>
         <div class="chips" id="libPills" hidden></div>
+        <div id="libPillsLive" class="sr-only" role="status" aria-live="polite"></div>
       </div>
       <div id="docList" class="wrap" style="gap:10px"></div>
       <p class="note" id="fileNote">Opens EPUB, PDF, TXT, Markdown and HTML files. Books bought in Apple Books are copy-protected and can't be opened here.</p>
@@ -697,15 +709,18 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 
 <div id="tsA" class="tsh" hidden></div><div id="tsB" class="tsh" hidden></div>
 <div id="selBar" hidden role="toolbar" aria-label="Selected text">
-  <button class="dot" type="button" data-hl="1" aria-label="Yellow highlight"></button>
-  <button class="dot" type="button" data-hl="2" aria-label="Green highlight"></button>
-  <button class="dot" type="button" data-hl="3" aria-label="Blue highlight"></button>
-  <button class="dot" type="button" data-hl="4" aria-label="Pink highlight"></button>
+  <button class="dot" type="button" data-hl="1" aria-label="Highlight yellow"></button>
+  <button class="dot" type="button" data-hl="2" aria-label="Highlight green"></button>
+  <button class="dot" type="button" data-hl="3" aria-label="Highlight blue"></button>
+  <button class="dot" type="button" data-hl="4" aria-label="Highlight pink"></button>
   <span class="sep"></span>
-  <button class="tb" type="button" data-sel="note">Note</button>
-  <button class="tb" type="button" data-sel="copy">Copy</button>
-  <button class="tb" type="button" data-sel="define">Define</button>
-  <button class="tb" type="button" data-sel="share">Share</button>
+  <button class="tb" type="button" id="selMore" aria-label="More" aria-haspopup="menu" aria-expanded="false" aria-controls="selMenu">More</button>
+  <div id="selMenu" hidden role="menu" aria-label="Selection actions">
+    <button class="tb" type="button" role="menuitem" data-sel="define">Define</button>
+    <button class="tb" type="button" role="menuitem" data-sel="note">Note</button>
+    <button class="tb" type="button" role="menuitem" data-sel="copy">Copy</button>
+    <button class="tb" type="button" role="menuitem" data-sel="share">Share</button>
+  </div>
 </div>
 <div id="shade" aria-hidden="true"></div>
 <div id="backdrop" hidden></div>
@@ -754,7 +769,9 @@ const ICON = {
   archive: I('<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9M10 13h4"/>'),
   sort: I('<path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/>'),
   filter: I('<path d="M3 5h18l-7 8v6l-4 2v-8z"/>'),
-  link: I('<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/>')
+  link: I('<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/>'),
+  copy: I('<rect x="8" y="8" width="12" height="14" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/>'),
+  share: I('<circle cx="6" cy="12" r="2.2"/><circle cx="17" cy="6.5" r="2.2"/><circle cx="17" cy="17.5" r="2.2"/><path d="M8 11l7-3.5M8 13l7 3.5"/>')
 };
 
 /* ---------- utilities ---------- */
@@ -2608,13 +2625,121 @@ function selCheck(){
   const rg=s.getRangeAt(0); const host=hostEl(); if(!host||!host.contains(rg.commonAncestorContainer)){ selHide(); return; }
   let a=nodeIdx(rg.startContainer, rg.startOffset, true), b=nodeIdx(rg.endContainer, rg.endOffset, false);
   if(a==null||b==null){ selHide(); return; } if(b<a) [a,b]=[b,a];
-  SEL={s:a,e:b, text:s.toString()}; $('#selBar').hidden=false; if(SC.auto) asStop();
+  SEL={s:a,e:b, text:s.toString()}; $('#selBar').hidden=false; if(SC.auto) asStop(); placeSelBar();
 }
-function selHide(){ $('#selBar').hidden=true; SEL=null; if(TS.on){ TS.on=false; tsPaint(); } }
+function selMenuIsOpen(){ const m=$('#selMenu'); return !!(m && !m.hidden); }
+function closeSelMenu(focusMore){
+  const m=$('#selMenu'), btn=$('#selMore');
+  if(m) m.hidden=true;
+  if(btn){ btn.setAttribute('aria-expanded','false'); if(focusMore) btn.focus(); }
+  placeSelBar();
+}
+function openSelMenu(){
+  const m=$('#selMenu'), btn=$('#selMore'); if(!m||!btn) return;
+  m.hidden=false; btn.setAttribute('aria-expanded','true');
+  placeSelBar();
+}
+function toggleSelMenu(){ if(selMenuIsOpen()) closeSelMenu(false); else openSelMenu(); }
+function cssVarPx(name){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name))||0; }
+function selSafeBox(){
+  const pad=8;
+  const L=cssVarPx('--sal')+pad, T=cssVarPx('--sat')+pad, R=cssVarPx('--sar')+pad, B=cssVarPx('--sab')+pad;
+  const W=innerWidth, H=innerHeight;
+  return {l:L, t:T, r:W-R, b:H-B, w:W-L-R, h:H-T-B};
+}
+function selRangeRect(){
+  const rects=[];
+  if(TS.on){
+    for(let i=TS.a;i<=TS.b;i++){
+      const el=wordEl(i); if(!el) continue;
+      for(const r of el.getClientRects()) if(r.width>0 && r.height>0) rects.push(r);
+    }
+  }
+  if(!rects.length){
+    try{
+      const s=getSelection();
+      if(s&&s.rangeCount&&!s.isCollapsed){ for(const r of s.getRangeAt(0).getClientRects()) if(r.width>0 && r.height>0) rects.push(r); }
+    }catch(e){}
+  }
+  if(!rects.length) return null;
+  let l=Infinity,t=Infinity,r=-Infinity,b=-Infinity;
+  for(const q of rects){ l=Math.min(l,q.left); t=Math.min(t,q.top); r=Math.max(r,q.right); b=Math.max(b,q.bottom); }
+  return {left:l, top:t, right:r, bottom:b, width:r-l, height:b-t};
+}
+function overlaps(a,b,pad){
+  pad=pad||0;
+  return !(a.right<=b.left-pad || a.left>=b.right+pad || a.bottom<=b.top-pad || a.top>=b.bottom+pad);
+}
+function placeSelBar(){
+  const bar=$('#selBar'); if(!bar || bar.hidden) return;
+  const menu=$('#selMenu'), menuOpen=menu && !menu.hidden;
+  const box=selSafeBox(), sel=selRangeRect(), gap=8;
+  const barW=bar.offsetWidth, barH=bar.offsetHeight;
+  const menuW=menuOpen?menu.offsetWidth:0, menuH=menuOpen?menu.offsetHeight:0;
+  let barLeft, barTop;
+  if(!sel){
+    barLeft=Math.max(box.l, Math.min((innerWidth-barW)/2, box.r-barW));
+    barTop=box.b-barH;
+  } else {
+    const mid=(sel.left+sel.right)/2;
+    barLeft=Math.max(box.l, Math.min(mid-barW/2, box.r-barW));
+    const below=sel.bottom+gap, above=sel.top-gap-barH;
+    const belowFits=below+barH<=box.b+0.5, aboveFits=above>=box.t-0.5;
+    if(belowFits) barTop=below;
+    else if(aboveFits) barTop=above;
+    else {
+      const roomBelow=box.b-(sel.bottom+gap), roomAbove=(sel.top-gap)-box.t;
+      barTop=roomBelow>=roomAbove ? Math.max(box.t, Math.min(below, box.b-barH)) : Math.max(box.t, Math.min(above, box.b-barH));
+    }
+  }
+  bar.classList.add('placed');
+  bar.style.left=Math.round(barLeft)+'px';
+  bar.style.top=Math.round(barTop)+'px';
+  bar.style.bottom='auto';
+  bar.style.right='auto';
+  if(!menuOpen) return;
+  const br={left:barLeft, top:barTop, right:barLeft+barW, bottom:barTop+barH};
+  const more=($('#selMore')||bar).getBoundingClientRect();
+  const area=r=>Math.max(0, Math.min(r.right,sel?sel.right:r.left)-Math.max(r.left,sel?sel.left:r.right))*Math.max(0, Math.min(r.bottom,sel?sel.bottom:r.top)-Math.max(r.top,sel?sel.top:r.bottom));
+  const candidates=[];
+  const add=(l,t,kind)=>{
+    l=Math.max(box.l, Math.min(l, box.r-menuW));
+    t=Math.max(box.t, Math.min(t, box.b-menuH));
+    const r={left:l, top:t, right:l+menuW, bottom:t+menuH};
+    const overSel=sel && overlaps(r, sel, 1);
+    const overBar=overlaps(r, br, 1);
+    const off=r.left<box.l-1||r.top<box.t-1||r.right>box.r+1||r.bottom>box.b+1;
+    const pref={below:0, above:1, right:2, left:3, 'right-end':4, 'left-end':5}[kind]||6;
+    candidates.push({l,t,kind, overSel, overBar, off, overlap:sel?area(r):0, score:(off?500:0)+(overSel?100:0)+(overBar?25:0)+pref});
+  };
+  add(more.left, br.bottom+gap, 'below');
+  add(more.left, br.top-gap-menuH, 'above');
+  add(br.right+gap, br.top, 'right');
+  add(br.left-gap-menuW, br.top, 'left');
+  add(br.right+gap, br.bottom-menuH, 'right-end');
+  add(br.left-gap-menuW, br.bottom-menuH, 'left-end');
+  candidates.sort((a,b)=>a.score-b.score || a.overlap-b.overlap);
+  const best=candidates[0];
+  menu.style.left=Math.round(best.l)+'px';
+  menu.style.top=Math.round(best.t)+'px';
+}
+function selHide(){
+  closeSelMenu(false);
+  const bar=$('#selBar');
+  bar.hidden=true; bar.classList.remove('placed'); bar.style.left=bar.style.top=bar.style.bottom=bar.style.right='';
+  SEL=null; if(TS.on){ TS.on=false; tsPaint(); }
+}
 function selClear(){ selHide(); try{ const s=getSelection(); if(s&&!s.isCollapsed) s.removeAllRanges(); }catch(e){} }
+$('#selMore').innerHTML=(ICON.more||'')+'More';
+for(const [act,icon,label] of [['define','define','Define'],['note','note','Note'],['copy','copy','Copy'],['share','share','Share']]){
+  const b=document.querySelector('#selMenu [data-sel="'+act+'"]'); if(b) b.innerHTML=(ICON[icon]||'')+label;
+}
 $('#selBar').addEventListener('mousedown',e=>e.preventDefault());
+$('#selMenu').addEventListener('mousedown',e=>e.preventDefault());
 $('#selBar').addEventListener('click',e=>{
-  const b=e.target.closest('button'); if(!b||!SEL) return; const {s,e:en}=SEL;
+  const b=e.target.closest('button'); if(!b||!SEL) return;
+  if(b.id==='selMore'){ toggleSelMenu(); return; }
+  const {s,e:en}=SEL;
   if(b.dataset.hl){ addHighlight(s,en,+b.dataset.hl); selClear(); return; }
   const act=b.dataset.sel; selClear();
   if(act==='copy') copyQuote(s,en);
@@ -2622,6 +2747,11 @@ $('#selBar').addEventListener('click',e=>{
   else if(act==='define'){ const k=defineIdx(s,en); const w=clean(R.words[k]); if(w) defineWord(w,k); }
   else if(act==='share') quoteImage(s,en);
 });
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape' || !selMenuIsOpen()) return;
+  e.preventDefault(); e.stopPropagation();
+  closeSelMenu(true);
+}, true);
 /* the word to define: the first real word in the selection (skipping note numbers and stray punctuation) */
 function defineIdx(s,e){ for(let k=s;k<=e;k++){ if(R.wf && (R.wf[k]&F_N)) continue; if(clean(R.words[k])) return k; } return s; }
 /* "quote" — Author, Title, chapter */
@@ -2643,6 +2773,7 @@ function tsPaint(){
   if(wa){ const b=bandOf(wa, wa.getClientRects()[0]||wa.getBoundingClientRect()); A.style.setProperty('--stem',b.h+'px'); A.style.left=b.l+'px'; A.style.top=(b.top-13)+'px'; A.hidden=false; } else A.hidden=true;
   if(wb){ const rs=wb.getClientRects(); const b=bandOf(wb, rs[rs.length-1]||wb.getBoundingClientRect()); B.style.setProperty('--stem',b.h+'px'); B.style.left=b.r+'px'; B.style.top=b.top+'px'; B.hidden=false; } else B.hidden=true;
   TS.bh=wb?bandOf(wb, wb.getBoundingClientRect()).h:22;
+  if(TS.on) placeSelBar();
 }
 function tsSet(a,b){ TS.on=true; TS.a=Math.min(a,b); TS.b=Math.max(a,b); SEL={s:TS.a, e:TS.b}; $('#selBar').hidden=false; if(SC.auto) asStop(); tsPaint(); }
 function wordAtPoint(x,y){ const el=document.elementFromPoint(x,y); const w=el&&el.closest?el.closest('w'):null; if(!w || !hostEl() || !hostEl().contains(w)) return null; return idxOf(w); }
@@ -2722,7 +2853,14 @@ for(const id of ['tsA','tsB']){
   h.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 }
 /* a tap anywhere else lets go of the selection */
-document.addEventListener('pointerdown',e=>{ if(!TS.on || TS.extending) return; if(e.target.closest('#selBar,.tsh,#sheet')) return; if(performance.now()-(TS.justSelected||0)<350) return; selClear(); TS.clearedAt=performance.now(); }, true);
+document.addEventListener('pointerdown',e=>{
+  if(selMenuIsOpen() && !e.target.closest('#selBar,#selMenu,.tsh,#sheet')){ closeSelMenu(true); e.stopPropagation(); return; }
+  if(!TS.on || TS.extending) return; if(e.target.closest('#selBar,#selMenu,.tsh,#sheet')) return; if(performance.now()-(TS.justSelected||0)<350) return; selClear(); TS.clearedAt=performance.now();
+}, true);
+const selReposition=()=>{ if($('#selBar').hidden) return; placeSelBar(); };
+scView.addEventListener('scroll', selReposition, {passive:true});
+window.addEventListener('resize', selReposition);
+try{ visualViewport.addEventListener('resize', selReposition); visualViewport.addEventListener('scroll', selReposition); }catch(e){}
 
 /* ---------- share a quote as an image ---------- */
 function quoteImage(s,e, style){
@@ -3915,10 +4053,10 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.28-filter-pills';
+const APP_VERSION='2026.11.18.29-selection-bar';
 const WHATSNEW=[
-  ['Colour-coded filter pills','When a filter is on, a compact row of coloured pills shows on your library. Tap a pill to remove that filter, or Clear all when more than one is on. The search bar can stay closed.'],
-  ['Back stays back','The “Back to where you were” chip no longer offers a new jump after you use it.']
+  ['A slimmer selection bar','The bar next to a selection now shows the four highlight colours and More. Define, Note, Copy and Share live in the More menu, so the bar stays small and off your words.'],
+  ['Filter pills keep your place','Removing a library filter moves focus to the next pill, and the row announces how many filters are on.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -4604,6 +4742,11 @@ function renderLibTools(){
   const pills=[]; for(const [sec] of FSEC) for(const k of F[sec]) pills.push(`<button class="pill ${SECCLS[sec]}" type="button" data-unf="${sec}" data-k="${esc(k)}" aria-label="Remove filter: ${esc(labelOf(sec,k))}"><span class="dot" aria-hidden="true"></span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(labelOf(sec,k))}</span><span class="x" aria-hidden="true">✕</span></button>`);
   if(pills.length>1) pills.push('<button class="pill clear" type="button" data-unf="all" aria-label="Clear all filters">Clear all</button>');
   $('#libPills').hidden=!pills.length; $('#libPills').innerHTML=pills.join('');
+  const live=$('#libPillsLive');
+  if(live){
+    if(n) live.textContent=n+(n===1?' filter on':' filters on');
+    else if(live.textContent && live.textContent!=='Filters cleared') live.textContent='Filters cleared';
+  }
   renderSuggest();
 }
 /* typing shows matching titles, authors and tags to tap */
@@ -4710,7 +4853,19 @@ $('#docList').addEventListener('keydown',e=>{
   e.preventDefault(); openDoc(o.dataset.open);
 });
 $('#v-library').addEventListener('click',e=>{
-  const u=e.target.closest('[data-unf]'); if(u){ if(u.dataset.unf==='all') clearFilters(); else toggleFilter(u.dataset.unf,u.dataset.k,false); renderLibrary(); return; }
+  const u=e.target.closest('[data-unf]'); if(u){
+    const row=$('#libPills');
+    const filters=row?[...row.querySelectorAll('.pill[data-unf]')].filter(p=>p.dataset.unf!=='all'):[];
+    const i=filters.indexOf(u);
+    const prefer=u.dataset.unf==='all'?null:(i>=0?(filters[i+1]||filters[i-1]):null);
+    const key=prefer?{unf:prefer.dataset.unf,k:prefer.dataset.k}:null;
+    if(u.dataset.unf==='all') clearFilters(); else toggleFilter(u.dataset.unf,u.dataset.k,false);
+    renderLibrary();
+    const next=key?[...document.querySelectorAll('#libPills .pill[data-unf]')].find(p=>p.dataset.unf===key.unf && p.dataset.k===key.k):null;
+    const fallback=($('#libTools')&&$('#libTools').classList.contains('open')&&$('#filterBtn'))||$('#libSearchBtn');
+    const go=next||fallback; if(go) go.focus();
+    return;
+  }
   if(e.target.closest('[data-fts]')){ searchAllBooks(LIBV.q); return; }
   const g=e.target.closest('[data-sug]'); if(g){ toggleFilter(g.dataset.sug,g.dataset.k,true); LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
 });
@@ -5349,7 +5504,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=21;
+const SAMPLE_V=22;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -5374,7 +5529,7 @@ const SAMPLE_HTML=`
 <p>Change any of these, or turn your phone sideways, and the page keeps the word you were reading in view.</p>
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>
-<p>Press and hold a word until it is marked. Keep holding and drag to select more, or drag the round handles at either end afterwards. A small bar appears with four highlight colours, plus <strong>Note</strong>, <strong>Copy</strong>, <strong>Share</strong> and <strong>Define</strong>. Tap anywhere else to clear the selection. Tap a highlight later to change its colour, add a note or remove it.</p>
+<p>Press and hold a word until it is marked. Keep holding and drag to select more, or drag the round handles at either end afterwards. A small bar appears next to your selection with four highlight colours and <strong>More</strong>. Tap a colour to highlight; <strong>More</strong> holds <strong>Define</strong>, <strong>Note</strong>, <strong>Copy</strong> and <strong>Share</strong>. Tap anywhere else to clear the selection. Tap a highlight later to change its colour, add a note or remove it.</p>
 <p><strong>Copy</strong> adds where the words came from: the author, the book and the chapter. <strong>Share</strong> turns the words into a picture, in light, sepia or dark, ready to send or save to Photos.</p>
 <p>The phone’s own menu stays hidden while you select. <strong>Define</strong> looks up the word you selected, and from there you can still reach the phone’s dictionary.</p>
 <blockquote><p>Try it on this sentence: highlight it, then add a note saying what you think of it.</p></blockquote>

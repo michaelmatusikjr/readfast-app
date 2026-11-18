@@ -28,6 +28,8 @@
   --f-ui:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --focus:#E0303F; --rfont:var(--f-ui); --rsize:44px;
+  --sat:env(safe-area-inset-top,0px); --sar:env(safe-area-inset-right,0px);
+  --sab:env(safe-area-inset-bottom,0px); --sal:env(safe-area-inset-left,0px);
   --img-bg:#FFFFFF; /* book art is drawn for white pages, so images keep a white ground in every theme */
   /* page (reader) tokens: JS sets these from the chosen reading theme */
   --page-bg:#FFFFFF; --page-ink:#1B1B1B; --page-muted:#6B6B6B; --page-line:#E2E2E2; --page-link:#2456C7;
@@ -54,6 +56,7 @@ h1{font-size:1.9rem;font-weight:800}
 h2{font-size:1.15rem;font-weight:600}
 .eyebrow{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .muted{color:var(--muted)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:4px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:700;text-decoration:none;color:var(--ink)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -72,7 +75,6 @@ h2{font-size:1.15rem;font-weight:600}
 #libFind{flex:1;min-width:0;box-sizing:border-box}
 .tbtn{flex:none;position:relative;width:46px;height:46px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .tbtn.on{border-color:var(--accent);color:var(--accent)}
-.tbtn .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:var(--surface);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
 #libSug,#libPills{gap:6px}
 #libPills{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:2px}
 #libPills::-webkit-scrollbar{display:none}
@@ -366,11 +368,20 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 #v-reader:not(.chrome-off):not([data-mode="speed"]) #backPill{bottom:calc(8px + var(--rfoot-h,96px))}
 #backPill button{background:none;border:0;color:inherit;font-weight:700;font-size:.85rem;padding:9px 6px 9px 14px;cursor:pointer}
 #backPill button+button{padding:9px 12px 9px 6px;opacity:.7}
-#selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;gap:2px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:4px 6px;box-shadow:0 8px 28px rgba(0,0,0,.22);max-width:calc(100% - 16px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))}
-#selBar .dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;margin:0 3px;flex:none}
-#selBar .dot[data-hl="1"]{background:var(--hl1)} #selBar .dot[data-hl="2"]{background:var(--hl2)} #selBar .dot[data-hl="3"]{background:var(--hl3)} #selBar .dot[data-hl="4"]{background:var(--hl4)}
-#selBar .tb{border:0;background:none;font-weight:700;font-size:.86rem;padding:8px 8px;cursor:pointer;color:var(--ink);white-space:nowrap}
+#selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;gap:2px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:2px 6px;box-shadow:0 8px 28px rgba(0,0,0,.22);max-width:calc(100% - 16px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));box-sizing:border-box}
+#selBar.placed{transform:none}
+#selBar .dot{position:relative;width:44px;height:44px;border:0;background:none;cursor:pointer;margin:0;flex:none;padding:0}
+#selBar .dot::after{content:"";position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--hc);box-shadow:0 0 0 1px var(--line);border:2px solid var(--surface)}
+#selBar .dot[data-hl="1"]{--hc:var(--hl1)} #selBar .dot[data-hl="2"]{--hc:var(--hl2)} #selBar .dot[data-hl="3"]{--hc:var(--hl3)} #selBar .dot[data-hl="4"]{--hc:var(--hl4)}
+#selBar .tb,#selMore{border:0;background:none;font-weight:700;font-size:.86rem;padding:0 10px;cursor:pointer;color:var(--ink);white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:44px;min-height:44px}
+#selMore svg{width:18px;height:18px;flex:none}
 #selBar .sep{width:1px;align-self:stretch;background:var(--line);margin:4px 3px}
+#selMenu{position:fixed;z-index:13;min-width:11.5rem;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.22);padding:4px;display:flex;flex-direction:column;box-sizing:border-box}
+#selMenu[hidden]{display:none!important}
+#selMenu .tb{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:44px;width:100%;padding:0 12px;border:0;background:none;border-radius:8px;font:inherit;font-weight:700;font-size:.9rem;color:var(--ink);cursor:pointer;text-align:left}
+#selMenu .tb:focus-visible,#selMenu .tb:hover{background:var(--raise)}
+#selMenu .tb svg{width:20px;height:20px;flex:none}
+@media (prefers-reduced-motion:reduce){#selBar,#selMenu{transition:none}}
 #shade{position:fixed;inset:0;pointer-events:none;z-index:40;display:none}
 #imgOverlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
 #imgOverlay img{background:var(--img-bg);max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;transform-origin:center center;will-change:transform;-webkit-user-drag:none;-webkit-touch-callout:none}

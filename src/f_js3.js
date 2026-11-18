@@ -405,6 +405,11 @@ function renderLibTools(){
   const pills=[]; for(const [sec] of FSEC) for(const k of F[sec]) pills.push(`<button class="pill ${SECCLS[sec]}" type="button" data-unf="${sec}" data-k="${esc(k)}" aria-label="Remove filter: ${esc(labelOf(sec,k))}"><span class="dot" aria-hidden="true"></span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(labelOf(sec,k))}</span><span class="x" aria-hidden="true">✕</span></button>`);
   if(pills.length>1) pills.push('<button class="pill clear" type="button" data-unf="all" aria-label="Clear all filters">Clear all</button>');
   $('#libPills').hidden=!pills.length; $('#libPills').innerHTML=pills.join('');
+  const live=$('#libPillsLive');
+  if(live){
+    if(n) live.textContent=n+(n===1?' filter on':' filters on');
+    else if(live.textContent && live.textContent!=='Filters cleared') live.textContent='Filters cleared';
+  }
   renderSuggest();
 }
 /* typing shows matching titles, authors and tags to tap */
@@ -511,7 +516,19 @@ $('#docList').addEventListener('keydown',e=>{
   e.preventDefault(); openDoc(o.dataset.open);
 });
 $('#v-library').addEventListener('click',e=>{
-  const u=e.target.closest('[data-unf]'); if(u){ if(u.dataset.unf==='all') clearFilters(); else toggleFilter(u.dataset.unf,u.dataset.k,false); renderLibrary(); return; }
+  const u=e.target.closest('[data-unf]'); if(u){
+    const row=$('#libPills');
+    const filters=row?[...row.querySelectorAll('.pill[data-unf]')].filter(p=>p.dataset.unf!=='all'):[];
+    const i=filters.indexOf(u);
+    const prefer=u.dataset.unf==='all'?null:(i>=0?(filters[i+1]||filters[i-1]):null);
+    const key=prefer?{unf:prefer.dataset.unf,k:prefer.dataset.k}:null;
+    if(u.dataset.unf==='all') clearFilters(); else toggleFilter(u.dataset.unf,u.dataset.k,false);
+    renderLibrary();
+    const next=key?[...document.querySelectorAll('#libPills .pill[data-unf]')].find(p=>p.dataset.unf===key.unf && p.dataset.k===key.k):null;
+    const fallback=($('#libTools')&&$('#libTools').classList.contains('open')&&$('#filterBtn'))||$('#libSearchBtn');
+    const go=next||fallback; if(go) go.focus();
+    return;
+  }
   if(e.target.closest('[data-fts]')){ searchAllBooks(LIBV.q); return; }
   const g=e.target.closest('[data-sug]'); if(g){ toggleFilter(g.dataset.sug,g.dataset.k,true); LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
 });
@@ -1150,7 +1167,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=21;
+const SAMPLE_V=22;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1175,7 +1192,7 @@ const SAMPLE_HTML=`
 <p>Change any of these, or turn your phone sideways, and the page keeps the word you were reading in view.</p>
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>
-<p>Press and hold a word until it is marked. Keep holding and drag to select more, or drag the round handles at either end afterwards. A small bar appears with four highlight colours, plus <strong>Note</strong>, <strong>Copy</strong>, <strong>Share</strong> and <strong>Define</strong>. Tap anywhere else to clear the selection. Tap a highlight later to change its colour, add a note or remove it.</p>
+<p>Press and hold a word until it is marked. Keep holding and drag to select more, or drag the round handles at either end afterwards. A small bar appears next to your selection with four highlight colours and <strong>More</strong>. Tap a colour to highlight; <strong>More</strong> holds <strong>Define</strong>, <strong>Note</strong>, <strong>Copy</strong> and <strong>Share</strong>. Tap anywhere else to clear the selection. Tap a highlight later to change its colour, add a note or remove it.</p>
 <p><strong>Copy</strong> adds where the words came from: the author, the book and the chapter. <strong>Share</strong> turns the words into a picture, in light, sepia or dark, ready to send or save to Photos.</p>
 <p>The phone’s own menu stays hidden while you select. <strong>Define</strong> looks up the word you selected, and from there you can still reach the phone’s dictionary.</p>
 <blockquote><p>Try it on this sentence: highlight it, then add a note saying what you think of it.</p></blockquote>

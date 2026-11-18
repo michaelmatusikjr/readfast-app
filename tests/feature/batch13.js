@@ -57,7 +57,7 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   ok('long-press select + drag', lp[0]&&lp[1]&&lp[2]>=3&&lp[3]&&lp[5]&&lp[6], lp);
   const cit=await pg.evaluate(()=>citation(SEL.s));
   ok('citation', cit.includes('Welcome to Tooz'), cit);
-  await pg.evaluate(()=>document.querySelector('#selBar [data-sel="share"]').click()); await sleep(900);
+  await pg.evaluate(()=>{ document.getElementById('selMore').click(); document.querySelector('#selMenu [data-sel="share"]').click(); }); await sleep(900);
   ok('quote image sheet', await pg.evaluate(()=>!$('#sheet').hidden && !!document.querySelector('#sheet canvas, #sheet img')));
   await pg.evaluate(()=>closeSheet()); await sleep(300);
   // tap elsewhere clears selection

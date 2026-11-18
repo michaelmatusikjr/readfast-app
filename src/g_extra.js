@@ -1,8 +1,8 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.28-filter-pills';
+const APP_VERSION='2026.11.18.29-selection-bar';
 const WHATSNEW=[
-  ['Colour-coded filter pills','When a filter is on, a compact row of coloured pills shows on your library. Tap a pill to remove that filter, or Clear all when more than one is on. The search bar can stay closed.'],
-  ['Back stays back','The “Back to where you were” chip no longer offers a new jump after you use it.']
+  ['A slimmer selection bar','The bar next to a selection now shows the four highlight colours and More. Define, Note, Copy and Share live in the More menu, so the bar stays small and off your words.'],
+  ['Filter pills keep your place','Removing a library filter moves focus to the next pill, and the row announces how many filters are on.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

@@ -67,7 +67,7 @@ and move items out of **Pending changes** once they're built.
 
 ## Notes, highlights, bookmarks
 
-- Highlights (four colours) with notes; copy with citation; quote image cards; export per book.
+- Highlights (four colours) with notes; copy with citation; quote image cards; export per book. The selection bar shows the four colours and More; Define, Note, Copy and Share are in the More menu, kept off the selected text.
 - The tutorial book opens on first launch; leaving it asks whether to keep it in the library or tuck it in Settings.
 - Notes tab → Bookmarks: **swipe left to delete**, with Undo (built Nov 16). In a book, the bookmark list has an ×.
 - A highlight must be able to stop right before a dash (dash-joined words are separate words).
