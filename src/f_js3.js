@@ -319,8 +319,10 @@ function docCard(d){
   const pct=d.finished?100:Math.round(100*d.pos/Math.max(1,d.count-1));
   const left=fmtMins((d.count-d.pos)/(S.measuredWpm||230));
   const tg=tagsOf(d); const sz=d.pending&&SHELF_SIZE[d.id];
-  return `<div class="doc" data-open="${d.id}" role="button" tabindex="0" style="--p:${d.pending?0:pct}%">
-      <div class="t"><span class="tag">${KIND[d.kind]||'Text'}</span>${esc(d.title)}</div>
+  const fin = d.finished ? ' style="opacity:.85"' : '';
+  const finMark = d.finished ? ' <span class="tag" style="background:#2f9e6e;color:#fff">Finished</span>' : '';
+  return `<div class="doc" data-open="${d.id}" role="button" tabindex="0" style="--p:${d.pending?0:pct}%"${fin}>
+      <div class="t"><span class="tag">${KIND[d.kind]||'Text'}</span>${esc(d.title)}${finMark}</div>
       <button class="icon-btn more" type="button" data-more="${d.id}" aria-label="Edit or organize ${esc(d.title)}">${ICON.more}</button>
       ${d.author?`<div class="a">${esc(d.author)}</div>`:''}
       <div class="m">${d.pending? 'Free book · tap to download'+(sz?' ('+sz+')':'') : d.count.toLocaleString()+' words · '+(d.finished?'Finished':pct+'% · '+left+' left')}</div>
@@ -392,7 +394,7 @@ function renderLibrary(){
   const q=LIBV.q.trim().toLowerCase();
   let docs=LIB.filter(d=>matchAll(d));
   if(q) docs=docs.filter(d=>[d.title,d.author,...tagsOf(d)].some(x=>(x||'').toLowerCase().includes(q)));
-  if(!docs.length){ el.innerHTML=`<div class="empty">No books match${q?' “'+esc(LIBV.q.trim())+'”':''}${fCount()?' with these filters':''}.${fCount()?' <button class="btn" type="button" data-unf="all" style="margin-top:10px">Clear all filters</button>':''}</div>`; return; }
+  if(!docs.length){ el.innerHTML=`<div class="empty" style="padding:40px 20px"><div style="font-size:2.2rem;margin-bottom:8px">📚</div><div style="font-weight:700;margin-bottom:6px">No books match</div><div class="small">${q?'Nothing matches “'+esc(LIBV.q.trim())+'”. ':''}${fCount()?'Try clearing the filters.':''}</div>${fCount()?'<button class="btn primary" type="button" data-unf="all" style="margin-top:16px">Clear filters</button>':''}</div>`; return; }
   /* books in progress sit on top under Continue reading, but only while nothing is filtered or searched */
   let top='';
   if(!fCount() && !q){ const cont=docs.filter(isReading).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0)); if(cont.length && cont.length<docs.length){ top=`<h3 class="grp">Continue reading <span>${cont.length}</span></h3>`+cont.map(docCard).join('')+'<h3 class="grp">Everything else</h3>'; docs=docs.filter(d=>!isReading(d)); } }
