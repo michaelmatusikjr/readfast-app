@@ -11,7 +11,7 @@
 
 
 /* ---------- define + word list ---------- */
-/*@@OLD:1151-1250@@*/
+/*@@OLD:1151-1228@@*/
 
 /* ---------- stats and daily goal ---------- */
 function recordStats(ms, words){

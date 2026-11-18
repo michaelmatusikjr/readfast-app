@@ -81,7 +81,7 @@ def fill(s):
             assert t.count(o)==1; t=t.replace(o,"let author=''; try{ const md=await pdf.getMetadata(); const t=md?.info?.Title; if(t&&t.trim().length>2) title=t.trim(); const au=md?.info?.Author; if(au&&au.trim()) author=au.trim().slice(0,80); }catch(e){}")
             o="return {title, kind:'pdf', words, ends, chapters};"
             assert t.count(o)==1; t=t.replace(o,"return {title, author, kind:'pdf', words, ends, chapters};")
-        if (a,b)==(1151,1250):
+        if (a,b)==(1151,1228):
             o="return {text:R.words.slice(s,e+1).join(' '), s, e};"
             assert t.count(o)==1; t=t.replace(o,"return {text:textOf(s,e), s, e};")
             o='<div class="src">${esc(x.docTitle)} · ${new Date(x.at).toLocaleDateString()}</div></div></div></div>`;'

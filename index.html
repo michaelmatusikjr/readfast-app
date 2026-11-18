@@ -496,7 +496,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.16</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.17</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -3735,7 +3735,7 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.16-reimagine';
+const APP_VERSION='2026.11.18.17-reimagine';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
@@ -4108,28 +4108,6 @@ const endSwipe=()=>{ const r=swipe.row; if(!r) return; swipe.row=null; r.classLi
   } else r.style.transform='';
   setTimeout(()=>{ swipe.moved=false; },50); };
 $('#wordList').addEventListener('pointerup',endSwipe); $('#wordList').addEventListener('pointercancel',endSwipe);
-
-/* ---------- full text ---------- */
-
-/* ---------- stats ---------- */
-function recordStats(ms, words){
-  if(words<1||ms<500) return; const st=LS.get('stats',{}); const k=dayKey(); const d=st[k]||{ms:0,words:0}; d.ms+=ms; d.words+=words; st[k]=d; LS.set('stats',st);
-}
-function renderStats(){
-  const st=LS.get('stats',{}); const days=Object.keys(st);
-  let tw=0,tms=0; for(const k of days){ tw+=st[k].words; tms+=st[k].ms; }
-  const today=st[dayKey()]||{ms:0,words:0};
-  let streak=0; const d=new Date(); if(!(st[dayKey(d)]?.words)) d.setDate(d.getDate()-1);
-  while(st[dayKey(d)]?.words>0){ streak++; d.setDate(d.getDate()-1); }
-  const avg=tms>0?Math.round(tw/(tms/60000)):0; const fin=LIB.filter(x=>x.finished).length;
-  const week=[]; for(let q=6;q>=0;q--){ const x=new Date(); x.setDate(x.getDate()-q); week.push({k:dayKey(x), lbl:x.toLocaleDateString(undefined,{weekday:'short'}).slice(0,2), w:st[dayKey(x)]?.words||0}); }
-  const max=Math.max(1,...week.map(w=>w.w));
-  const fmtK=(n)=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':String(n);
-  $('#statsBody').innerHTML=`
-    <div class="tiles">
-      <div class="tile"><div class="v">${today.words.toLocaleString()}</div><div class="k">Words today</div></div>
-      <div class="tile"><div class="v">${streak}</div><div class="k">Day streak</div></div>
-      <div class="tile"><div class="v">${avg||'—'}</div><div class="k">Average WPM, all time</div></div>
 
 /* ---------- stats and daily goal ---------- */
 function recordStats(ms, words){
