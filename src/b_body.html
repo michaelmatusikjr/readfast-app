@@ -1,5 +1,5 @@
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.35</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.36</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -202,8 +202,10 @@
     </div>
   </div>
   <div id="tourFinger" hidden aria-hidden="true"></div>
-  <div id="tourCaption" aria-live="polite"></div>
-  <p id="tourSub" hidden></p>
+  <div id="tourCaption" aria-live="polite">
+    <div id="tourCaptionText"></div>
+    <p id="tourSub" hidden></p>
+  </div>
   <div id="tourDots" aria-hidden="true"></div>
   <button type="button" id="tourNext" class="tour-pill-btn">Next</button>
   <button type="button" id="tourStart" class="tour-pill-btn primary" hidden>Start reading</button>

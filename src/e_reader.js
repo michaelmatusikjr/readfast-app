@@ -362,7 +362,7 @@ function scPlaceAnchor(i){
   const w=wordEl(i); if(!w) return;
   const desired=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
   const max=Math.max(0, scView.scrollHeight-scView.clientHeight);
-  if(desired>max+1){
+  if(desired>max){
     scSetEndPad(scEndPad()+(desired-max)+2);
     scView.scrollTop=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
   }else{
@@ -370,11 +370,21 @@ function scPlaceAnchor(i){
       scSetEndPad(0);
       const d2=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
       const max2=Math.max(0, scView.scrollHeight-scView.clientHeight);
-      if(d2>max2+1) scSetEndPad((d2-max2)+2);
+      if(d2>max2) scSetEndPad((d2-max2)+2);
     }
     scView.scrollTop=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
   }
 }
+/* Place word i at the sample point without clearing existing end pad.
+   Used when the read-aloud clip changes so firstVis can be restored after a reflow. */
+function scKeepWord(i){
+  const w=wordEl(i); if(!w || !scView) return;
+  const desired=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
+  const max=Math.max(0, scView.scrollHeight-scView.clientHeight);
+  if(desired>max) scSetEndPad(scEndPad()+(desired-max)+2);
+  scView.scrollTop=Math.max(0, scTopOf(w)-SC_ANCHOR_PAD);
+}
+
 async function scShow(i, keepPos){
   SC.busy=true; SC.userScrolled=false; /* the place stays exactly on word i until the reader scrolls */
   try{
@@ -1743,18 +1753,47 @@ function ttsMeasureReservePx(){
 function ttsReserveSync(){
   const v=$('#v-reader'), b=$('#ttsBar');
   const on=!!(TTS.mode && R.mode!=='speed' && b && !b.hidden);
-  if(v) v.classList.toggle('tts-pill-on', on);
-  document.body.classList.toggle('tts-pill-on', on);
+  const wasOn=!!(v && v.classList.contains('tts-pill-on'));
   if(v && b && !b.hidden){ const lift=Math.ceil(b.getBoundingClientRect().height+8); if(lift>0) v.style.setProperty('--tts-chip-lift', lift+'px'); v.style.setProperty('--tts-line-pad', ttsLinePad()+'px'); }
   const next=on?ttsMeasureReservePx():0;
-  if(next===ttsResPx) return;
-  /* Always re-anchor on the current first visible word *before* the clip changes.
-     A stale R.anchor (set when the pill opened) would jump the view back after listening turned the page. */
+  if(next===ttsResPx && on===wasOn){
+    if(v) v.classList.toggle('tts-pill-on', on);
+    document.body.classList.toggle('tts-pill-on', on);
+    return;
+  }
+  /* Capture the first visible word *before* the clip changes. If the clip will
+     grow (pill closing), add end pad first so the browser cannot clamp scrollTop. */
+  if(R.mode==='scroll' && wasOn && (!on || next<ttsResPx) && scView){
+    const grow=Math.max(0, (ttsResPx||0)-next);
+    const max=Math.max(0, scView.scrollHeight-scView.clientHeight);
+    const need=scView.scrollTop - Math.max(0, max-grow);
+    if(need>0) scSetEndPad(scEndPad()+need+2);
+  }
   if(R.mode==='pages' || R.mode==='scroll') holdPlace(true);
+  const keepTop=(R.mode==='scroll' && scView)?scView.scrollTop:null;
   ttsResPx=next;
   if(v) v.style.setProperty('--tts-reserve', next+'px');
-  if(R.mode==='pages' || R.mode==='scroll') relayoutSoon();
+  if(v) v.classList.toggle('tts-pill-on', on);
+  document.body.classList.toggle('tts-pill-on', on);
+  if(R.mode==='pages') relayoutSoon();
+  else if(R.mode==='scroll' && scView){
+    const i=R.anchor;
+    const restore=()=>{
+      if(R.mode!=='scroll') return;
+      if(i!=null) scKeepWord(i);
+      else if(keepTop!=null){
+        const max=Math.max(0, scView.scrollHeight-scView.clientHeight);
+        if(keepTop>max) scSetEndPad(scEndPad()+(keepTop-max)+2);
+        scView.scrollTop=keepTop;
+      }
+    };
+    void scView.offsetHeight;
+    restore();
+    requestAnimationFrame(restore);
+    setTimeout(restore, 50);
+  }
 }
+
 function ttsModeOn(){
   if(R.mode==='speed') return;
   if(SC.auto) asStop(true);
@@ -1767,7 +1806,8 @@ function ttsBarUI(){
   const was=b.hidden;
   b.hidden=!TTS.mode || R.mode==='speed';
   document.body.classList.toggle('tts-pill-on', !b.hidden);
-  const vr=$('#v-reader'); if(vr) vr.classList.toggle('tts-pill-on', !b.hidden);
+  /* #v-reader.tts-pill-on shrinks the text clip; ttsReserveSync toggles that
+     class after it has captured firstVis and added any end pad. */
   ttsHintUI();
   if(b.hidden){ ttsReserveSync(); return; }
   $('#ttsPlay').innerHTML=TTS.on?ICON.pause:ICON.play; $('#ttsPlay').setAttribute('aria-label',TTS.on?'Pause':'Play');

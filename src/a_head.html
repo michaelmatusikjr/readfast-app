@@ -631,10 +631,11 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourHole{position:absolute;box-shadow:0 0 0 9999px rgba(10,12,16,.62);background:transparent;pointer-events:none;z-index:1;border-radius:16px}
 #tour.reduced #tourHole{box-shadow:0 0 0 9999px rgba(10,12,16,.7)}
 #tourSkip{position:absolute;top:calc(6px + var(--sat));right:calc(8px + var(--sar));z-index:5;min-width:44px;min-height:44px;padding:0 12px;border:0;background:rgba(20,22,26,.62);color:#fff;font:700 16px/1 var(--f-ui);cursor:pointer;border-radius:12px}
-#tourCaption{position:absolute;left:calc(20px + var(--sal));right:calc(20px + var(--sar));z-index:5;color:#fff;font:700 1.15rem/1.35 var(--f-display);text-align:center;text-shadow:0 1px 4px rgba(0,0,0,.75);margin:0}
-#tourSub{position:absolute;left:calc(24px + var(--sal));right:calc(24px + var(--sar));bottom:calc(120px + var(--sab));z-index:5;color:rgba(255,255,255,.9);font:500 .95rem/1.4 var(--f-ui);text-align:center;margin:0;text-shadow:0 1px 3px rgba(0,0,0,.7)}
-#tourDots{position:absolute;left:0;right:0;bottom:calc(76px + var(--sab));z-index:5;display:flex;justify-content:center;gap:7px;pointer-events:none}
-.tour-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4);box-shadow:0 0 0 1.5px rgba(0,0,0,.55)}
+#tourCaption{position:absolute;left:calc(20px + var(--sal));right:calc(20px + var(--sar));z-index:5;color:#fff;font:700 1.15rem/1.35 var(--f-display);text-align:center;margin:0;padding:14px 16px;box-sizing:border-box;background:rgba(20,22,30,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+#tourCaptionText{margin:0}
+#tourSub{position:static;left:auto;right:auto;bottom:auto;z-index:auto;color:rgba(255,255,255,.9);font:500 .95rem/1.4 var(--f-ui);text-align:center;margin:8px 0 0;text-shadow:none}
+#tourDots{position:absolute;left:50%;right:auto;transform:translateX(-50%);bottom:calc(76px + var(--sab));z-index:5;display:flex;justify-content:center;align-items:center;gap:7px;pointer-events:none;padding:8px 12px;background:rgba(20,22,30,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:999px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.tour-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.7);box-shadow:0 0 0 1.5px rgba(0,0,0,.65)}
 .tour-dot.on,.tour-dot.done,#tourDots.all-on .tour-dot{background:#fff}
 .tour-pill-btn{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--sab));z-index:5;min-height:44px;min-width:120px;padding:0 22px;border:0;border-radius:22px;background:#fff;color:#111;font:700 16px/1 var(--f-ui);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .tour-pill-btn.primary{background:var(--accent);color:var(--accent-ink,#fff)}
@@ -651,7 +652,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourPageB.in{animation:tourIn .8s ease-out}
 @keyframes tourIn{from{transform:translateX(24%);opacity:0}to{transform:none;opacity:1}}
 #tourHoldWord.sel{background:var(--hl1);border-radius:2px;box-shadow:0 0 0 3px var(--hl1)}
-#tourMid{position:absolute;left:22%;right:22%;top:18%;bottom:18%;border-radius:16px}
+#tourMid{position:absolute;left:26%;right:26%;top:28%;height:32%;bottom:auto;border-radius:16px}
 #tourEdgeR{position:absolute;top:22%;right:-8px;width:56px;height:38%;border-radius:12px}
 #tourSel{position:absolute;left:50%;top:46%;transform:translate(-50%,-120%);z-index:4;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:22px;background:var(--surface);color:var(--ink);box-shadow:0 8px 28px rgba(0,0,0,.2);pointer-events:none}
 #tourSel .dot{width:28px;height:28px;border-radius:50%;border:0;opacity:0;transform:scale(.6)}
@@ -670,7 +671,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourSpeedWord.flash{animation:tourFlash .8s ease-out}
 @keyframes tourFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(.92)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1}}
 #tourDemo.speed-on .tour-page,#tourDemo.speed-on #tourSel,#tourDemo.speed-on #tourPeek,#tourDemo.speed-on #tourMoment{display:none}
-#tourPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(12px + var(--rfoot-h,96px));z-index:6;display:flex;align-items:center;gap:2px;width:max-content;max-width:calc(100% - 24px);padding:4px 4px 8px 4px;border-radius:32px;background:color-mix(in srgb,var(--page-bg,#fff) 94%,var(--page-ink,#111));color:var(--page-ink,#111);border:1px solid var(--page-line,#ddd);box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+#tourPill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + var(--rfoot-h,96px));z-index:6;display:flex;align-items:center;gap:2px;width:max-content;max-width:calc(100% - 24px);padding:4px 4px 8px 4px;border-radius:32px;background:color-mix(in srgb,var(--page-bg,#fff) 94%,var(--page-ink,#111));color:var(--page-ink,#111);border:1px solid var(--page-line,#ddd);box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 #tourPill.glide{animation:tourGlide .8s ease-out}
 @keyframes tourGlide{from{transform:translateX(-50%) translateY(24px);opacity:0}to{transform:translateX(-50%);opacity:1}}
 #tourPill.breathe{animation:tourGlide .8s ease-out, tourBreathe .9s ease-out .8s}
@@ -681,7 +682,6 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourPill .tour-pill-close{width:44px;height:44px;flex:none;border-radius:50%;color:var(--page-ink,#111)}
 #tourPill .tour-pill-close svg{width:16px;height:16px}
 #tourPill .tour-pill-track{position:absolute;left:14px;right:14px;bottom:4px;height:2px;border-radius:1px;background:color-mix(in srgb,var(--page-ink,#111) 16%,transparent);pointer-events:none}
-#tour.tour-listen #tourDots{bottom:calc(12px + var(--rfoot-h,96px) + 68px)}
 #tour.tour-listen .tour-page{bottom:calc(12px + var(--rfoot-h,96px) + 80px)}
 #tourFinger{position:absolute;z-index:7;width:28px;height:28px;margin:-6px 0 0 -14px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none}
 #tourFinger.tap{animation:tourTap .8s ease-out}
@@ -695,11 +695,10 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #v-library.tour-grid-dim #docList .doc:not(.continue-hero){opacity:.45}
 #docList [data-tour-hide]{display:none}
 
-#tour.reduced *{animation:none !important;transition:opacity .35s ease !important}
-#tour.reduced #tourCaption{transition:opacity .35s ease}
+#tour.reduced *,#tour.reduced #tourCaption{animation:none !important;transition:none !important}
 
 @media (prefers-reduced-motion: reduce){
-  #tour *{animation:none !important}
+  #tour *,#tour #tourCaption{animation:none !important;transition:none !important}
 }
 
 </style>

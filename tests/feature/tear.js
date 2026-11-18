@@ -7,7 +7,7 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   const b=await chromium.launch();
   const ctx=await b.newContext({viewport:{width:393,height:852},deviceScaleFactor:2,serviceWorkers:'block',hasTouch:true,isMobile:true});
   await ctx.route(/fonts\.(googleapis|gstatic)/, r=>r.abort());
-  await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
+  await ctx.addInitScript(()=>{ window.__toozKeepSample=true; try{ localStorage.setItem('rf.tourDone','1'); }catch(e){}; });
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(1500);
   const hide=async(h)=>pg.evaluate(h=>{ Object.defineProperty(document,'hidden',{get:()=>h,configurable:true}); Object.defineProperty(document,'visibilityState',{get:()=>h?'hidden':'visible',configurable:true}); document.dispatchEvent(new Event('visibilitychange')); },h);

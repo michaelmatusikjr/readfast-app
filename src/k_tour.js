@@ -14,7 +14,7 @@ function shouldAutoTour(){
   return books.every(m=>m.kind==='sample');
 }
 function tourRoot(){ return document.getElementById('tour'); }
-function tourClearTimers(){ (TOUR.timers||[]).forEach(t=>clearTimeout(t)); TOUR.timers=[]; }
+function tourClearTimers(){ (TOUR.timers||[]).forEach(t=>clearTimeout(t)); TOUR.timers=[]; TOUR.autoTimer=null; }
 function tourAfter(ms){
   return new Promise(res=>{
     const tok=TOUR.token;
@@ -39,14 +39,28 @@ function tourMeasureRfoot(){
   return h;
 }
 
+function tourBox(el, pad){
+  if(!el || el.hidden || (el.closest && el.closest('[hidden]'))) return null;
+  const r=el.getBoundingClientRect();
+  if(r.width<2 || r.height<2) return null;
+  const p=pad||0;
+  return {left:r.left-p, top:r.top-p, right:r.right+p, bottom:r.bottom+p};
+}
+
 function tourObstacles(){
-  const ids=['tourSkip','tourNext','tourStart','tourSub','tourDots','tourPeek','tourMoment','tourPill','tourSel','tourFinger'];
+  const ids=['tourSkip','tourNext','tourStart','tourDots','tourPeek','tourMoment','tourPill','tourSel','tourFinger'];
   const out=[];
   for(const id of ids){
-    const el=$('#'+id);
-    if(!el || el.hidden || (el.closest && el.closest('[hidden]'))) continue;
-    const r=el.getBoundingClientRect();
-    if(r.width>2 && r.height>2) out.push({left:r.left, top:r.top, right:r.right, bottom:r.bottom});
+    const b=tourBox($('#'+id), 8);
+    if(b) out.push(b);
+  }
+  const demo=tourDemo();
+  if(!demo || demo.hidden){
+    const hero=document.querySelector('#v-library .continue-hero');
+    const go=document.querySelector('#v-library .hero-go');
+    const hb=tourBox(hero, 10); if(hb) out.push(hb);
+    const gb=tourBox(go, 10); if(gb) out.push(gb);
+    const tb=tourBox($('#tabs'), 8); if(tb) out.push(tb);
   }
   return out;
 }
@@ -54,72 +68,175 @@ function tourObstacles(){
 function tourPlaceCaption(hole){
   const cap=$('#tourCaption'), next=$('#tourNext'), start=$('#tourStart'), skip=$('#tourSkip');
   if(!cap) return;
-  const safeTop=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat'))||0;
-  const safeBot=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab'))||0;
-  const safeL=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sal'))||0;
-  const safeR=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sar'))||0;
+  const root=getComputedStyle(document.documentElement);
+  const safeTop=parseFloat(root.getPropertyValue('--sat'))||0;
+  const safeBot=parseFloat(root.getPropertyValue('--sab'))||0;
+  const safeL=parseFloat(root.getPropertyValue('--sal'))||0;
+  const safeR=parseFloat(root.getPropertyValue('--sar'))||0;
   const foot=(!start||start.hidden)?next:start;
-  const nextH=(foot && !foot.hidden)?foot.getBoundingClientRect().height+16:0;
-  const skipBox=skip?skip.getBoundingClientRect():{bottom:safeTop+56,left:innerWidth};
-  const vw=innerWidth, vh=innerHeight;
-  const capH=Math.max(48, cap.offsetHeight||56);
-  const margin=12;
+  const vw=innerWidth, vh=innerHeight, margin=12;
+  const left=safeL+20;
+  const width=Math.max(80, vw-safeL-safeR-40);
+  cap.style.left=left+'px';
+  cap.style.width=width+'px';
+  cap.style.right='auto';
+  cap.style.bottom='auto';
+  const capH=Math.max(40, cap.offsetHeight||56);
   const obs=tourObstacles();
-  const overlaps=(top,left,w)=>{
-    const a={left, top, right:left+w, bottom:top+capH};
-    const hit=r=>!(a.bottom<r.top-8 || a.top>r.bottom+8 || a.right<r.left-8 || a.left>r.right-8);
-    if(hole && hit(hole)) return true;
+  const holeBox=hole?{left:hole.left, top:hole.top, right:hole.right, bottom:hole.bottom}:null;
+  const overlaps=(top,l,w)=>{
+    const a={left:l, top, right:l+w, bottom:top+capH};
+    const hit=r=>!(a.bottom<=r.top-8 || a.top>=r.bottom+8 || a.right<=r.left-8 || a.left>=r.right+8);
+    if(holeBox && hit(holeBox)) return true;
     return obs.some(hit);
   };
+  let reservedBot=safeBot+16;
+  if(foot && !foot.hidden) reservedBot=Math.max(reservedBot, vh-foot.getBoundingClientRect().top+12);
+  const dots=$('#tourDots');
+  if(dots && !dots.hidden) reservedBot=Math.max(reservedBot, vh-dots.getBoundingClientRect().top+10);
+  const pill=$('#tourPill');
+  if(pill && !pill.hidden) reservedBot=Math.max(reservedBot, vh-pill.getBoundingClientRect().top+10);
+  const minTop=Math.max(safeTop+8, skip&&!skip.hidden?skip.getBoundingClientRect().bottom+8:safeTop+56);
+  const maxTop=vh-reservedBot-capH;
   const cands=[];
-  const fullW=vw-safeL-safeR-40;
-  let reservedBot=safeBot+nextH+16;
-  for(const id of ['tourSub','tourDots','tourMoment','tourPill']){
-    const el=$('#'+id);
-    if(!el || el.hidden) continue;
-    const r=el.getBoundingClientRect();
-    if(r.height>2) reservedBot=Math.max(reservedBot, vh-r.top+10);
+  const push=(top,l,w,pri)=>{
+    if(w<80 || top==null || !isFinite(top)) return;
+    if(top<safeTop+4 || top+capH>vh-safeBot+8) return;
+    cands.push({top, left:l, w, pri});
+  };
+  if(holeBox){
+    const holeMid=(holeBox.top+holeBox.bottom)/2;
+    const preferAbove=holeMid>vh*0.5;
+    const aboveTop=holeBox.top-capH-margin;
+    const belowTop=holeBox.bottom+margin;
+    const aboveFits=aboveTop>=minTop-1 && aboveTop+capH<=holeBox.top-8;
+    const belowFits=belowTop+capH<=vh-reservedBot+8 && belowTop>=holeBox.bottom+8;
+    if(preferAbove){
+      if(aboveFits) push(Math.max(minTop, aboveTop), left, width, 0);
+      if(belowFits) push(Math.min(maxTop, belowTop), left, width, 1);
+    }else{
+      if(belowFits) push(Math.min(maxTop, belowTop), left, width, 0);
+      if(aboveFits) push(Math.max(minTop, aboveTop), left, width, 1);
+    }
+    const leftW=Math.max(120, holeBox.left-safeL-32);
+    const rightX=holeBox.right+12, rightW=Math.max(120, vw-safeR-16-rightX);
+    const midY=Math.max(minTop, Math.min(maxTop, (holeBox.top+holeBox.bottom-capH)/2));
+    if(holeBox.left>vw*0.4) push(midY, safeL+16, leftW, 2);
+    if(holeBox.right<vw*0.6) push(midY, rightX, rightW, 2);
+    push(maxTop, left, width, 3);
+    push(minTop, left, width, 4);
+  }else{
+    const hero=document.querySelector('#v-library .continue-hero');
+    const hr=hero?hero.getBoundingClientRect():null;
+    if(hr && hr.height>2){
+      const below=hr.bottom+margin;
+      if(below+capH<=vh-reservedBot) push(below, left, width, 0);
+      const above=Math.min(hr.top-capH-margin, maxTop);
+      if(above>=minTop && above+capH<=hr.top-8) push(above, left, width, 1);
+    }
+    push(Math.max(minTop, Math.min(maxTop, vh*0.34)), left, width, 2);
+    push(maxTop, left, width, 3);
+    push(minTop, left, width, 4);
   }
-  const bottomY=vh-reservedBot-capH;
-  const topY=Math.max(safeTop+skipBox.bottom+8, safeTop+56);
-  cands.push({top:bottomY,left:safeL+20,w:fullW});
-  cands.push({top:topY,left:safeL+20,w:fullW});
-  /* end card and empty-hole steps prefer a mid-page band */
-  if(!hole) cands.unshift({top:Math.max(topY, Math.min(bottomY, vh*0.34)), left:safeL+20, w:fullW});
-  if(hole){
-    const leftW=Math.max(120, hole.left-safeL-32);
-    const rightX=hole.right+12, rightW=Math.max(120, vw-safeR-16-rightX);
-    if(hole.left>vw*0.4) cands.unshift({top:Math.max(topY, Math.min(bottomY,(hole.top+hole.bottom-capH)/2)), left:safeL+16, w:leftW});
-    if(hole.right<vw*0.6) cands.unshift({top:Math.max(topY, Math.min(bottomY,(hole.top+hole.bottom-capH)/2)), left:rightX, w:rightW});
-    if(hole.top-topY>capH+margin) cands.unshift({top:Math.max(topY, hole.top-capH-margin), left:safeL+20, w:fullW});
-    if(bottomY-hole.bottom>margin) cands.unshift({top:Math.min(bottomY, hole.bottom+margin), left:safeL+20, w:fullW});
+  cands.sort((a,b)=>a.pri-b.pri);
+  let pick=cands.find(c=>c.w>=80 && !overlaps(c.top,c.left,c.w));
+  if(!pick){
+    const blocks=obs.slice();
+    if(holeBox) blocks.push(holeBox);
+    blocks.push({top:0, bottom:minTop, left:0, right:vw});
+    blocks.push({top:vh-reservedBot, bottom:vh, left:0, right:vw});
+    const ys=[minTop, vh-reservedBot, ...blocks.flatMap(b=>[b.top,b.bottom])].filter(y=>isFinite(y)).sort((a,b)=>a-b);
+    let best=null, bestH=-1;
+    for(let i=0;i<ys.length-1;i++){
+      const gap=ys[i+1]-ys[i];
+      if(gap>bestH){ bestH=gap; best={t:ys[i], b:ys[i+1]}; }
+    }
+    if(best){
+      const top=Math.max(minTop, Math.min(maxTop, best.t+Math.max(0,(best.b-best.t-capH)/2)));
+      pick={top, left, w:width};
+    }else pick=cands[0]||{top:Math.max(minTop, maxTop), left, w:width};
   }
-  let pick=cands.find(c=>c.w>=80 && c.top>=safeTop+8 && c.top+capH<=vh-reservedBot+8 && !overlaps(c.top,c.left,c.w)) || cands[0] || cands[cands.length-1];
-  cap.style.top=Math.max(8, pick.top)+'px';
+  let top=Math.max(8, pick.top);
+  cap.style.top=top+'px';
   cap.style.left=Math.max(12, pick.left)+'px';
-  cap.style.right='auto';
   cap.style.width=Math.min(pick.w, vw-pick.left-safeR-12)+'px';
-  cap.style.bottom='auto';
+  /* Re-measure and push the card clear of the spotlight if it still overlaps. */
+  const capH2=Math.max(capH, cap.offsetHeight||capH);
+  if(holeBox){
+    const r=()=>cap.getBoundingClientRect();
+    const hits=()=>{
+      const a=r();
+      return !(a.bottom<=holeBox.top-8 || a.top>=holeBox.bottom+8 || a.right<=holeBox.left-8 || a.left>=holeBox.right-8);
+    };
+    if(hits()){
+      const below=holeBox.bottom+8;
+      const above=holeBox.top-capH2-8;
+      if(below+capH2<=vh-reservedBot+8) cap.style.top=below+'px';
+      else if(above>=safeTop+4) cap.style.top=Math.max(8, above)+'px';
+    }
+    if(hits()){
+      /* last resort: shrink the spotlight to leave the caption band free */
+      const hole=$('#tourHole');
+      const a=r();
+      if(hole && !hole.hidden){
+        if(a.bottom<=(holeBox.top+holeBox.bottom)/2){
+          const nt=Math.max(holeBox.top, a.bottom+8);
+          if(nt<holeBox.bottom-24){ hole.style.top=nt+'px'; hole.style.height=(holeBox.bottom-nt)+'px'; }
+        }else{
+          const nb=Math.min(holeBox.bottom, a.top-8);
+          if(nb>holeBox.top+24){ hole.style.height=(nb-holeBox.top)+'px'; }
+        }
+      }
+    }
+  }
 }
 
 function tourSpot(el, pad){
   const hole=$('#tourHole');
   if(!hole) return null;
-  if(!el){ hole.hidden=true; hole.style.width=0; return null; }
+  if(!el){ hole.hidden=true; hole.style.width=0; tourPlaceCaption(null); return null; }
   const r=el.getBoundingClientRect();
   const p=pad==null?10:pad;
-  const x=Math.max(4, r.left-p), y=Math.max(4, r.top-p);
-  const w=Math.min(innerWidth-x-4, r.width+p*2), h=Math.min(innerHeight-y-4, r.height+p*2);
+  let x=Math.max(4, r.left-p), y=Math.max(4, r.top-p);
+  let w=Math.min(innerWidth-x-4, r.width+p*2), h=Math.min(innerHeight-y-4, r.height+p*2);
   hole.hidden=false;
   hole.style.left=x+'px'; hole.style.top=y+'px'; hole.style.width=w+'px'; hole.style.height=h+'px';
   const box={left:x, top:y, right:x+w, bottom:y+h, width:w, height:h};
+  /* On a short viewport, shrink a tall spotlight so a caption band stays free. */
+  const cap=$('#tourCaption');
+  const capH=(cap?Math.max(40, cap.offsetHeight||56):56)+16;
+  const skip=$('#tourSkip');
+  const next=$('#tourNext'), start=$('#tourStart');
+  const foot=(!start||start.hidden)?next:start;
+  const root=getComputedStyle(document.documentElement);
+  const safeTop=parseFloat(root.getPropertyValue('--sat'))||0;
+  const safeBot=parseFloat(root.getPropertyValue('--sab'))||0;
+  const topLimit=Math.max(safeTop+8, skip&&!skip.hidden?skip.getBoundingClientRect().bottom+8:safeTop+48)+4;
+  let botLimit=innerHeight-safeBot-12;
+  if(foot&&!foot.hidden) botLimit=Math.min(botLimit, foot.getBoundingClientRect().top-12);
+  const dots=$('#tourDots');
+  if(dots&&!dots.hidden) botLimit=Math.min(botLimit, dots.getBoundingClientRect().top-10);
+  const roomAbove=box.top-topLimit;
+  const roomBelow=botLimit-box.bottom;
+  if(roomAbove<capH && roomBelow<capH){
+    const mid=(box.top+box.bottom)/2;
+    if(mid>innerHeight*0.5){
+      if(topLimit+capH < box.bottom-36){ box.top=topLimit+capH; box.height=box.bottom-box.top; }
+    }else{
+      if(botLimit-capH > box.top+36){ box.bottom=botLimit-capH; box.height=box.bottom-box.top; }
+    }
+    hole.style.top=box.top+'px';
+    hole.style.height=box.height+'px';
+  }
   tourPlaceCaption(box);
   return box;
 }
 
 function tourSay(text){
   const cap=$('#tourCaption'); if(!cap) return;
-  cap.textContent=text||'';
+  const main=$('#tourCaptionText');
+  if(main) main.textContent=text||'';
+  else cap.textContent=text||'';
 }
 
 function tourSetDots(n){
@@ -189,18 +306,73 @@ function tourTrap(e){
 }
 
 function tourBindSwipe(root){
+  const mark=s=>{ if(!s) return; s.dragged=true; TOUR.dragged=true; };
+  const finish=(x,y,s)=>{
+    TOUR.swiping=null;
+    if(!TOUR.on || !s) return;
+    const dx=x-s.x, dy=y-s.y;
+    if(s.dragged || Math.hypot(dx,dy)>12) TOUR.dragged=true;
+    if(dy>72 && dy>Math.abs(dx)*1.2) tourEnd(true);
+  };
+  root.addEventListener('pointerdown',e=>{
+    if(!TOUR.on) return;
+    if(e.pointerType!=='touch' && e.button!=null && e.button!==0) return;
+    TOUR.swiping={x:e.clientX, y:e.clientY, id:e.pointerId, dragged:false};
+    TOUR.dragged=false;
+  });
+  root.addEventListener('pointermove',e=>{
+    const s=TOUR.swiping; if(!s || s.id!==e.pointerId) return;
+    if(Math.hypot(e.clientX-s.x, e.clientY-s.y)>12) mark(s);
+  });
+  root.addEventListener('pointerup',e=>{
+    const s=TOUR.swiping; if(!s || s.id!==e.pointerId) return;
+    finish(e.clientX, e.clientY, s);
+  });
+  root.addEventListener('pointercancel',e=>{
+    const s=TOUR.swiping; if(!s || s.id!==e.pointerId) return;
+    if(s.dragged) TOUR.dragged=true;
+    TOUR.swiping=null;
+  });
   root.addEventListener('touchstart',e=>{
     if(!TOUR.on || !e.touches[0]) return;
-    TOUR.swiping={x:e.touches[0].clientX, y:e.touches[0].clientY};
+    TOUR.swiping={x:e.touches[0].clientX, y:e.touches[0].clientY, dragged:false, touch:true};
+    TOUR.dragged=false;
+  },{passive:true});
+  root.addEventListener('touchmove',e=>{
+    const s=TOUR.swiping; if(!s || !s.touch || !e.touches[0]) return;
+    if(Math.hypot(e.touches[0].clientX-s.x, e.touches[0].clientY-s.y)>12) mark(s);
   },{passive:true});
   root.addEventListener('touchend',e=>{
-    if(!TOUR.on || !TOUR.swiping) return;
+    const s=TOUR.swiping; if(!s || !s.touch) return;
     const t=e.changedTouches && e.changedTouches[0];
-    const s=TOUR.swiping; TOUR.swiping=null;
-    if(!t) return;
-    const dx=t.clientX-s.x, dy=t.clientY-s.y;
-    if(dy>72 && dy>Math.abs(dx)*1.2) tourEnd(true);
+    if(!t){ TOUR.swiping=null; return; }
+    finish(t.clientX, t.clientY, s);
   },{passive:true});
+}
+
+function tourChromeHover(el){
+  return !!(el && el.closest && el.closest('#tourCaption,#tourNext,#tourStart'));
+}
+function tourAutoPause(){
+  if(!TOUR.on || TOUR.autoPaused || TOUR.reduced || TOUR.step>=6) return;
+  TOUR.autoPaused=true;
+  if(TOUR.autoAt!=null) TOUR.autoRemain=Math.max(0, (TOUR.autoRemain||0)-(performance.now()-TOUR.autoAt));
+  if(TOUR.autoTimer){ clearTimeout(TOUR.autoTimer); TOUR.timers=(TOUR.timers||[]).filter(t=>t!==TOUR.autoTimer); TOUR.autoTimer=null; }
+}
+function tourAutoResume(){
+  if(!TOUR.on || !TOUR.autoPaused || TOUR.reduced || TOUR.step>=6) return;
+  TOUR.autoPaused=false;
+  tourScheduleAuto(TOUR.token, TOUR.step);
+}
+function tourScheduleAuto(tok, n){
+  if(TOUR.reduced || n>=6 || !TOUR.on) return;
+  if(TOUR.autoTimer){ clearTimeout(TOUR.autoTimer); TOUR.timers=(TOUR.timers||[]).filter(t=>t!==TOUR.autoTimer); TOUR.autoTimer=null; }
+  if(TOUR.autoRemain==null) TOUR.autoRemain=TOUR_AUTO_MS;
+  TOUR.autoAt=performance.now();
+  const wait=TOUR.autoRemain;
+  const t=setTimeout(()=>{ TOUR.autoTimer=null; if(TOUR.token===tok && TOUR.on && !TOUR.autoPaused && TOUR.step<6) tourAdvance(); }, wait);
+  TOUR.autoTimer=t;
+  TOUR.timers.push(t);
 }
 
 function tourDemo(){ return $('#tourDemo'); }
@@ -250,17 +422,6 @@ async function tourRunStep(n){
     await tourAfter(40);
     if(tok!==TOUR.token) return;
     tourSpot(hero, 10);
-    /* keep the caption under the hero, above Next, so it never sits on the card */
-    const cap=$('#tourCaption'), hole=$('#tourHole');
-    if(cap && hole && !hole.hidden){
-      const next=$('#tourNext');
-      const safeBot=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab'))||0;
-      const nextH=(next && !next.hidden)?next.getBoundingClientRect().height+16:0;
-      const capH=cap.offsetHeight||72;
-      const bottomY=innerHeight-safeBot-nextH-16-capH;
-      const hr=hole.getBoundingClientRect();
-      if(bottomY>=hr.bottom+8){ cap.style.top=bottomY+'px'; cap.style.left=''; cap.style.right=''; cap.style.width=''; cap.style.paddingLeft=''; }
-    }
     if(hero && document.querySelector('#docList .doc:not(.continue-hero)'))
       $('#v-library').classList.add('tour-grid-dim');
     if(!TOUR.reduced && hero) hero.classList.add('tour-pulse');
@@ -387,7 +548,7 @@ async function tourRunStep(n){
       if(root) root.style.setProperty('--rfoot-h', h+'px');
       pill.style.bottom='calc(12px + '+h+'px)';
       const dots=$('#tourDots');
-      if(dots) dots.style.bottom=(12+h+62+18)+'px';
+      if(dots) dots.style.bottom='';
       await tourAfter(TOUR.reduced?40:30);
       if(tok!==TOUR.token) return;
       tourSpot(pill, 14);
@@ -399,21 +560,13 @@ async function tourRunStep(n){
   if(n>=6){
     tourDemoPages(false);
     const tourRoot=$('#tour'); if(tourRoot) tourRoot.classList.remove('tour-listen');
-  const td=$('#tourDots'); if(td) td.style.bottom='';
-    tourSpot(null);
+    const td=$('#tourDots'); if(td) td.style.bottom='';
     tourSay('That’s it.');
     const sub=$('#tourSub'); if(sub){ sub.hidden=false; sub.textContent='Replay anytime: Settings → Help.'; }
     tourShowChrome('', true);
     tourSetDots(TOUR_DOTS-1);
     $('#tourDots') && $('#tourDots').classList.add('all-on');
-    tourPlaceCaption(null);
-    const cap=$('#tourCaption'), subEl=$('#tourSub');
-    if(cap && subEl && !subEl.hidden){
-      const r=subEl.getBoundingClientRect();
-      cap.style.top=Math.max(80, r.top-(cap.offsetHeight||48)-10)+'px';
-      cap.style.left='20px';
-      cap.style.width=(innerWidth-40)+'px';
-    }
+    tourSpot(null);
     tourFocusSkip();
     return;
   }else{
@@ -422,9 +575,12 @@ async function tourRunStep(n){
   }
 
   tourFocusSkip();
+  TOUR.autoRemain=TOUR_AUTO_MS;
+  TOUR.autoPaused=false;
   if(!TOUR.reduced && n<6){
-    const t=setTimeout(()=>{ if(TOUR.token===tok && TOUR.on) tourAdvance(); }, TOUR_AUTO_MS);
-    TOUR.timers.push(t);
+    const over=document.querySelector('#tourCaption:hover, #tourNext:hover, #tourStart:hover');
+    if(over){ TOUR.autoPaused=true; }
+    else tourScheduleAuto(tok, n);
   }
 }
 
@@ -465,6 +621,7 @@ function startTour(opts){
   try{ if(typeof closeSheet==='function') closeSheet(); }catch(e){}
   try{ if(R&&R.meta&&typeof closeReader==='function') closeReader(true); }catch(e){}
   TOUR.on=true; TOUR.replay=replay; TOUR.reduced=tourReduced(); TOUR.step=0; TOUR.token++;
+  TOUR.autoRemain=TOUR_AUTO_MS; TOUR.autoPaused=false; TOUR.autoTimer=null; TOUR.dragged=false;
   tourClearTimers();
   TOUR.lastFocus=document.activeElement;
   if(typeof showView==='function') showView('library');
@@ -486,12 +643,21 @@ function maybeStartTour(){
     const root=tourRoot(); if(!root || root._bound) return;
     root._bound=1;
     tourBindSwipe(root);
+    root.addEventListener('pointerover',e=>{ if(tourChromeHover(e.target)) tourAutoPause(); });
+    root.addEventListener('pointerout',e=>{ if(tourChromeHover(e.target) && !tourChromeHover(e.relatedTarget)) tourAutoResume(); });
+    root.addEventListener('focusin',e=>{ if(e.target && e.target.closest && e.target.closest('#tourNext,#tourStart,#tourCaption')) tourAutoPause(); });
+    root.addEventListener('focusout',e=>{
+      const to=e.relatedTarget;
+      if(e.target && e.target.closest && e.target.closest('#tourNext,#tourStart,#tourCaption') && !(to && to.closest && to.closest('#tourNext,#tourStart,#tourCaption'))) tourAutoResume();
+    });
     root.addEventListener('click',e=>{
       if(!TOUR.on) return;
+      const dragged=!!TOUR.dragged; TOUR.dragged=false;
       if(e.target.closest('#tourSkip')){ e.preventDefault(); tourEnd(true); return; }
       if(e.target.closest('#tourStart')){ e.preventDefault(); tourEnd(false); return; }
-      if(e.target.closest('#tourNext')){ e.preventDefault(); tourAdvance(); return; }
-      /* a tap on the scrim or demo advances; controls already handled */
+      if(e.target.closest('#tourNext')){ e.preventDefault(); if(!dragged) tourAdvance(); return; }
+      /* a drag never advances; only Next (or a tap on the scrim) does */
+      if(dragged) return;
       if(e.target.closest('#tourSkip,#tourNext,#tourStart,#tourCaption,#tourDots')) return;
       if(TOUR.step>=6) return;
       tourAdvance();

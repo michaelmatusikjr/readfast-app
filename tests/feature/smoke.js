@@ -5,7 +5,7 @@ const LIB={'jszip.min.js':__E.NM+'jszip/dist/jszip.min.js','pdf.min.js':__E.NM+'
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
   const b=await chromium.launch({});
-  const ctx=await b.newContext({viewport:{width:390,height:844}, serviceWorkers:'block', hasTouch:false}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
+  const ctx=await b.newContext({viewport:{width:390,height:844}, serviceWorkers:'block', hasTouch:false}); await ctx.addInitScript(()=>{window.__toozKeepSample=true; try{ localStorage.setItem('rf.tourDone','1'); }catch(e){}});
   await ctx.route(/cdnjs/,r=>{ const k=Object.keys(LIB).find(k=>r.request().url().endsWith('/'+k)); return k?r.fulfill({path:LIB[k],contentType:'application/javascript'}):r.abort(); });
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push('PAGEERR '+e.message)); pg.on('console',m=>{ if(m.type()==='error') errs.push('console '+m.text()); });
