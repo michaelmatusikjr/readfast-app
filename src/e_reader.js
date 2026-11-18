@@ -621,7 +621,8 @@ async function switchMode(m){
   await MODES[m].enter(); updateChrome(); resetClock();
 }
 let relayT=null;
-function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; if(hasSelection()) return; pinApp(); applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
+let pendingRelay=false;
+function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; if(hasSelection()){ holdPlace(); pendingRelay=true; return; } pendingRelay=false; pinApp(); applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
 /* after a rotation the page area can settle a moment later (the notch insets): if the anchor word isn't on screen, lay out once more */
 function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor==null || $('#v-reader').hidden) return; const w=wordEl(R.anchor); if(!w) return; const c=$('#pgClip').getBoundingClientRect(), r=w.getBoundingClientRect(); if(r.left<c.left-2 || r.right>c.right+2){ pgApplyGeom(); P.k=-1; await pgShow(R.anchor); } }, 400); }
 function holdPlace(){ if(R.mode && R.meta && R.anchor==null && R.mode!=='speed') R.anchor = R.mode==='pages' && P.topWord!=null && P.k>=0 ? P.topWord : R.pos; }
@@ -693,7 +694,7 @@ $('#rScrub').addEventListener('change',e=>{ scrubbing=false; goTo(+e.target.valu
 $('#rMark').onclick=()=>{
   const ex=bookmarkHere(); const bm=R.meta.bookmarks||(R.meta.bookmarks=[]);
   if(ex){ bm.splice(bm.indexOf(ex),1); toast('Bookmark removed'); }
-  else { const ch=currentChapter(R.pos); bm.push({i:R.pos, name:ch?ch.t:'', at:Date.now()}); bm.sort((a,b)=>a.i-b.i); toast('Bookmarked', {label:'See all', fn:()=>openToc('marks')}); }
+  else { const ch=currentChapter(R.pos); bm.push({i:R.pos, name:ch?ch.t:'', at:Date.now()}); bm.sort((a,b)=>a.i-b.i); toast('Bookmarked', {label:'See all', fn:()=>openToc('hls')}); }
   touch(R.meta); updateChrome();
 };
 
@@ -897,7 +898,12 @@ function selCheck(){
   const rg=s.getRangeAt(0); const host=hostEl(); if(!host||!host.contains(rg.commonAncestorContainer)){ selHide(); return; }
   let a=nodeIdx(rg.startContainer, rg.startOffset, true), b=nodeIdx(rg.endContainer, rg.endOffset, false);
   if(a==null||b==null){ selHide(); return; } if(b<a) [a,b]=[b,a];
-  SEL={s:a,e:b, text:s.toString()}; $('#selBar').hidden=false; if(SC.auto) asStop(); placeSelBar();
+  SEL={s:a,e:b, text:s.toString()}; showSelBar(); if(SC.auto) asStop(); placeSelBar();
+}
+function showSelBar(){
+  const bar=$('#selBar'); if(!bar) return;
+  const was=bar.hidden; bar.hidden=false;
+  if(was) TS.barAt=performance.now();
 }
 function selMenuIsOpen(){ const m=$('#selMenu'); return !!(m && !m.hidden); }
 function closeSelMenu(focusMore){
@@ -906,10 +912,19 @@ function closeSelMenu(focusMore){
   if(btn){ btn.setAttribute('aria-expanded','false'); if(focusMore) btn.focus(); }
   placeSelBar();
 }
+function selMenuItems(){ return [...document.querySelectorAll('#selMenu [role="menuitem"], #selMenu [data-sel]')].filter(b=>!b.hidden && b.offsetParent!==null); }
+function selMenuFocus(i){
+  const items=selMenuItems(); if(!items.length) return;
+  i=(i+items.length)%items.length;
+  items.forEach((b,k)=>b.tabIndex=k===i?0:-1);
+  items[i].focus();
+}
 function openSelMenu(){
   const m=$('#selMenu'), btn=$('#selMore'); if(!m||!btn) return;
   m.hidden=false; btn.setAttribute('aria-expanded','true');
+  const items=selMenuItems(); items.forEach((b,k)=>b.tabIndex=k===0?0:-1);
   placeSelBar();
+  if(items[0]) items[0].focus();
 }
 function toggleSelMenu(){ if(selMenuIsOpen()) closeSelMenu(false); else openSelMenu(); }
 function cssVarPx(name){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name))||0; }
@@ -936,7 +951,11 @@ function selRangeRect(){
   if(!rects.length) return null;
   let l=Infinity,t=Infinity,r=-Infinity,b=-Infinity;
   for(const q of rects){ l=Math.min(l,q.left); t=Math.min(t,q.top); r=Math.max(r,q.right); b=Math.max(b,q.bottom); }
-  return {left:l, top:t, right:r, bottom:b, width:r-l, height:b-t};
+  const clipEl=R.mode==='pages'?$('#pgClip'):R.mode==='scroll'?scView:null;
+  const vis=clipEl?clipEl.getBoundingClientRect():{left:0,top:0,right:innerWidth,bottom:innerHeight};
+  const cl=Math.max(l, vis.left, 0), ct=Math.max(t, vis.top, 0), cr=Math.min(r, vis.right, innerWidth), cb=Math.min(b, vis.bottom, innerHeight);
+  if(cr-cl<1 || cb-ct<1) return null;
+  return {left:cl, top:ct, right:cr, bottom:cb, width:cr-cl, height:cb-ct};
 }
 function overlaps(a,b,pad){
   pad=pad||0;
@@ -945,7 +964,7 @@ function overlaps(a,b,pad){
 function placeSelBar(){
   const bar=$('#selBar'); if(!bar || bar.hidden) return;
   const menu=$('#selMenu'), menuOpen=menu && !menu.hidden;
-  const box=selSafeBox(), sel=selRangeRect(), gap=8;
+  const box=selSafeBox(), sel=selRangeRect(), gap=12;
   const barW=bar.offsetWidth, barH=bar.offsetHeight;
   const menuW=menuOpen?menu.offsetWidth:0, menuH=menuOpen?menu.offsetHeight:0;
   let barLeft, barTop;
@@ -1001,7 +1020,7 @@ function selHide(){
   bar.hidden=true; bar.classList.remove('placed'); bar.style.left=bar.style.top=bar.style.bottom=bar.style.right='';
   SEL=null; if(TS.on){ TS.on=false; tsPaint(); }
 }
-function selClear(){ selHide(); try{ const s=getSelection(); if(s&&!s.isCollapsed) s.removeAllRanges(); }catch(e){} }
+function selClear(){ selHide(); try{ const s=getSelection(); if(s&&!s.isCollapsed) s.removeAllRanges(); }catch(e){} if(pendingRelay){ pendingRelay=false; holdPlace(); relayoutSoon(); } }
 $('#selMore').innerHTML=(ICON.more||'')+'More';
 for(const [act,icon,label] of [['define','define','Define'],['note','note','Note'],['copy','copy','Copy'],['share','share','Share']]){
   const b=document.querySelector('#selMenu [data-sel="'+act+'"]'); if(b) b.innerHTML=(ICON[icon]||'')+label;
@@ -1012,17 +1031,23 @@ $('#selBar').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b||!SEL) return;
   if(b.id==='selMore'){ toggleSelMenu(); return; }
   const {s,e:en}=SEL;
-  if(b.dataset.hl){ addHighlight(s,en,+b.dataset.hl); selClear(); return; }
+  if(b.dataset.hl){ if(performance.now()-(TS.barAt||0)<250) return; addHighlight(s,en,+b.dataset.hl); selClear(); return; }
   const act=b.dataset.sel; selClear();
+  /* Define, Note and Share only open a sheet — they must not call goTo or setBack or move R.pos */
   if(act==='copy') copyQuote(s,en);
   else if(act==='note'){ const ex=(R.meta.highlights||[]).find(h=>h.e>=s && h.s<=en); const h=addHighlight(s,en,ex?ex.c:1); openHlMenu(h,true); }
   else if(act==='define'){ const k=defineIdx(s,en); const w=clean(R.words[k]); if(w) defineWord(w,k); }
   else if(act==='share') quoteImage(s,en);
 });
 document.addEventListener('keydown',e=>{
-  if(e.key!=='Escape' || !selMenuIsOpen()) return;
-  e.preventDefault(); e.stopPropagation();
-  closeSelMenu(true);
+  if(!selMenuIsOpen()) return;
+  const items=selMenuItems();
+  const i=items.indexOf(document.activeElement);
+  if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeSelMenu(true); return; }
+  if(e.key==='ArrowDown'){ e.preventDefault(); e.stopPropagation(); selMenuFocus(i<0?0:i+1); return; }
+  if(e.key==='ArrowUp'){ e.preventDefault(); e.stopPropagation(); selMenuFocus(i<0?items.length-1:i-1); return; }
+  if(e.key==='Home'){ e.preventDefault(); e.stopPropagation(); selMenuFocus(0); return; }
+  if(e.key==='End'){ e.preventDefault(); e.stopPropagation(); selMenuFocus(items.length-1); return; }
 }, true);
 /* the word to define: the first real word in the selection (skipping note numbers and stray punctuation) */
 function defineIdx(s,e){ for(let k=s;k<=e;k++){ if(R.wf && (R.wf[k]&F_N)) continue; if(clean(R.words[k])) return k; } return s; }
@@ -1047,7 +1072,7 @@ function tsPaint(){
   TS.bh=wb?bandOf(wb, wb.getBoundingClientRect()).h:22;
   if(TS.on) placeSelBar();
 }
-function tsSet(a,b){ TS.on=true; TS.a=Math.min(a,b); TS.b=Math.max(a,b); SEL={s:TS.a, e:TS.b}; $('#selBar').hidden=false; if(SC.auto) asStop(); tsPaint(); }
+function tsSet(a,b){ TS.on=true; TS.a=Math.min(a,b); TS.b=Math.max(a,b); SEL={s:TS.a, e:TS.b}; showSelBar(); if(SC.auto) asStop(); tsPaint(); }
 function wordAtPoint(x,y){ const el=document.elementFromPoint(x,y); const w=el&&el.closest?el.closest('w'):null; if(!w || !hostEl() || !hostEl().contains(w)) return null; return idxOf(w); }
 /* the coloured band of a word: no taller than its line (tall fonts have boxes that reach into the next line) */
 function bandOf(w, r){
@@ -1170,18 +1195,26 @@ function addHighlight(s,e,c,note){
   const h={id:uid(), s, e, c, note:notes.join('\n\n'), at:Date.now()}; list.push(h); list.sort((a,b)=>a.s-b.s);
   touch(R.meta); redecorate(); return h;
 }
-function openHlMenu(h, focusNote){
+const HL_NAME={1:'Yellow',2:'Green',3:'Blue',4:'Pink'};
+function hlName(c){ return HL_NAME[c||1]||'Highlight'; }
+function jumpToMoment(i, len){
+  if(R.mode==='speed' && R.playing) pause();
+  const prev=R.pos;
+  return goTo(i, true).then(()=>{ if(prev!==i) setBack(prev); return flashFound(i, Math.max(1, len||1)); });
+}
+function refreshMomentViews(){ try{ if(typeof renderNotes==='function' && $('#v-words') && !$('#v-words').hidden) renderNotes(); }catch(e){} }
+function openHlMenu(h, focusNote, from){
   openSheet('Highlight', `
     <div class="quote">${esc(textOf(h.s,Math.min(h.e,h.s+120)))}${h.e>h.s+120?'…':''}</div>
-    <div class="chips" style="gap:12px">${[1,2,3,4].map(c=>`<button class="swatch" type="button" data-act="col" data-c="${c}" aria-label="Color ${c}" aria-pressed="${h.c===c}" style="background:var(--hl${c})"></button>`).join('')}</div>
+    <div class="chips" style="gap:12px">${[1,2,3,4].map(c=>`<button class="swatch" type="button" data-act="col" data-c="${c}" aria-label="Highlight ${hlName(c).toLowerCase()}" aria-pressed="${h.c===c}" style="background:var(--hl${c})"></button>`).join('')}</div>
     <div class="field"><label for="hlNote">Note</label><textarea class="short" id="hlNote" placeholder="Add a note">${esc(h.note||'')}</textarea></div>
     <div class="row"><button class="btn primary" type="button" data-act="save">Save note</button><button class="btn" type="button" data-act="copy">Copy</button><button class="btn" type="button" data-act="share">Share image</button></div>
     <button class="btn block danger" type="button" data-act="del">${ICON.trash} Remove highlight</button>`, {
     col:(b)=>{ h.c=+b.dataset.c; touch(R.meta); redecorate(); document.querySelectorAll('#sheet .swatch').forEach(x=>x.setAttribute('aria-pressed', x===b)); },
-    save:()=>{ h.note=$('#hlNote').value.trim(); touch(R.meta); redecorate(); closeSheet(); toast(h.note?'Note saved':'Note cleared'); },
+    save:()=>{ h.note=$('#hlNote').value.trim(); touch(R.meta); redecorate(); toast(h.note?'Note saved':'Note cleared'); if(from==='toc') openToc('hls'); else { closeSheet(); refreshMomentViews(); } },
     copy:()=>{ copyQuote(h.s,h.e); },
     share:()=>{ closeSheet(); quoteImage(h.s,h.e); },
-    del:()=>{ const L=R.meta.highlights; const k=L.indexOf(h); if(k>=0) L.splice(k,1); touch(R.meta); redecorate(); closeSheet(); toast('Highlight removed'); }
+    del:()=>{ const L=R.meta.highlights; const k=L.indexOf(h); if(k>=0) L.splice(k,1); touch(R.meta); redecorate(); toast('Highlight removed'); if(from==='toc') openToc('hls'); else { closeSheet(); refreshMomentViews(); } }
   });
   if(focusNote) setTimeout(()=>{ const t=$('#hlNote'); t&&t.focus(); },120);
 }
@@ -1196,13 +1229,117 @@ function openFootnote(i){
   openSheet('Note', `<div class="quote">${esc(txt)}${e>s+200?'…':''}</div><button class="btn block" type="button" data-act="go">Go to this note in the book</button>`, { go:()=>{ closeSheet(); goTo(t,true); } });
 }
 
+/* ---------- notes & highlights stream (view only; stored highlights stay {id,s,e,c,note,at}) ---------- */
+let NOTESORT=LS.get('notesSort','pos');
+if(NOTESORT!=='date') NOTESORT='pos';
+function sortMoments(list){
+  const a=(list||[]).slice();
+  if(NOTESORT==='date') a.sort((x,y)=>(y.at||0)-(x.at||0) || (x.s||0)-(y.s||0));
+  else a.sort((x,y)=>(x.s||0)-(y.s||0) || (x.at||0)-(y.at||0));
+  return a;
+}
+function bookMoments(d){
+  const out=[];
+  if(!d) return out;
+  for(const h of d.highlights||[]) out.push({kind:'hl', s:h.s, e:h.e, at:h.at||0, id:h.id, c:h.c, note:h.note||'', bookId:d.id, src:h});
+  for(const b of d.bookmarks||[]) out.push({kind:'bm', s:b.i, e:b.i, at:b.at||0, id:'bm:'+(b.at||0)+':'+b.i, name:b.name||'', bookId:d.id, src:b});
+  if(typeof WORDS!=='undefined'){
+    for(const w of WORDS){ if(w && w.docId===d.id) out.push({kind:'word', s:w.pos||0, e:w.pos||0, at:w.at||0, id:w.id, word:w.word||'', sentence:w.sentence||'', def:w.def||'', bookId:d.id, src:w}); }
+  }
+  return out;
+}
+function momentQuote(m, getText){
+  if(m.kind==='word'){ const s=m.sentence||''; const cap=s.length>180; return (m.word||'Word')+(s?': '+(cap?s.slice(0,180)+'…':s):''); }
+  if(m.kind==='bm'){
+    const raw=getText?getText(m):(typeof textOf==='function' && R.meta && R.meta.id===m.bookId?textOf(m.s, Math.min((R.n||1)-1, m.s+9)):'');
+    const q=raw?raw+(raw.length>40|| (R.n&&m.s+9<R.n-1)?'…':''):'';
+    return (m.name||'Bookmark')+(q?' · '+q:'');
+  }
+  const raw=(getText?getText(m):textOf(m.s, Math.min(m.e, m.s+80)))||'';
+  const cap=(m.e>m.s+80) || raw.length>320;
+  return cap?(raw.length>320?raw.slice(0,320)+'…':raw+'…'):raw;
+}
+function momentMatches(m, q, quote){
+  if(!q) return true;
+  q=q.toLowerCase();
+  return [quote, m.note, m.name, m.word, m.sentence, m.def, m.kind==='hl'?'highlight':m.kind==='bm'?'bookmark':'word', m.kind==='hl'?hlName(m.c):''].some(x=>x && String(x).toLowerCase().includes(q));
+}
+function momentKindMeta(m){
+  if(m.kind==='hl'){ const name=hlName(m.c); return {label:name+' highlight', kindLbl:name, icon:`<span class="moment-dot" style="background:var(--hl${m.c||1})" aria-hidden="true"></span>`}; }
+  if(m.kind==='bm') return {label:'Bookmark', kindLbl:'Bookmark', icon:`<span class="moment-ico" aria-hidden="true">${ICON.mark}</span>`};
+  return {label:'Looked-up word', kindLbl:'Word', icon:`<span class="moment-ico" aria-hidden="true">${ICON.define}</span>`};
+}
+function momentRowHtml(m, quote, where, goAttrs, moreBtn){
+  const k=momentKindMeta(m);
+  return `<div class="swrow moment-row" data-mk="${m.kind}" data-mid="${esc(String(m.id))}" data-book="${esc(m.bookId||'')}" data-i="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}" data-bmat="${m.kind==='bm'?(m.at||0):''}">
+    <button class="swdel" type="button" tabindex="-1">Delete</button>
+    <div class="hlrow moment swfront">
+      ${k.icon}
+      <span class="sr-only">${k.label}</span>
+      <button type="button" class="grow moment-go" ${goAttrs}>
+        <div class="t"><span class="moment-kind">${esc(k.kindLbl)}</span>${esc(quote)}</div>
+        ${m.note?`<div class="nt">${esc(m.note)}</div>`:''}
+        ${where?`<div class="where">${esc(where)}</div>`:''}
+      </button>
+      ${moreBtn||''}
+      <button class="icon-btn moment-rm" type="button" data-act="rmmoment" aria-label="Remove ${k.label}">${ICON.close}</button>
+    </div>
+  </div>`;
+}
+function notesSortLabel(){ return NOTESORT==='date'?'Sorted by date':'Sorted by place in the book'; }
+function removeMoment(m, book){
+  const d=book|| (R.meta && m.bookId && R.meta.id===m.bookId?R.meta:(typeof LIB!=='undefined'?LIB.find(x=>x.id===m.bookId):null));
+  let undo=()=>{}, label='Removed';
+  if(m.kind==='hl'){
+    if(!d) return; const L=d.highlights||(d.highlights=[]); const k=L.findIndex(h=>h.id===m.id); if(k<0) return;
+    const [gone]=L.splice(k,1); touch(d); if(R.meta===d) redecorate();
+    label='Highlight removed';
+    undo=()=>{ d.highlights.push(gone); d.highlights.sort((a,b)=>a.s-b.s); touch(d); if(R.meta===d) redecorate(); afterMomentChange(); };
+  } else if(m.kind==='bm'){
+    if(!d) return; const L=d.bookmarks||(d.bookmarks=[]); const k=L.findIndex(b=>b.i===m.s && String(b.at||0)===String(m.at||0)); if(k<0) return;
+    const [gone]=L.splice(k,1); touch(d); if(R.meta===d) updateChrome();
+    label='Bookmark deleted';
+    undo=()=>{ d.bookmarks.push(gone); d.bookmarks.sort((a,b)=>a.i-b.i); touch(d); if(R.meta===d) updateChrome(); afterMomentChange(); };
+  } else if(m.kind==='word'){
+    if(typeof WORDS==='undefined') return; const k=WORDS.findIndex(w=>w.id===m.id); if(k<0) return;
+    const [gone]=WORDS.splice(k,1); if(typeof saveWords==='function') saveWords();
+    label='Removed “'+(gone.word||'word')+'”';
+    undo=()=>{ WORDS.splice(k,0,gone); if(typeof saveWords==='function') saveWords(); afterMomentChange(); };
+  } else return;
+  afterMomentChange();
+  toast(label, {label:'Undo', fn:undo});
+}
+function afterMomentChange(){
+  if($('#hlStream')) fillHlStream();
+  refreshMomentViews();
+}
+function fillHlStream(){
+  const box=$('#hlStream'), count=$('#hlCount'); if(!box||!R.meta) return;
+  const q=(($('#hlFind')||{}).value||'').trim();
+  const all=sortMoments(bookMoments(R.meta));
+  const rows=[];
+  for(const m of all){
+    const quote=momentQuote(m);
+    if(!momentMatches(m,q,quote)) continue;
+    const ch=(currentChapter(m.s)||{}).t||'';
+    const where=(ch?ch+' · ':'')+Math.round(100*m.s/Math.max(1,R.n-1))+'%';
+    const more=m.kind==='hl'?`<button class="icon-btn moment-more" type="button" data-act="edit" data-id="${esc(m.id)}" aria-label="Edit ${hlName(m.c)} highlight">${ICON.more}</button>`:'';
+    rows.push(momentRowHtml(m, quote, where, `data-act="go" data-i="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}"`, more));
+  }
+  const n=rows.length, tot=all.length;
+  if(count) count.textContent=tot?(n+' of '+tot):'';
+  const empty=q?'<p class="note">No matches.</p>':'<p class="note">Select text in the book to highlight it. Add a note from More. Bookmarks and words you look up appear here too.</p>';
+  box.innerHTML=n?rows.join(''):empty;
+  const sortBtn=$('#hlSort'); if(sortBtn){ sortBtn.textContent=notesSortLabel(); sortBtn.setAttribute('aria-pressed', NOTESORT==='date'?'true':'false'); }
+}
+
 /* ---------- contents, bookmarks, highlights ---------- */
 function openToc(tab){
   if(R.mode==='speed' && R.playing) pause();
   setChrome(true);
-  const t=tab||'toc';
+  const t=(tab==='marks'?'hls':(tab||'toc'));
   const tools=`<div class="toc-tools"><button type="button" class="toc-tool" id="tocSearch" data-act="search">${ICON.search}<span>Search this book</span></button><button type="button" class="toc-tool" id="tocNotes" data-act="notes">${ICON.note}<span>Notes &amp; highlights</span></button></div>`;
-  const seg=`<div class="seg" style="margin-bottom:4px">${[['toc','Contents'],['marks','Bookmarks'],['hls','Highlights & notes']].map(([k,l])=>`<button type="button" data-act="tab" data-t="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>`;
+  const seg=`<div class="seg" style="margin-bottom:4px">${[['toc','Contents'],['hls','Notes']].map(([k,l])=>`<button type="button" data-act="tab" data-t="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>`;
   let body='';
   if(t==='toc'){
     const ch=R.meta.chapters||[]; const cur=currentChapter(R.pos);
@@ -1223,22 +1360,33 @@ function openToc(tab){
       <button class="btn primary block" type="button" data-act="addbm">${ICON.mark} Add bookmark here</button>
       <div class="list">${bm.length?bm.map((b,k)=>`<div class="li"><button type="button" style="all:unset;flex:1;min-width:0;cursor:pointer" data-act="go" data-i="${b.i}"><b>${esc(b.name||'Bookmark')}</b><div class="small">${Math.round(100*b.i/Math.max(1,R.n-1))}% · ${esc(textOf(b.i,Math.min(R.n-1,b.i+9)))}…</div></button><button class="icon-btn" type="button" data-act="rmbm" data-k="${k}" aria-label="Remove bookmark">${ICON.close}</button></div>`).join(''):'<p class="note">No bookmarks yet. Tap the bookmark at the bottom of any page.</p>'}</div>`;
   } else {
-    const hl=R.meta.highlights;
-    body = hl.length ? `<button class="btn block" type="button" data-act="copyall">Copy all highlights and notes</button>`+hl.map(h=>`<div class="hlrow"><span class="bar" style="background:var(--hl${h.c})"></span><div class="grow" data-act="go" data-i="${h.s}"><div class="t">${esc(textOf(h.s,Math.min(h.e,h.s+60)))}${h.e>h.s+60?'…':''}</div>${h.note?`<div class="nt">${esc(h.note)}</div>`:''}<div class="where">${esc((currentChapter(h.s)||{}).t||'')} · ${Math.round(100*h.s/Math.max(1,R.n-1))}%</div></div><button class="icon-btn" type="button" data-act="edit" data-id="${h.id}" aria-label="Edit highlight">${ICON.more}</button></div>`).join('')
-      : '<p class="note">Select text with a long press, then pick a color to highlight it or tap Note to add a note.</p>';
+    const hl=R.meta.highlights||[];
+    body=`<div class="hl-tools">
+        <input class="input" id="hlFind" type="search" placeholder="Search notes, bookmarks and words" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search notes, bookmarks and words">
+        <div class="hl-meta"><span id="hlCount"></span><button class="sort" type="button" id="hlSort" data-act="hlsort">${notesSortLabel()}</button></div>
+      </div>
+      <div id="hlStream"></div>
+      ${hl.length?`<button class="btn block" type="button" data-act="copyall" style="margin-top:12px">Copy all highlights and notes</button>`:''}`;
   }
   openSheet(R.meta.title, tools+seg+body, {
     search:()=>openSearch(),
     notes:()=>openToc('hls'),
     tab:(b)=>openToc(b.dataset.t),
     tocx:(b)=>{ const k=+b.dataset.k; const was=R.tocOpen&&R.tocOpen.id===R.meta.id&&R.tocOpen.k===k; R.tocOpen={id:R.meta.id, k: was? -1 : k}; openToc('toc'); setTimeout(()=>{ const o=$('#sheet .li.open'); o&&o.scrollIntoView({block:'start'}); },40); },
-    go:(b)=>{ closeSheet(); goTo(+b.dataset.i, true); },
+    go:(b)=>{ const i=+b.dataset.i, len=+b.dataset.len||1; closeSheet(); jumpToMoment(i, len); },
     addbm:()=>{ const bm=R.meta.bookmarks; bm.push({i:R.pos, name:$('#bmName').value.trim()||((currentChapter(R.pos)||{}).t||''), at:Date.now()}); bm.sort((a,b)=>a.i-b.i); touch(R.meta); updateChrome(); toast('Bookmarked'); openToc('marks'); },
     rmbm:(b)=>{ R.meta.bookmarks.splice(+b.dataset.k,1); touch(R.meta); updateChrome(); openToc('marks'); },
-    edit:(b)=>{ const h=R.meta.highlights.find(x=>x.id===b.dataset.id); if(h) openHlMenu(h); },
+    edit:(b)=>{ const h=R.meta.highlights.find(x=>x.id===b.dataset.id); if(h) openHlMenu(h,false,'toc'); },
+    rmmoment:(b)=>{ const row=b.closest('.moment-row'); if(row) removeMoment({kind:row.dataset.mk, id:row.dataset.mid, bookId:row.dataset.book, s:+row.dataset.i, at:+row.dataset.bmat||0}, R.meta); },
+    hlsort:()=>{ NOTESORT=NOTESORT==='date'?'pos':'date'; LS.set('notesSort',NOTESORT); fillHlStream(); },
     copyall:async()=>{ const txt=R.meta.title+'\n\n'+R.meta.highlights.map(h=>'“'+textOf(h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+R.meta.highlights.length+' highlight'+(R.meta.highlights.length===1?'':'s')); }catch(e){ toast('Couldn’t copy on this device.'); } }
   });
   sheetFocusBack=$('#rToc');
+  if(t==='hls'){
+    fillHlStream();
+    const inp=$('#hlFind');
+    if(inp){ inp.addEventListener('input', fillHlStream); setTimeout(()=>inp.focus(), 80); }
+  }
   if(t==='toc' && !(tab==='toc' && R.tocOpen && R.tocOpen.fresh===false)) setTimeout(()=>{ const on=$('#sheet .li.on')||$('#sheet .li.open'); on&&on.scrollIntoView({block:'center'}); },30);
 }
 
@@ -1620,7 +1768,7 @@ function bindPanel(root){
 }
 $('#rAa').onclick=openPanel;
 $('#rToc').onclick=()=>openToc('toc');
-$('#markBtn').onclick=()=>openToc('marks');
+$('#markBtn').onclick=()=>openToc('hls');
 /* night theme switch and phone light/dark changes */
 setInterval(()=>{ if(S.nightAuto) applyLook(); },60000);
 try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>applyLook()); }catch(e){}

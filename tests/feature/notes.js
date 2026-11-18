@@ -31,13 +31,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await pg.evaluate(()=>closeReader()); await sleep(300);
   // notes tab
   await pg.click('#tabs [data-tab=words]'); await sleep(500);
-  console.log('notes hl', await pg.evaluate(()=>[$('#notesHl').hidden, document.querySelectorAll('#notesHl .nbook').length, document.querySelectorAll('#notesHl .hlrow').length, $('#notesHl .hlrow .t').textContent.slice(0,50), $('#notesHl .nt').textContent]));
-  await pg.click('#notesSeg [data-n=bm]'); await sleep(400);
-  console.log('notes bm', await pg.evaluate(()=>[$('#notesBm').hidden, document.querySelectorAll('#notesBm .hlrow').length, $('#notesBm .hlrow').textContent.slice(0,80)]));
-  await pg.click('#notesSeg [data-n=w]'); await sleep(300);
-  console.log('words pane', await pg.evaluate(()=>[$('#wordsPane').hidden, $('#notesBm').hidden]));
-  await pg.click('#notesSeg [data-n=hl]'); await sleep(400);
-  await pg.click('#notesHl .hlrow .grow'); await sleep(900);
+  console.log('notes hl', await pg.evaluate(()=>[$('#notesHl').hidden, document.querySelectorAll('#notesHl .nbook').length, document.querySelectorAll('#notesHl .hlrow').length, ($('#notesHl .moment-row[data-mk=hl] .t')||{}).textContent&&$('#notesHl .moment-row[data-mk=hl] .t').textContent.slice(0,50), ($('#notesHl .nt')||{}).textContent]));
+  console.log('notes stream types', await pg.evaluate(()=>[...document.querySelectorAll('#notesHl .moment-row')].map(r=>r.dataset.mk)));
+  await pg.click('#notesHl .moment-row[data-mk=hl] .moment-go'); await sleep(900);
   console.log('open from notes', await pg.evaluate(()=>[$('#v-reader').hidden, R.pos, !$('#backPill').hidden, R.playing]));
   await pg.evaluate(()=>closeReader()); await sleep(300);
   console.log('back returns to', await pg.evaluate(()=>[$('#v-words').hidden, $('#v-library').hidden]));

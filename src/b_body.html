@@ -1,5 +1,5 @@
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.29</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.30</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -22,7 +22,11 @@
   <section id="v-words" class="view" aria-label="Notes" hidden>
     <div class="wrap">
       <div class="topbar"><div><div class="eyebrow">From every book</div><h1>Notes</h1></div></div>
-      <div class="seg" id="notesSeg"><button type="button" data-n="hl">Highlights</button><button type="button" data-n="bm">Bookmarks</button><button type="button" data-n="w">Words</button></div>
+      <div class="seg" id="notesSeg" hidden><button type="button" data-n="hl">Notes &amp; highlights</button><button type="button" data-n="bm">Bookmarks</button><button type="button" data-n="w">Words</button></div>
+      <div id="notesHlTools">
+        <input class="input" id="notesFind" type="search" placeholder="Search notes, bookmarks and words" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search notes, bookmarks and words">
+        <div class="hl-meta"><span id="notesHlCount"></span><button class="sort" type="button" id="notesSort"></button></div>
+      </div>
       <div id="notesHl" class="wrap" style="gap:14px"></div>
       <div id="notesBm" class="wrap" style="gap:14px" hidden></div>
       <div id="wordsPane" class="wrap" style="gap:10px" hidden>

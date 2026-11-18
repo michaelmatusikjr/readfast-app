@@ -1,8 +1,8 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.29-selection-bar';
+const APP_VERSION='2026.11.18.30-notes-stream';
 const WHATSNEW=[
-  ['A slimmer selection bar','The bar next to a selection now shows the four highlight colours and More. Define, Note, Copy and Share live in the More menu, so the bar stays small and off your words.'],
-  ['Filter pills keep your place','Removing a library filter moves focus to the next pill, and the row announces how many filters are on.']
+  ['One notes stream','Highlights, bookmarks and words you look up now share one list per book, in the order they appear. Search it, tap a moment to jump there, swipe to remove, or use the remove button. The Notes tab searches every book and groups the same stream by title.'],
+  ['A more careful selection bar','The More menu can be moved with the arrow keys, and a new highlight is not created if your finger is still coming off the page.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

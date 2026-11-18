@@ -430,7 +430,23 @@ code{font-family:var(--f-mono);font-size:.85em;background:var(--raise);padding:1
 .nbook-h .small{color:var(--muted);font-size:.78rem}
 .nbook .hlrow:last-child{border-bottom:0}
 .hlrow{display:flex;gap:10px;align-items:flex-start;border-bottom:1px solid var(--line);padding:10px 0}
-/* swipe left on a row to reveal Delete (Notes → Bookmarks) */
+.moment-dot{flex:none;width:12px;height:12px;border-radius:50%;margin-top:8px;box-shadow:0 0 0 1px var(--line)}
+.moment-go{all:unset;flex:1;min-width:0;cursor:pointer;display:block;text-align:left;color:inherit;font:inherit}
+.moment-more{flex:none}
+.hl-tools{display:flex;flex-direction:column;gap:8px;margin:0 0 10px}
+.hl-meta{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--muted);min-height:44px}
+.hl-meta .sort{margin-left:auto;background:none;border:0;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;min-height:44px;padding:0 6px}
+.nbook-toggle{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.nbook-toggle .chev{flex:none;color:var(--muted)}
+#notesHlTools{width:100%;min-width:0;margin:0 0 10px}
+.nbook-title{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nbook-count{flex:none;color:var(--muted);font-size:.82rem}
+.moment-ico{flex:none;width:22px;height:22px;margin-top:3px;color:var(--accent);display:inline-flex;align-items:center;justify-content:center}
+.moment-ico svg{width:20px;height:20px}
+.moment-kind{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:6px}
+.moment-rm,.moment-more{flex:none;min-width:44px;min-height:44px}
+.moment-row .swfront{background:var(--surface)}
+/* swipe left on a row to reveal Delete, with Undo */
 .swrow{position:relative;overflow:hidden}
 .swrow .swdel{position:absolute;top:0;right:0;bottom:1px;width:92px;border:0;background:var(--danger);color:#fff;font:inherit;font-weight:600}
 .swrow .swfront{position:relative;background:var(--paper);transition:transform .2s ease;touch-action:pan-y}
@@ -575,7 +591,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.29</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.30</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -598,7 +614,11 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   <section id="v-words" class="view" aria-label="Notes" hidden>
     <div class="wrap">
       <div class="topbar"><div><div class="eyebrow">From every book</div><h1>Notes</h1></div></div>
-      <div class="seg" id="notesSeg"><button type="button" data-n="hl">Highlights</button><button type="button" data-n="bm">Bookmarks</button><button type="button" data-n="w">Words</button></div>
+      <div class="seg" id="notesSeg" hidden><button type="button" data-n="hl">Notes &amp; highlights</button><button type="button" data-n="bm">Bookmarks</button><button type="button" data-n="w">Words</button></div>
+      <div id="notesHlTools">
+        <input class="input" id="notesFind" type="search" placeholder="Search notes, bookmarks and words" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search notes, bookmarks and words">
+        <div class="hl-meta"><span id="notesHlCount"></span><button class="sort" type="button" id="notesSort"></button></div>
+      </div>
       <div id="notesHl" class="wrap" style="gap:14px"></div>
       <div id="notesBm" class="wrap" style="gap:14px" hidden></div>
       <div id="wordsPane" class="wrap" style="gap:10px" hidden>
@@ -2349,7 +2369,8 @@ async function switchMode(m){
   await MODES[m].enter(); updateChrome(); resetClock();
 }
 let relayT=null;
-function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; if(hasSelection()) return; pinApp(); applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
+let pendingRelay=false;
+function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; if(hasSelection()){ holdPlace(); pendingRelay=true; return; } pendingRelay=false; pinApp(); applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
 /* after a rotation the page area can settle a moment later (the notch insets): if the anchor word isn't on screen, lay out once more */
 function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor==null || $('#v-reader').hidden) return; const w=wordEl(R.anchor); if(!w) return; const c=$('#pgClip').getBoundingClientRect(), r=w.getBoundingClientRect(); if(r.left<c.left-2 || r.right>c.right+2){ pgApplyGeom(); P.k=-1; await pgShow(R.anchor); } }, 400); }
 function holdPlace(){ if(R.mode && R.meta && R.anchor==null && R.mode!=='speed') R.anchor = R.mode==='pages' && P.topWord!=null && P.k>=0 ? P.topWord : R.pos; }
@@ -2421,7 +2442,7 @@ $('#rScrub').addEventListener('change',e=>{ scrubbing=false; goTo(+e.target.valu
 $('#rMark').onclick=()=>{
   const ex=bookmarkHere(); const bm=R.meta.bookmarks||(R.meta.bookmarks=[]);
   if(ex){ bm.splice(bm.indexOf(ex),1); toast('Bookmark removed'); }
-  else { const ch=currentChapter(R.pos); bm.push({i:R.pos, name:ch?ch.t:'', at:Date.now()}); bm.sort((a,b)=>a.i-b.i); toast('Bookmarked', {label:'See all', fn:()=>openToc('marks')}); }
+  else { const ch=currentChapter(R.pos); bm.push({i:R.pos, name:ch?ch.t:'', at:Date.now()}); bm.sort((a,b)=>a.i-b.i); toast('Bookmarked', {label:'See all', fn:()=>openToc('hls')}); }
   touch(R.meta); updateChrome();
 };
 
@@ -2625,7 +2646,12 @@ function selCheck(){
   const rg=s.getRangeAt(0); const host=hostEl(); if(!host||!host.contains(rg.commonAncestorContainer)){ selHide(); return; }
   let a=nodeIdx(rg.startContainer, rg.startOffset, true), b=nodeIdx(rg.endContainer, rg.endOffset, false);
   if(a==null||b==null){ selHide(); return; } if(b<a) [a,b]=[b,a];
-  SEL={s:a,e:b, text:s.toString()}; $('#selBar').hidden=false; if(SC.auto) asStop(); placeSelBar();
+  SEL={s:a,e:b, text:s.toString()}; showSelBar(); if(SC.auto) asStop(); placeSelBar();
+}
+function showSelBar(){
+  const bar=$('#selBar'); if(!bar) return;
+  const was=bar.hidden; bar.hidden=false;
+  if(was) TS.barAt=performance.now();
 }
 function selMenuIsOpen(){ const m=$('#selMenu'); return !!(m && !m.hidden); }
 function closeSelMenu(focusMore){
@@ -2634,10 +2660,19 @@ function closeSelMenu(focusMore){
   if(btn){ btn.setAttribute('aria-expanded','false'); if(focusMore) btn.focus(); }
   placeSelBar();
 }
+function selMenuItems(){ return [...document.querySelectorAll('#selMenu [role="menuitem"], #selMenu [data-sel]')].filter(b=>!b.hidden && b.offsetParent!==null); }
+function selMenuFocus(i){
+  const items=selMenuItems(); if(!items.length) return;
+  i=(i+items.length)%items.length;
+  items.forEach((b,k)=>b.tabIndex=k===i?0:-1);
+  items[i].focus();
+}
 function openSelMenu(){
   const m=$('#selMenu'), btn=$('#selMore'); if(!m||!btn) return;
   m.hidden=false; btn.setAttribute('aria-expanded','true');
+  const items=selMenuItems(); items.forEach((b,k)=>b.tabIndex=k===0?0:-1);
   placeSelBar();
+  if(items[0]) items[0].focus();
 }
 function toggleSelMenu(){ if(selMenuIsOpen()) closeSelMenu(false); else openSelMenu(); }
 function cssVarPx(name){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name))||0; }
@@ -2664,7 +2699,11 @@ function selRangeRect(){
   if(!rects.length) return null;
   let l=Infinity,t=Infinity,r=-Infinity,b=-Infinity;
   for(const q of rects){ l=Math.min(l,q.left); t=Math.min(t,q.top); r=Math.max(r,q.right); b=Math.max(b,q.bottom); }
-  return {left:l, top:t, right:r, bottom:b, width:r-l, height:b-t};
+  const clipEl=R.mode==='pages'?$('#pgClip'):R.mode==='scroll'?scView:null;
+  const vis=clipEl?clipEl.getBoundingClientRect():{left:0,top:0,right:innerWidth,bottom:innerHeight};
+  const cl=Math.max(l, vis.left, 0), ct=Math.max(t, vis.top, 0), cr=Math.min(r, vis.right, innerWidth), cb=Math.min(b, vis.bottom, innerHeight);
+  if(cr-cl<1 || cb-ct<1) return null;
+  return {left:cl, top:ct, right:cr, bottom:cb, width:cr-cl, height:cb-ct};
 }
 function overlaps(a,b,pad){
   pad=pad||0;
@@ -2673,7 +2712,7 @@ function overlaps(a,b,pad){
 function placeSelBar(){
   const bar=$('#selBar'); if(!bar || bar.hidden) return;
   const menu=$('#selMenu'), menuOpen=menu && !menu.hidden;
-  const box=selSafeBox(), sel=selRangeRect(), gap=8;
+  const box=selSafeBox(), sel=selRangeRect(), gap=12;
   const barW=bar.offsetWidth, barH=bar.offsetHeight;
   const menuW=menuOpen?menu.offsetWidth:0, menuH=menuOpen?menu.offsetHeight:0;
   let barLeft, barTop;
@@ -2729,7 +2768,7 @@ function selHide(){
   bar.hidden=true; bar.classList.remove('placed'); bar.style.left=bar.style.top=bar.style.bottom=bar.style.right='';
   SEL=null; if(TS.on){ TS.on=false; tsPaint(); }
 }
-function selClear(){ selHide(); try{ const s=getSelection(); if(s&&!s.isCollapsed) s.removeAllRanges(); }catch(e){} }
+function selClear(){ selHide(); try{ const s=getSelection(); if(s&&!s.isCollapsed) s.removeAllRanges(); }catch(e){} if(pendingRelay){ pendingRelay=false; holdPlace(); relayoutSoon(); } }
 $('#selMore').innerHTML=(ICON.more||'')+'More';
 for(const [act,icon,label] of [['define','define','Define'],['note','note','Note'],['copy','copy','Copy'],['share','share','Share']]){
   const b=document.querySelector('#selMenu [data-sel="'+act+'"]'); if(b) b.innerHTML=(ICON[icon]||'')+label;
@@ -2740,17 +2779,23 @@ $('#selBar').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b||!SEL) return;
   if(b.id==='selMore'){ toggleSelMenu(); return; }
   const {s,e:en}=SEL;
-  if(b.dataset.hl){ addHighlight(s,en,+b.dataset.hl); selClear(); return; }
+  if(b.dataset.hl){ if(performance.now()-(TS.barAt||0)<250) return; addHighlight(s,en,+b.dataset.hl); selClear(); return; }
   const act=b.dataset.sel; selClear();
+  /* Define, Note and Share only open a sheet — they must not call goTo or setBack or move R.pos */
   if(act==='copy') copyQuote(s,en);
   else if(act==='note'){ const ex=(R.meta.highlights||[]).find(h=>h.e>=s && h.s<=en); const h=addHighlight(s,en,ex?ex.c:1); openHlMenu(h,true); }
   else if(act==='define'){ const k=defineIdx(s,en); const w=clean(R.words[k]); if(w) defineWord(w,k); }
   else if(act==='share') quoteImage(s,en);
 });
 document.addEventListener('keydown',e=>{
-  if(e.key!=='Escape' || !selMenuIsOpen()) return;
-  e.preventDefault(); e.stopPropagation();
-  closeSelMenu(true);
+  if(!selMenuIsOpen()) return;
+  const items=selMenuItems();
+  const i=items.indexOf(document.activeElement);
+  if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeSelMenu(true); return; }
+  if(e.key==='ArrowDown'){ e.preventDefault(); e.stopPropagation(); selMenuFocus(i<0?0:i+1); return; }
+  if(e.key==='ArrowUp'){ e.preventDefault(); e.stopPropagation(); selMenuFocus(i<0?items.length-1:i-1); return; }
+  if(e.key==='Home'){ e.preventDefault(); e.stopPropagation(); selMenuFocus(0); return; }
+  if(e.key==='End'){ e.preventDefault(); e.stopPropagation(); selMenuFocus(items.length-1); return; }
 }, true);
 /* the word to define: the first real word in the selection (skipping note numbers and stray punctuation) */
 function defineIdx(s,e){ for(let k=s;k<=e;k++){ if(R.wf && (R.wf[k]&F_N)) continue; if(clean(R.words[k])) return k; } return s; }
@@ -2775,7 +2820,7 @@ function tsPaint(){
   TS.bh=wb?bandOf(wb, wb.getBoundingClientRect()).h:22;
   if(TS.on) placeSelBar();
 }
-function tsSet(a,b){ TS.on=true; TS.a=Math.min(a,b); TS.b=Math.max(a,b); SEL={s:TS.a, e:TS.b}; $('#selBar').hidden=false; if(SC.auto) asStop(); tsPaint(); }
+function tsSet(a,b){ TS.on=true; TS.a=Math.min(a,b); TS.b=Math.max(a,b); SEL={s:TS.a, e:TS.b}; showSelBar(); if(SC.auto) asStop(); tsPaint(); }
 function wordAtPoint(x,y){ const el=document.elementFromPoint(x,y); const w=el&&el.closest?el.closest('w'):null; if(!w || !hostEl() || !hostEl().contains(w)) return null; return idxOf(w); }
 /* the coloured band of a word: no taller than its line (tall fonts have boxes that reach into the next line) */
 function bandOf(w, r){
@@ -2898,18 +2943,26 @@ function addHighlight(s,e,c,note){
   const h={id:uid(), s, e, c, note:notes.join('\n\n'), at:Date.now()}; list.push(h); list.sort((a,b)=>a.s-b.s);
   touch(R.meta); redecorate(); return h;
 }
-function openHlMenu(h, focusNote){
+const HL_NAME={1:'Yellow',2:'Green',3:'Blue',4:'Pink'};
+function hlName(c){ return HL_NAME[c||1]||'Highlight'; }
+function jumpToMoment(i, len){
+  if(R.mode==='speed' && R.playing) pause();
+  const prev=R.pos;
+  return goTo(i, true).then(()=>{ if(prev!==i) setBack(prev); return flashFound(i, Math.max(1, len||1)); });
+}
+function refreshMomentViews(){ try{ if(typeof renderNotes==='function' && $('#v-words') && !$('#v-words').hidden) renderNotes(); }catch(e){} }
+function openHlMenu(h, focusNote, from){
   openSheet('Highlight', `
     <div class="quote">${esc(textOf(h.s,Math.min(h.e,h.s+120)))}${h.e>h.s+120?'…':''}</div>
-    <div class="chips" style="gap:12px">${[1,2,3,4].map(c=>`<button class="swatch" type="button" data-act="col" data-c="${c}" aria-label="Color ${c}" aria-pressed="${h.c===c}" style="background:var(--hl${c})"></button>`).join('')}</div>
+    <div class="chips" style="gap:12px">${[1,2,3,4].map(c=>`<button class="swatch" type="button" data-act="col" data-c="${c}" aria-label="Highlight ${hlName(c).toLowerCase()}" aria-pressed="${h.c===c}" style="background:var(--hl${c})"></button>`).join('')}</div>
     <div class="field"><label for="hlNote">Note</label><textarea class="short" id="hlNote" placeholder="Add a note">${esc(h.note||'')}</textarea></div>
     <div class="row"><button class="btn primary" type="button" data-act="save">Save note</button><button class="btn" type="button" data-act="copy">Copy</button><button class="btn" type="button" data-act="share">Share image</button></div>
     <button class="btn block danger" type="button" data-act="del">${ICON.trash} Remove highlight</button>`, {
     col:(b)=>{ h.c=+b.dataset.c; touch(R.meta); redecorate(); document.querySelectorAll('#sheet .swatch').forEach(x=>x.setAttribute('aria-pressed', x===b)); },
-    save:()=>{ h.note=$('#hlNote').value.trim(); touch(R.meta); redecorate(); closeSheet(); toast(h.note?'Note saved':'Note cleared'); },
+    save:()=>{ h.note=$('#hlNote').value.trim(); touch(R.meta); redecorate(); toast(h.note?'Note saved':'Note cleared'); if(from==='toc') openToc('hls'); else { closeSheet(); refreshMomentViews(); } },
     copy:()=>{ copyQuote(h.s,h.e); },
     share:()=>{ closeSheet(); quoteImage(h.s,h.e); },
-    del:()=>{ const L=R.meta.highlights; const k=L.indexOf(h); if(k>=0) L.splice(k,1); touch(R.meta); redecorate(); closeSheet(); toast('Highlight removed'); }
+    del:()=>{ const L=R.meta.highlights; const k=L.indexOf(h); if(k>=0) L.splice(k,1); touch(R.meta); redecorate(); toast('Highlight removed'); if(from==='toc') openToc('hls'); else { closeSheet(); refreshMomentViews(); } }
   });
   if(focusNote) setTimeout(()=>{ const t=$('#hlNote'); t&&t.focus(); },120);
 }
@@ -2924,13 +2977,117 @@ function openFootnote(i){
   openSheet('Note', `<div class="quote">${esc(txt)}${e>s+200?'…':''}</div><button class="btn block" type="button" data-act="go">Go to this note in the book</button>`, { go:()=>{ closeSheet(); goTo(t,true); } });
 }
 
+/* ---------- notes & highlights stream (view only; stored highlights stay {id,s,e,c,note,at}) ---------- */
+let NOTESORT=LS.get('notesSort','pos');
+if(NOTESORT!=='date') NOTESORT='pos';
+function sortMoments(list){
+  const a=(list||[]).slice();
+  if(NOTESORT==='date') a.sort((x,y)=>(y.at||0)-(x.at||0) || (x.s||0)-(y.s||0));
+  else a.sort((x,y)=>(x.s||0)-(y.s||0) || (x.at||0)-(y.at||0));
+  return a;
+}
+function bookMoments(d){
+  const out=[];
+  if(!d) return out;
+  for(const h of d.highlights||[]) out.push({kind:'hl', s:h.s, e:h.e, at:h.at||0, id:h.id, c:h.c, note:h.note||'', bookId:d.id, src:h});
+  for(const b of d.bookmarks||[]) out.push({kind:'bm', s:b.i, e:b.i, at:b.at||0, id:'bm:'+(b.at||0)+':'+b.i, name:b.name||'', bookId:d.id, src:b});
+  if(typeof WORDS!=='undefined'){
+    for(const w of WORDS){ if(w && w.docId===d.id) out.push({kind:'word', s:w.pos||0, e:w.pos||0, at:w.at||0, id:w.id, word:w.word||'', sentence:w.sentence||'', def:w.def||'', bookId:d.id, src:w}); }
+  }
+  return out;
+}
+function momentQuote(m, getText){
+  if(m.kind==='word'){ const s=m.sentence||''; const cap=s.length>180; return (m.word||'Word')+(s?': '+(cap?s.slice(0,180)+'…':s):''); }
+  if(m.kind==='bm'){
+    const raw=getText?getText(m):(typeof textOf==='function' && R.meta && R.meta.id===m.bookId?textOf(m.s, Math.min((R.n||1)-1, m.s+9)):'');
+    const q=raw?raw+(raw.length>40|| (R.n&&m.s+9<R.n-1)?'…':''):'';
+    return (m.name||'Bookmark')+(q?' · '+q:'');
+  }
+  const raw=(getText?getText(m):textOf(m.s, Math.min(m.e, m.s+80)))||'';
+  const cap=(m.e>m.s+80) || raw.length>320;
+  return cap?(raw.length>320?raw.slice(0,320)+'…':raw+'…'):raw;
+}
+function momentMatches(m, q, quote){
+  if(!q) return true;
+  q=q.toLowerCase();
+  return [quote, m.note, m.name, m.word, m.sentence, m.def, m.kind==='hl'?'highlight':m.kind==='bm'?'bookmark':'word', m.kind==='hl'?hlName(m.c):''].some(x=>x && String(x).toLowerCase().includes(q));
+}
+function momentKindMeta(m){
+  if(m.kind==='hl'){ const name=hlName(m.c); return {label:name+' highlight', kindLbl:name, icon:`<span class="moment-dot" style="background:var(--hl${m.c||1})" aria-hidden="true"></span>`}; }
+  if(m.kind==='bm') return {label:'Bookmark', kindLbl:'Bookmark', icon:`<span class="moment-ico" aria-hidden="true">${ICON.mark}</span>`};
+  return {label:'Looked-up word', kindLbl:'Word', icon:`<span class="moment-ico" aria-hidden="true">${ICON.define}</span>`};
+}
+function momentRowHtml(m, quote, where, goAttrs, moreBtn){
+  const k=momentKindMeta(m);
+  return `<div class="swrow moment-row" data-mk="${m.kind}" data-mid="${esc(String(m.id))}" data-book="${esc(m.bookId||'')}" data-i="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}" data-bmat="${m.kind==='bm'?(m.at||0):''}">
+    <button class="swdel" type="button" tabindex="-1">Delete</button>
+    <div class="hlrow moment swfront">
+      ${k.icon}
+      <span class="sr-only">${k.label}</span>
+      <button type="button" class="grow moment-go" ${goAttrs}>
+        <div class="t"><span class="moment-kind">${esc(k.kindLbl)}</span>${esc(quote)}</div>
+        ${m.note?`<div class="nt">${esc(m.note)}</div>`:''}
+        ${where?`<div class="where">${esc(where)}</div>`:''}
+      </button>
+      ${moreBtn||''}
+      <button class="icon-btn moment-rm" type="button" data-act="rmmoment" aria-label="Remove ${k.label}">${ICON.close}</button>
+    </div>
+  </div>`;
+}
+function notesSortLabel(){ return NOTESORT==='date'?'Sorted by date':'Sorted by place in the book'; }
+function removeMoment(m, book){
+  const d=book|| (R.meta && m.bookId && R.meta.id===m.bookId?R.meta:(typeof LIB!=='undefined'?LIB.find(x=>x.id===m.bookId):null));
+  let undo=()=>{}, label='Removed';
+  if(m.kind==='hl'){
+    if(!d) return; const L=d.highlights||(d.highlights=[]); const k=L.findIndex(h=>h.id===m.id); if(k<0) return;
+    const [gone]=L.splice(k,1); touch(d); if(R.meta===d) redecorate();
+    label='Highlight removed';
+    undo=()=>{ d.highlights.push(gone); d.highlights.sort((a,b)=>a.s-b.s); touch(d); if(R.meta===d) redecorate(); afterMomentChange(); };
+  } else if(m.kind==='bm'){
+    if(!d) return; const L=d.bookmarks||(d.bookmarks=[]); const k=L.findIndex(b=>b.i===m.s && String(b.at||0)===String(m.at||0)); if(k<0) return;
+    const [gone]=L.splice(k,1); touch(d); if(R.meta===d) updateChrome();
+    label='Bookmark deleted';
+    undo=()=>{ d.bookmarks.push(gone); d.bookmarks.sort((a,b)=>a.i-b.i); touch(d); if(R.meta===d) updateChrome(); afterMomentChange(); };
+  } else if(m.kind==='word'){
+    if(typeof WORDS==='undefined') return; const k=WORDS.findIndex(w=>w.id===m.id); if(k<0) return;
+    const [gone]=WORDS.splice(k,1); if(typeof saveWords==='function') saveWords();
+    label='Removed “'+(gone.word||'word')+'”';
+    undo=()=>{ WORDS.splice(k,0,gone); if(typeof saveWords==='function') saveWords(); afterMomentChange(); };
+  } else return;
+  afterMomentChange();
+  toast(label, {label:'Undo', fn:undo});
+}
+function afterMomentChange(){
+  if($('#hlStream')) fillHlStream();
+  refreshMomentViews();
+}
+function fillHlStream(){
+  const box=$('#hlStream'), count=$('#hlCount'); if(!box||!R.meta) return;
+  const q=(($('#hlFind')||{}).value||'').trim();
+  const all=sortMoments(bookMoments(R.meta));
+  const rows=[];
+  for(const m of all){
+    const quote=momentQuote(m);
+    if(!momentMatches(m,q,quote)) continue;
+    const ch=(currentChapter(m.s)||{}).t||'';
+    const where=(ch?ch+' · ':'')+Math.round(100*m.s/Math.max(1,R.n-1))+'%';
+    const more=m.kind==='hl'?`<button class="icon-btn moment-more" type="button" data-act="edit" data-id="${esc(m.id)}" aria-label="Edit ${hlName(m.c)} highlight">${ICON.more}</button>`:'';
+    rows.push(momentRowHtml(m, quote, where, `data-act="go" data-i="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}"`, more));
+  }
+  const n=rows.length, tot=all.length;
+  if(count) count.textContent=tot?(n+' of '+tot):'';
+  const empty=q?'<p class="note">No matches.</p>':'<p class="note">Select text in the book to highlight it. Add a note from More. Bookmarks and words you look up appear here too.</p>';
+  box.innerHTML=n?rows.join(''):empty;
+  const sortBtn=$('#hlSort'); if(sortBtn){ sortBtn.textContent=notesSortLabel(); sortBtn.setAttribute('aria-pressed', NOTESORT==='date'?'true':'false'); }
+}
+
 /* ---------- contents, bookmarks, highlights ---------- */
 function openToc(tab){
   if(R.mode==='speed' && R.playing) pause();
   setChrome(true);
-  const t=tab||'toc';
+  const t=(tab==='marks'?'hls':(tab||'toc'));
   const tools=`<div class="toc-tools"><button type="button" class="toc-tool" id="tocSearch" data-act="search">${ICON.search}<span>Search this book</span></button><button type="button" class="toc-tool" id="tocNotes" data-act="notes">${ICON.note}<span>Notes &amp; highlights</span></button></div>`;
-  const seg=`<div class="seg" style="margin-bottom:4px">${[['toc','Contents'],['marks','Bookmarks'],['hls','Highlights & notes']].map(([k,l])=>`<button type="button" data-act="tab" data-t="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>`;
+  const seg=`<div class="seg" style="margin-bottom:4px">${[['toc','Contents'],['hls','Notes']].map(([k,l])=>`<button type="button" data-act="tab" data-t="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>`;
   let body='';
   if(t==='toc'){
     const ch=R.meta.chapters||[]; const cur=currentChapter(R.pos);
@@ -2951,22 +3108,33 @@ function openToc(tab){
       <button class="btn primary block" type="button" data-act="addbm">${ICON.mark} Add bookmark here</button>
       <div class="list">${bm.length?bm.map((b,k)=>`<div class="li"><button type="button" style="all:unset;flex:1;min-width:0;cursor:pointer" data-act="go" data-i="${b.i}"><b>${esc(b.name||'Bookmark')}</b><div class="small">${Math.round(100*b.i/Math.max(1,R.n-1))}% · ${esc(textOf(b.i,Math.min(R.n-1,b.i+9)))}…</div></button><button class="icon-btn" type="button" data-act="rmbm" data-k="${k}" aria-label="Remove bookmark">${ICON.close}</button></div>`).join(''):'<p class="note">No bookmarks yet. Tap the bookmark at the bottom of any page.</p>'}</div>`;
   } else {
-    const hl=R.meta.highlights;
-    body = hl.length ? `<button class="btn block" type="button" data-act="copyall">Copy all highlights and notes</button>`+hl.map(h=>`<div class="hlrow"><span class="bar" style="background:var(--hl${h.c})"></span><div class="grow" data-act="go" data-i="${h.s}"><div class="t">${esc(textOf(h.s,Math.min(h.e,h.s+60)))}${h.e>h.s+60?'…':''}</div>${h.note?`<div class="nt">${esc(h.note)}</div>`:''}<div class="where">${esc((currentChapter(h.s)||{}).t||'')} · ${Math.round(100*h.s/Math.max(1,R.n-1))}%</div></div><button class="icon-btn" type="button" data-act="edit" data-id="${h.id}" aria-label="Edit highlight">${ICON.more}</button></div>`).join('')
-      : '<p class="note">Select text with a long press, then pick a color to highlight it or tap Note to add a note.</p>';
+    const hl=R.meta.highlights||[];
+    body=`<div class="hl-tools">
+        <input class="input" id="hlFind" type="search" placeholder="Search notes, bookmarks and words" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search notes, bookmarks and words">
+        <div class="hl-meta"><span id="hlCount"></span><button class="sort" type="button" id="hlSort" data-act="hlsort">${notesSortLabel()}</button></div>
+      </div>
+      <div id="hlStream"></div>
+      ${hl.length?`<button class="btn block" type="button" data-act="copyall" style="margin-top:12px">Copy all highlights and notes</button>`:''}`;
   }
   openSheet(R.meta.title, tools+seg+body, {
     search:()=>openSearch(),
     notes:()=>openToc('hls'),
     tab:(b)=>openToc(b.dataset.t),
     tocx:(b)=>{ const k=+b.dataset.k; const was=R.tocOpen&&R.tocOpen.id===R.meta.id&&R.tocOpen.k===k; R.tocOpen={id:R.meta.id, k: was? -1 : k}; openToc('toc'); setTimeout(()=>{ const o=$('#sheet .li.open'); o&&o.scrollIntoView({block:'start'}); },40); },
-    go:(b)=>{ closeSheet(); goTo(+b.dataset.i, true); },
+    go:(b)=>{ const i=+b.dataset.i, len=+b.dataset.len||1; closeSheet(); jumpToMoment(i, len); },
     addbm:()=>{ const bm=R.meta.bookmarks; bm.push({i:R.pos, name:$('#bmName').value.trim()||((currentChapter(R.pos)||{}).t||''), at:Date.now()}); bm.sort((a,b)=>a.i-b.i); touch(R.meta); updateChrome(); toast('Bookmarked'); openToc('marks'); },
     rmbm:(b)=>{ R.meta.bookmarks.splice(+b.dataset.k,1); touch(R.meta); updateChrome(); openToc('marks'); },
-    edit:(b)=>{ const h=R.meta.highlights.find(x=>x.id===b.dataset.id); if(h) openHlMenu(h); },
+    edit:(b)=>{ const h=R.meta.highlights.find(x=>x.id===b.dataset.id); if(h) openHlMenu(h,false,'toc'); },
+    rmmoment:(b)=>{ const row=b.closest('.moment-row'); if(row) removeMoment({kind:row.dataset.mk, id:row.dataset.mid, bookId:row.dataset.book, s:+row.dataset.i, at:+row.dataset.bmat||0}, R.meta); },
+    hlsort:()=>{ NOTESORT=NOTESORT==='date'?'pos':'date'; LS.set('notesSort',NOTESORT); fillHlStream(); },
     copyall:async()=>{ const txt=R.meta.title+'\n\n'+R.meta.highlights.map(h=>'“'+textOf(h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+R.meta.highlights.length+' highlight'+(R.meta.highlights.length===1?'':'s')); }catch(e){ toast('Couldn’t copy on this device.'); } }
   });
   sheetFocusBack=$('#rToc');
+  if(t==='hls'){
+    fillHlStream();
+    const inp=$('#hlFind');
+    if(inp){ inp.addEventListener('input', fillHlStream); setTimeout(()=>inp.focus(), 80); }
+  }
   if(t==='toc' && !(tab==='toc' && R.tocOpen && R.tocOpen.fresh===false)) setTimeout(()=>{ const on=$('#sheet .li.on')||$('#sheet .li.open'); on&&on.scrollIntoView({block:'center'}); },30);
 }
 
@@ -3348,7 +3516,7 @@ function bindPanel(root){
 }
 $('#rAa').onclick=openPanel;
 $('#rToc').onclick=()=>openToc('toc');
-$('#markBtn').onclick=()=>openToc('marks');
+$('#markBtn').onclick=()=>openToc('hls');
 /* night theme switch and phone light/dark changes */
 setInterval(()=>{ if(S.nightAuto) applyLook(); },60000);
 try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>applyLook()); }catch(e){}
@@ -4053,10 +4221,10 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.29-selection-bar';
+const APP_VERSION='2026.11.18.30-notes-stream';
 const WHATSNEW=[
-  ['A slimmer selection bar','The bar next to a selection now shows the four highlight colours and More. Define, Note, Copy and Share live in the More menu, so the bar stays small and off your words.'],
-  ['Filter pills keep your place','Removing a library filter moves focus to the next pill, and the row announces how many filters are on.']
+  ['One notes stream','Highlights, bookmarks and words you look up now share one list per book, in the order they appear. Search it, tap a moment to jump there, swipe to remove, or use the remove button. The Notes tab searches every book and groups the same stream by title.'],
+  ['A more careful selection bar','The More menu can be moved with the arrow keys, and a new highlight is not created if your finger is still coming off the page.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -5386,33 +5554,65 @@ async function addGutenberg(r){
 
 /* ---------- Notes tab: highlights, notes and bookmarks from every book ---------- */
 let NOTESEG=LS.get('notesSeg','hl'), notesTok=0; const SNIPS=new Map();
-function joinWords(t,s,e){ const wf=(t.wf&&t.wf.length===t.words.length)?t.wf:null; let o=''; for(let k=s;k<=e&&k<t.words.length;k++){ if(k>s && !(wf&&(wf[k]&F_GLUE))) o+=' '; o+=t.words[k]; } return o; }
-async function bookSnips(d){
-  const need=[]; for(const h of d.highlights||[]) need.push([h.s,h.e]); for(const b of d.bookmarks||[]) need.push([b.i,b.i+11]);
-  if(need.every(([s,e])=>SNIPS.has(d.id+'|'+s+'|'+e))) return;
-  let t=(R.meta&&R.meta.id===d.id&&R.text)||await Store.get('texts',d.id).catch(()=>null)||fetchText(d); if(!t||!t.words) return;
-  for(const [s,e] of need) SNIPS.set(d.id+'|'+s+'|'+e, joinWords(t,s,e));
+const NOTECOLLAPSE=new Set();
+function notesFindQ(){ return (($('#notesFind')||{}).value||'').trim(); }
+async function snipOf(id,s,e){
+  const k=id+':'+s+':'+e; if(SNIPS.has(k)) return SNIPS.get(k);
+  try{ const d=await Store.get('texts',id); const w=(d&&d.words)||[]; const raw=w.slice(s, Math.min((e==null?s+80:e)+1, w.length)).join(' '); const q=raw.length>320?raw.slice(0,320)+'…':raw; SNIPS.set(k,q); return q; }
+  catch(err){ return ''; }
 }
-const snip=(d,s,e)=>SNIPS.get(d.id+'|'+s+'|'+e)||'';
-const pctOf=(d,i)=>Math.round(100*i/Math.max(1,(d.count||1)-1));
-function chapterName(d,i){ let c=null; for(const x of d.chapters||[]){ if(x.i<=i) c=x; else break; } return c?c.t:''; }
 async function renderNotes(){
-  if(!['hl','bm','w'].includes(NOTESEG)) NOTESEG='hl';
-  document.querySelectorAll('#notesSeg button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.n===NOTESEG));
-  $('#notesHl').hidden=NOTESEG!=='hl'; $('#notesBm').hidden=NOTESEG!=='bm'; $('#wordsPane').hidden=NOTESEG!=='w';
-  if(NOTESEG==='w'){ renderWords(); return; }
-  const hl=NOTESEG==='hl', key=hl?'highlights':'bookmarks', el=hl?$('#notesHl'):$('#notesBm');
-  const books=LIB.filter(d=>(d[key]||[]).length).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0));
-  if(!books.length){ el.innerHTML=`<div class="empty">${hl?'Highlights and notes from all your books appear here. In a book, press and hold a word, drag to select, then pick a color or tap Note.':'Bookmarks from all your books appear here. In a book, tap the bookmark button at the bottom left.'}</div>`; return; }
-  const tok=++notesTok; await Promise.all(books.map(bookSnips)); if(tok!==notesTok) return;
-  el.innerHTML=books.map(d=>{
-    const L=d[key]; const n=L.length;
-    const rows=hl? L.map((h,k)=>{ const t=snip(d,h.s,h.e); return `<div class="hlrow"><span class="bar" style="background:var(--hl${h.c||1})"></span><div class="grow" data-nb="${d.id}" data-ni="${h.s}"><div class="t">${esc(t.length>320?t.slice(0,320)+'…':t)}</div>${h.note?`<div class="nt">${esc(h.note)}</div>`:''}<div class="where">${esc(chapterName(d,h.s))}${chapterName(d,h.s)?' · ':''}${pctOf(d,h.s)}%</div></div></div>`; }).join('')
-      : L.map(b=>`<div class="swrow" data-bmbook="${d.id}" data-bmi="${b.i}" data-bmat="${b.at||0}"><button class="swdel" type="button" tabindex="-1">Delete</button><div class="hlrow swfront"><span class="bar" style="background:var(--accent)"></span><div class="grow" data-nb="${d.id}" data-ni="${b.i}"><div class="t"><b>${esc(b.name||'Bookmark')}</b></div><div class="where">${pctOf(d,b.i)}% · ${esc(snip(d,b.i,b.i+11))}…</div></div></div></div>`).join('');
-    return `<div class="nbook"><div class="nbook-h"><b>${esc(d.title)}</b><span class="small">${n} ${hl?'highlight':'bookmark'}${n===1?'':'s'}</span>${hl?`<button class="btn" type="button" data-copy="${d.id}" style="padding:6px 10px;font-size:.8rem">Copy</button>`:''}<button class="btn" type="button" data-exp="${d.id}" style="padding:6px 10px;font-size:.8rem">Export</button></div>${rows}</div>`;
-  }).join('');
+  const el=$('#notesHl'); if(!el) return;
+  const tok=++notesTok;
+  const tools=$('#notesHlTools'); if(tools) tools.hidden=false;
+  el.hidden=false;
+  const bmEl=$('#notesBm'), wEl=$('#wordsPane'), seg=$('#notesSeg');
+  if(bmEl) bmEl.hidden=true; if(wEl) wEl.hidden=true; if(seg) seg.hidden=true;
+  const q=notesFindQ();
+  const groups=[];
+  let total=0, shown=0;
+  const books=LIB.slice();
+  if(typeof WORDS!=='undefined'){
+    const seen=new Set(LIB.map(d=>d.id));
+    for(const w of WORDS){
+      if(!w || seen.has(w.docId)) continue;
+      seen.add(w.docId);
+      books.push({id:w.docId, title:w.docTitle||'Looked-up words', highlights:[], bookmarks:[], count:1});
+    }
+  }
+  for(const d of books){
+    if(tok!==notesTok) return;
+    const all=typeof bookMoments==='function'?bookMoments(d):[];
+    if(!all.length) continue;
+    total+=all.length;
+    const rows=[];
+    for(const m of sortMoments(all)){
+      let quote='';
+      if(m.kind==='hl'){ const raw=await snipOf(d.id,m.s,Math.min(m.e,m.s+80)); quote=(m.e>m.s+80 && raw && !raw.endsWith('…'))?raw+'…':(raw||'Highlight'); }
+      else if(m.kind==='bm'){ const sn=await snipOf(d.id,m.s,m.s+9); quote=(m.name||'Bookmark')+(sn?' · '+sn+(sn.endsWith('…')?'':'…'):''); }
+      else quote=momentQuote(m);
+      if(!momentMatches(m,q,quote)) continue;
+      const where=Math.round(100*m.s/Math.max(1,(d.count||1)-1))+'% · '+(m.at?new Date(m.at).toLocaleDateString():'');
+      const more=m.kind==='hl'?`<button class="icon-btn moment-more" type="button" data-ed="${esc(m.id)}" data-book="${esc(d.id)}" aria-label="Edit ${hlName(m.c)} highlight">${ICON.more}</button>`:'';
+      rows.push(momentRowHtml(m, quote, where, `data-nb="${esc(d.id)}" data-ni="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}"`, more));
+    }
+    if(!rows.length) continue;
+    shown+=rows.length;
+    const collapsed=NOTECOLLAPSE.has(d.id);
+    groups.push(`<div class="nbook" data-book="${esc(d.id)}">
+      <button type="button" class="nbook-toggle" data-toggle="${esc(d.id)}" aria-expanded="${!collapsed}"><span class="nbook-title">${esc(d.title)}</span><span class="nbook-count">${rows.length}</span></button>
+      <div class="nbook-body"${collapsed?' hidden':''}>${rows.join('')}
+        ${LIB.some(x=>x.id===d.id)?`<div class="row" style="margin-top:4px"><button class="btn" type="button" data-copy="${esc(d.id)}">Copy</button><button class="btn" type="button" data-export="${esc(d.id)}">Export…</button></div>`:''}
+      </div>
+    </div>`);
+  }
+  if(tok!==notesTok) return;
+  const count=$('#notesHlCount'); if(count) count.textContent=total?(shown+' of '+total):'';
+  const sortBtn=$('#notesSort'); if(sortBtn){ sortBtn.textContent=notesSortLabel(); sortBtn.setAttribute('aria-pressed', NOTESORT==='date'?'true':'false'); }
+  const empty=q?'<p class="note">No matches.</p>':'<p class="note">Select text in the book to highlight it. Add a note from More. Bookmarks and words you look up appear here too.</p>';
+  el.innerHTML=groups.length?groups.join(''):empty;
 }
-/* swipe a bookmark left to show Delete; tap Delete to remove it (with Undo) */
+
 function swipeRows(host, onDelete){
   let row=null, x0=0, y0=0, dx=0, horiz=null, base=0;
   const W=92, front=r=>r.querySelector('.swfront');
@@ -5437,21 +5637,57 @@ function swipeRows(host, onDelete){
     if(r && (r.classList.contains('open') || Date.now()-(+r.dataset.swiped||0)<400)){ e.stopPropagation(); if(r.classList.contains('open') && Date.now()-(+r.dataset.swiped||0)>=400){ r.classList.remove('open'); front(r).style.transform=''; } }
   },true);
 }
-swipeRows($('#notesBm'), r=>{
-  const d=LIB.find(x=>x.id===r.dataset.bmbook); if(!d) return;
-  const k=(d.bookmarks||[]).findIndex(b=>b.i===+r.dataset.bmi && String(b.at||0)===r.dataset.bmat); if(k<0) return;
-  const [gone]=d.bookmarks.splice(k,1); touch(d); if(R.meta===d) updateChrome();
-  renderNotes();
-  toast('Bookmark deleted', {label:'Undo', fn:()=>{ d.bookmarks.push(gone); d.bookmarks.sort((a,b)=>a.i-b.i); touch(d); if(R.meta===d) updateChrome(); renderNotes(); }});
-});
-$('#notesSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; NOTESEG=b.dataset.n; LS.set('notesSeg',NOTESEG); renderNotes(); });
-for(const id of ['#notesHl','#notesBm']) $(id).addEventListener('click',async e=>{
-  const x=e.target.closest('[data-exp]'); if(x){ const d=LIB.find(y=>y.id===x.dataset.exp); if(d) exportSheet(d); return; }
-  const c=e.target.closest('[data-copy]');
-  if(c){ const d=LIB.find(x=>x.id===c.dataset.copy); if(!d) return; await bookSnips(d); const txt=d.title+'\n\n'+d.highlights.map(h=>'“'+snip(d,h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+d.highlights.length+' highlight'+(d.highlights.length===1?'':'s')); }catch(err){ toast('Couldn’t copy on this device.'); } return; }
+
+function momentFromRow(row){
+  if(!row) return null;
+  return {kind:row.dataset.mk, id:row.dataset.mid, bookId:row.dataset.book, s:+row.dataset.i, at:+row.dataset.bmat||0};
+}
+function bindMomentSwipe(host){
+  if(!host || host._momentSwipe) return;
+  host._momentSwipe=1;
+  swipeRows(host, r=>{
+    const m=momentFromRow(r);
+    if(m) removeMoment(m, typeof LIB!=='undefined'?LIB.find(x=>x.id===m.bookId):null);
+  });
+}
+bindMomentSwipe($('#notesHl'));
+bindMomentSwipe($('#sheet'));
+$('#notesHl').addEventListener('click',async e=>{
+  const tog=e.target.closest('[data-toggle]');
+  if(tog){
+    const id=tog.dataset.toggle; const body=tog.nextElementSibling;
+    if(NOTECOLLAPSE.has(id)) NOTECOLLAPSE.delete(id); else NOTECOLLAPSE.add(id);
+    if(body) body.hidden=NOTECOLLAPSE.has(id);
+    tog.setAttribute('aria-expanded', NOTECOLLAPSE.has(id)?'false':'true');
+    return;
+  }
+  if(e.target.closest('.swdel')) return;
+  const rm=e.target.closest('.moment-rm');
+  if(rm){ const m=momentFromRow(rm.closest('.moment-row')); if(m) removeMoment(m, LIB.find(x=>x.id===m.bookId)); return; }
+  const copy=e.target.closest('[data-copy]');
+  if(copy){
+    const d=LIB.find(x=>x.id===copy.dataset.copy); if(!d) return;
+    const lines=[d.title];
+    for(const h of d.highlights||[]){ const q=await snipOf(d.id,h.s,h.e); lines.push('“'+q+'”'+(h.note?'\nNote: '+h.note:'')); }
+    try{ await navigator.clipboard.writeText(lines.join('\n\n')); toast('Copied'); }catch(err){ toast('Couldn’t copy on this device.'); }
+    return;
+  }
+  const exp=e.target.closest('[data-export]');
+  if(exp){ const d=LIB.find(x=>x.id===exp.dataset.export); if(d) exportSheet(d); return; }
+  const ed=e.target.closest('[data-ed]');
+  if(ed){
+    const d=LIB.find(x=>x.id===ed.dataset.book); const h=d&&(d.highlights||[]).find(x=>x.id===ed.dataset.ed);
+    if(!h) return;
+    if(!R.meta || R.meta.id!==d.id){ if(await openDoc(d.id)===false) return; }
+    openHlMenu(h,false,'notes');
+    return;
+  }
   const g=e.target.closest('[data-nb]'); if(!g) return;
-  const i=+g.dataset.ni; if(await openDoc(g.dataset.nb)!==false){ R.returnTo='words'; goTo(i,true); }
+  const i=+g.dataset.ni, len=+g.dataset.len||1;
+  if(await openDoc(g.dataset.nb)!==false){ R.returnTo='words'; jumpToMoment(i, len); }
 });
+$('#notesFind')&&$('#notesFind').addEventListener('input',()=>{ renderNotes(); });
+$('#notesSort')&&$('#notesSort').addEventListener('click',()=>{ NOTESORT=NOTESORT==='date'?'pos':'date'; LS.set('notesSort',NOTESORT); renderNotes(); });
 
 /* ---------- sheet, toast, views ---------- */
 let sheetActs={}, sheetAt=0;
@@ -5504,7 +5740,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=22;
+const SAMPLE_V=23;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -5530,10 +5766,11 @@ const SAMPLE_HTML=`
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>
 <p>Press and hold a word until it is marked. Keep holding and drag to select more, or drag the round handles at either end afterwards. A small bar appears next to your selection with four highlight colours and <strong>More</strong>. Tap a colour to highlight; <strong>More</strong> holds <strong>Define</strong>, <strong>Note</strong>, <strong>Copy</strong> and <strong>Share</strong>. Tap anywhere else to clear the selection. Tap a highlight later to change its colour, add a note or remove it.</p>
+<p>Contents has <strong>Notes</strong>: one list of every highlight, bookmark and word you have looked up in this book, in the order they appear. Search it, tap a moment to jump there, swipe to remove it, or use the remove button. For a highlight, More still lets you change the colour or edit the note.</p>
 <p><strong>Copy</strong> adds where the words came from: the author, the book and the chapter. <strong>Share</strong> turns the words into a picture, in light, sepia or dark, ready to send or save to Photos.</p>
 <p>The phone’s own menu stays hidden while you select. <strong>Define</strong> looks up the word you selected, and from there you can still reach the phone’s dictionary.</p>
 <blockquote><p>Try it on this sentence: highlight it, then add a note saying what you think of it.</p></blockquote>
-<p>Every word you define is saved in the <strong>Notes</strong> tab under Words, along with the sentence you found it in. The Notes tab also gathers the highlights, notes and bookmarks from every book, so you can find them without opening each one. To delete a bookmark there, swipe it to the left and tap <strong>Delete</strong>.</p>
+<p>The <strong>Notes</strong> tab gathers every book’s highlights, bookmarks and looked-up words in one stream, grouped by book. Search across all of them, tap a moment to jump there, or swipe left and tap <strong>Delete</strong> to remove it — there is also a remove button if you prefer. You can Undo a delete from the toast that follows.</p>
 <p>To keep them somewhere else, tap <strong>Export</strong> beside a book in the Notes tab, or <strong>Export highlights and notes</strong> in the book’s three dots. You get one document with every highlight, note and bookmark, grouped by chapter, to print, save as a PDF or paste into another app.</p>
 <h2>Footnotes</h2>
 <p>Books often tuck extra detail into footnotes.<a href="#note1"><sup>1</sup></a> Tap the small number and the note opens without losing your place.</p>

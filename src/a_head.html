@@ -430,7 +430,23 @@ code{font-family:var(--f-mono);font-size:.85em;background:var(--raise);padding:1
 .nbook-h .small{color:var(--muted);font-size:.78rem}
 .nbook .hlrow:last-child{border-bottom:0}
 .hlrow{display:flex;gap:10px;align-items:flex-start;border-bottom:1px solid var(--line);padding:10px 0}
-/* swipe left on a row to reveal Delete (Notes → Bookmarks) */
+.moment-dot{flex:none;width:12px;height:12px;border-radius:50%;margin-top:8px;box-shadow:0 0 0 1px var(--line)}
+.moment-go{all:unset;flex:1;min-width:0;cursor:pointer;display:block;text-align:left;color:inherit;font:inherit}
+.moment-more{flex:none}
+.hl-tools{display:flex;flex-direction:column;gap:8px;margin:0 0 10px}
+.hl-meta{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--muted);min-height:44px}
+.hl-meta .sort{margin-left:auto;background:none;border:0;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;min-height:44px;padding:0 6px}
+.nbook-toggle{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.nbook-toggle .chev{flex:none;color:var(--muted)}
+#notesHlTools{width:100%;min-width:0;margin:0 0 10px}
+.nbook-title{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nbook-count{flex:none;color:var(--muted);font-size:.82rem}
+.moment-ico{flex:none;width:22px;height:22px;margin-top:3px;color:var(--accent);display:inline-flex;align-items:center;justify-content:center}
+.moment-ico svg{width:20px;height:20px}
+.moment-kind{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:6px}
+.moment-rm,.moment-more{flex:none;min-width:44px;min-height:44px}
+.moment-row .swfront{background:var(--surface)}
+/* swipe left on a row to reveal Delete, with Undo */
 .swrow{position:relative;overflow:hidden}
 .swrow .swdel{position:absolute;top:0;right:0;bottom:1px;width:92px;border:0;background:var(--danger);color:#fff;font:inherit;font-weight:600}
 .swrow .swfront{position:relative;background:var(--paper);transition:transform .2s ease;touch-action:pan-y}

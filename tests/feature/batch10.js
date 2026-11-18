@@ -96,8 +96,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   console.log('data applied', await pg.evaluate(()=>{ const m=LIB.find(x=>x.title==='Memo again'); return [m.pos, m.highlights.length, ARCH.list().length, ARCH_RESTORE]; }));
   // #7 words remove button
   await pg.evaluate(()=>{ WORDS.unshift({id:'w1',word:'ephemeral',sentence:'An ephemeral thing.',docId:'x',docTitle:'X',pos:0,at:Date.now()}); saveWords(); renderWords(); });
-  await pg.click('#tabs [data-tab=words]'); await sleep(200); await pg.click('#notesSeg [data-n=w]'); await sleep(200);
-  await pg.click('[data-wdel="w1"]'); await sleep(200);
+  await pg.click('#tabs [data-tab=words]'); await sleep(400);
+  await pg.click('#notesHl .moment-row[data-mid=w1] .moment-rm'); await sleep(200);
   console.log('word removed', await pg.evaluate(()=>[WORDS.some(w=>w.id==='w1'), $('#toastMsg').textContent]));
   // #8 selection
   console.log('select', await pg.evaluate(()=>[getComputedStyle(document.querySelector('#tabs')).userSelect, getComputedStyle($('#settingsBody')).userSelect, getComputedStyle($('#pagesView')).userSelect]));

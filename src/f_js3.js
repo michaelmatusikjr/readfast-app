@@ -1049,33 +1049,65 @@ async function addGutenberg(r){
 
 /* ---------- Notes tab: highlights, notes and bookmarks from every book ---------- */
 let NOTESEG=LS.get('notesSeg','hl'), notesTok=0; const SNIPS=new Map();
-function joinWords(t,s,e){ const wf=(t.wf&&t.wf.length===t.words.length)?t.wf:null; let o=''; for(let k=s;k<=e&&k<t.words.length;k++){ if(k>s && !(wf&&(wf[k]&F_GLUE))) o+=' '; o+=t.words[k]; } return o; }
-async function bookSnips(d){
-  const need=[]; for(const h of d.highlights||[]) need.push([h.s,h.e]); for(const b of d.bookmarks||[]) need.push([b.i,b.i+11]);
-  if(need.every(([s,e])=>SNIPS.has(d.id+'|'+s+'|'+e))) return;
-  let t=(R.meta&&R.meta.id===d.id&&R.text)||await Store.get('texts',d.id).catch(()=>null)||fetchText(d); if(!t||!t.words) return;
-  for(const [s,e] of need) SNIPS.set(d.id+'|'+s+'|'+e, joinWords(t,s,e));
+const NOTECOLLAPSE=new Set();
+function notesFindQ(){ return (($('#notesFind')||{}).value||'').trim(); }
+async function snipOf(id,s,e){
+  const k=id+':'+s+':'+e; if(SNIPS.has(k)) return SNIPS.get(k);
+  try{ const d=await Store.get('texts',id); const w=(d&&d.words)||[]; const raw=w.slice(s, Math.min((e==null?s+80:e)+1, w.length)).join(' '); const q=raw.length>320?raw.slice(0,320)+'…':raw; SNIPS.set(k,q); return q; }
+  catch(err){ return ''; }
 }
-const snip=(d,s,e)=>SNIPS.get(d.id+'|'+s+'|'+e)||'';
-const pctOf=(d,i)=>Math.round(100*i/Math.max(1,(d.count||1)-1));
-function chapterName(d,i){ let c=null; for(const x of d.chapters||[]){ if(x.i<=i) c=x; else break; } return c?c.t:''; }
 async function renderNotes(){
-  if(!['hl','bm','w'].includes(NOTESEG)) NOTESEG='hl';
-  document.querySelectorAll('#notesSeg button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.n===NOTESEG));
-  $('#notesHl').hidden=NOTESEG!=='hl'; $('#notesBm').hidden=NOTESEG!=='bm'; $('#wordsPane').hidden=NOTESEG!=='w';
-  if(NOTESEG==='w'){ renderWords(); return; }
-  const hl=NOTESEG==='hl', key=hl?'highlights':'bookmarks', el=hl?$('#notesHl'):$('#notesBm');
-  const books=LIB.filter(d=>(d[key]||[]).length).sort((a,b)=>(b.lastRead||0)-(a.lastRead||0));
-  if(!books.length){ el.innerHTML=`<div class="empty">${hl?'Highlights and notes from all your books appear here. In a book, press and hold a word, drag to select, then pick a color or tap Note.':'Bookmarks from all your books appear here. In a book, tap the bookmark button at the bottom left.'}</div>`; return; }
-  const tok=++notesTok; await Promise.all(books.map(bookSnips)); if(tok!==notesTok) return;
-  el.innerHTML=books.map(d=>{
-    const L=d[key]; const n=L.length;
-    const rows=hl? L.map((h,k)=>{ const t=snip(d,h.s,h.e); return `<div class="hlrow"><span class="bar" style="background:var(--hl${h.c||1})"></span><div class="grow" data-nb="${d.id}" data-ni="${h.s}"><div class="t">${esc(t.length>320?t.slice(0,320)+'…':t)}</div>${h.note?`<div class="nt">${esc(h.note)}</div>`:''}<div class="where">${esc(chapterName(d,h.s))}${chapterName(d,h.s)?' · ':''}${pctOf(d,h.s)}%</div></div></div>`; }).join('')
-      : L.map(b=>`<div class="swrow" data-bmbook="${d.id}" data-bmi="${b.i}" data-bmat="${b.at||0}"><button class="swdel" type="button" tabindex="-1">Delete</button><div class="hlrow swfront"><span class="bar" style="background:var(--accent)"></span><div class="grow" data-nb="${d.id}" data-ni="${b.i}"><div class="t"><b>${esc(b.name||'Bookmark')}</b></div><div class="where">${pctOf(d,b.i)}% · ${esc(snip(d,b.i,b.i+11))}…</div></div></div></div>`).join('');
-    return `<div class="nbook"><div class="nbook-h"><b>${esc(d.title)}</b><span class="small">${n} ${hl?'highlight':'bookmark'}${n===1?'':'s'}</span>${hl?`<button class="btn" type="button" data-copy="${d.id}" style="padding:6px 10px;font-size:.8rem">Copy</button>`:''}<button class="btn" type="button" data-exp="${d.id}" style="padding:6px 10px;font-size:.8rem">Export</button></div>${rows}</div>`;
-  }).join('');
+  const el=$('#notesHl'); if(!el) return;
+  const tok=++notesTok;
+  const tools=$('#notesHlTools'); if(tools) tools.hidden=false;
+  el.hidden=false;
+  const bmEl=$('#notesBm'), wEl=$('#wordsPane'), seg=$('#notesSeg');
+  if(bmEl) bmEl.hidden=true; if(wEl) wEl.hidden=true; if(seg) seg.hidden=true;
+  const q=notesFindQ();
+  const groups=[];
+  let total=0, shown=0;
+  const books=LIB.slice();
+  if(typeof WORDS!=='undefined'){
+    const seen=new Set(LIB.map(d=>d.id));
+    for(const w of WORDS){
+      if(!w || seen.has(w.docId)) continue;
+      seen.add(w.docId);
+      books.push({id:w.docId, title:w.docTitle||'Looked-up words', highlights:[], bookmarks:[], count:1});
+    }
+  }
+  for(const d of books){
+    if(tok!==notesTok) return;
+    const all=typeof bookMoments==='function'?bookMoments(d):[];
+    if(!all.length) continue;
+    total+=all.length;
+    const rows=[];
+    for(const m of sortMoments(all)){
+      let quote='';
+      if(m.kind==='hl'){ const raw=await snipOf(d.id,m.s,Math.min(m.e,m.s+80)); quote=(m.e>m.s+80 && raw && !raw.endsWith('…'))?raw+'…':(raw||'Highlight'); }
+      else if(m.kind==='bm'){ const sn=await snipOf(d.id,m.s,m.s+9); quote=(m.name||'Bookmark')+(sn?' · '+sn+(sn.endsWith('…')?'':'…'):''); }
+      else quote=momentQuote(m);
+      if(!momentMatches(m,q,quote)) continue;
+      const where=Math.round(100*m.s/Math.max(1,(d.count||1)-1))+'% · '+(m.at?new Date(m.at).toLocaleDateString():'');
+      const more=m.kind==='hl'?`<button class="icon-btn moment-more" type="button" data-ed="${esc(m.id)}" data-book="${esc(d.id)}" aria-label="Edit ${hlName(m.c)} highlight">${ICON.more}</button>`:'';
+      rows.push(momentRowHtml(m, quote, where, `data-nb="${esc(d.id)}" data-ni="${m.s}" data-len="${Math.max(1,(m.e||m.s)-m.s+1)}"`, more));
+    }
+    if(!rows.length) continue;
+    shown+=rows.length;
+    const collapsed=NOTECOLLAPSE.has(d.id);
+    groups.push(`<div class="nbook" data-book="${esc(d.id)}">
+      <button type="button" class="nbook-toggle" data-toggle="${esc(d.id)}" aria-expanded="${!collapsed}"><span class="nbook-title">${esc(d.title)}</span><span class="nbook-count">${rows.length}</span></button>
+      <div class="nbook-body"${collapsed?' hidden':''}>${rows.join('')}
+        ${LIB.some(x=>x.id===d.id)?`<div class="row" style="margin-top:4px"><button class="btn" type="button" data-copy="${esc(d.id)}">Copy</button><button class="btn" type="button" data-export="${esc(d.id)}">Export…</button></div>`:''}
+      </div>
+    </div>`);
+  }
+  if(tok!==notesTok) return;
+  const count=$('#notesHlCount'); if(count) count.textContent=total?(shown+' of '+total):'';
+  const sortBtn=$('#notesSort'); if(sortBtn){ sortBtn.textContent=notesSortLabel(); sortBtn.setAttribute('aria-pressed', NOTESORT==='date'?'true':'false'); }
+  const empty=q?'<p class="note">No matches.</p>':'<p class="note">Select text in the book to highlight it. Add a note from More. Bookmarks and words you look up appear here too.</p>';
+  el.innerHTML=groups.length?groups.join(''):empty;
 }
-/* swipe a bookmark left to show Delete; tap Delete to remove it (with Undo) */
+
 function swipeRows(host, onDelete){
   let row=null, x0=0, y0=0, dx=0, horiz=null, base=0;
   const W=92, front=r=>r.querySelector('.swfront');
@@ -1100,21 +1132,57 @@ function swipeRows(host, onDelete){
     if(r && (r.classList.contains('open') || Date.now()-(+r.dataset.swiped||0)<400)){ e.stopPropagation(); if(r.classList.contains('open') && Date.now()-(+r.dataset.swiped||0)>=400){ r.classList.remove('open'); front(r).style.transform=''; } }
   },true);
 }
-swipeRows($('#notesBm'), r=>{
-  const d=LIB.find(x=>x.id===r.dataset.bmbook); if(!d) return;
-  const k=(d.bookmarks||[]).findIndex(b=>b.i===+r.dataset.bmi && String(b.at||0)===r.dataset.bmat); if(k<0) return;
-  const [gone]=d.bookmarks.splice(k,1); touch(d); if(R.meta===d) updateChrome();
-  renderNotes();
-  toast('Bookmark deleted', {label:'Undo', fn:()=>{ d.bookmarks.push(gone); d.bookmarks.sort((a,b)=>a.i-b.i); touch(d); if(R.meta===d) updateChrome(); renderNotes(); }});
-});
-$('#notesSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; NOTESEG=b.dataset.n; LS.set('notesSeg',NOTESEG); renderNotes(); });
-for(const id of ['#notesHl','#notesBm']) $(id).addEventListener('click',async e=>{
-  const x=e.target.closest('[data-exp]'); if(x){ const d=LIB.find(y=>y.id===x.dataset.exp); if(d) exportSheet(d); return; }
-  const c=e.target.closest('[data-copy]');
-  if(c){ const d=LIB.find(x=>x.id===c.dataset.copy); if(!d) return; await bookSnips(d); const txt=d.title+'\n\n'+d.highlights.map(h=>'“'+snip(d,h.s,h.e)+'”'+(h.note?'\nNote: '+h.note:'')).join('\n\n'); try{ await navigator.clipboard.writeText(txt); toast('Copied '+d.highlights.length+' highlight'+(d.highlights.length===1?'':'s')); }catch(err){ toast('Couldn’t copy on this device.'); } return; }
+
+function momentFromRow(row){
+  if(!row) return null;
+  return {kind:row.dataset.mk, id:row.dataset.mid, bookId:row.dataset.book, s:+row.dataset.i, at:+row.dataset.bmat||0};
+}
+function bindMomentSwipe(host){
+  if(!host || host._momentSwipe) return;
+  host._momentSwipe=1;
+  swipeRows(host, r=>{
+    const m=momentFromRow(r);
+    if(m) removeMoment(m, typeof LIB!=='undefined'?LIB.find(x=>x.id===m.bookId):null);
+  });
+}
+bindMomentSwipe($('#notesHl'));
+bindMomentSwipe($('#sheet'));
+$('#notesHl').addEventListener('click',async e=>{
+  const tog=e.target.closest('[data-toggle]');
+  if(tog){
+    const id=tog.dataset.toggle; const body=tog.nextElementSibling;
+    if(NOTECOLLAPSE.has(id)) NOTECOLLAPSE.delete(id); else NOTECOLLAPSE.add(id);
+    if(body) body.hidden=NOTECOLLAPSE.has(id);
+    tog.setAttribute('aria-expanded', NOTECOLLAPSE.has(id)?'false':'true');
+    return;
+  }
+  if(e.target.closest('.swdel')) return;
+  const rm=e.target.closest('.moment-rm');
+  if(rm){ const m=momentFromRow(rm.closest('.moment-row')); if(m) removeMoment(m, LIB.find(x=>x.id===m.bookId)); return; }
+  const copy=e.target.closest('[data-copy]');
+  if(copy){
+    const d=LIB.find(x=>x.id===copy.dataset.copy); if(!d) return;
+    const lines=[d.title];
+    for(const h of d.highlights||[]){ const q=await snipOf(d.id,h.s,h.e); lines.push('“'+q+'”'+(h.note?'\nNote: '+h.note:'')); }
+    try{ await navigator.clipboard.writeText(lines.join('\n\n')); toast('Copied'); }catch(err){ toast('Couldn’t copy on this device.'); }
+    return;
+  }
+  const exp=e.target.closest('[data-export]');
+  if(exp){ const d=LIB.find(x=>x.id===exp.dataset.export); if(d) exportSheet(d); return; }
+  const ed=e.target.closest('[data-ed]');
+  if(ed){
+    const d=LIB.find(x=>x.id===ed.dataset.book); const h=d&&(d.highlights||[]).find(x=>x.id===ed.dataset.ed);
+    if(!h) return;
+    if(!R.meta || R.meta.id!==d.id){ if(await openDoc(d.id)===false) return; }
+    openHlMenu(h,false,'notes');
+    return;
+  }
   const g=e.target.closest('[data-nb]'); if(!g) return;
-  const i=+g.dataset.ni; if(await openDoc(g.dataset.nb)!==false){ R.returnTo='words'; goTo(i,true); }
+  const i=+g.dataset.ni, len=+g.dataset.len||1;
+  if(await openDoc(g.dataset.nb)!==false){ R.returnTo='words'; jumpToMoment(i, len); }
 });
+$('#notesFind')&&$('#notesFind').addEventListener('input',()=>{ renderNotes(); });
+$('#notesSort')&&$('#notesSort').addEventListener('click',()=>{ NOTESORT=NOTESORT==='date'?'pos':'date'; LS.set('notesSort',NOTESORT); renderNotes(); });
 
 /* ---------- sheet, toast, views ---------- */
 let sheetActs={}, sheetAt=0;
@@ -1167,7 +1235,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=22;
+const SAMPLE_V=23;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1193,10 +1261,11 @@ const SAMPLE_HTML=`
 <p>Change the text size now and watch the page count at the bottom update to match.</p>
 <h2>Highlights, notes and words</h2>
 <p>Press and hold a word until it is marked. Keep holding and drag to select more, or drag the round handles at either end afterwards. A small bar appears next to your selection with four highlight colours and <strong>More</strong>. Tap a colour to highlight; <strong>More</strong> holds <strong>Define</strong>, <strong>Note</strong>, <strong>Copy</strong> and <strong>Share</strong>. Tap anywhere else to clear the selection. Tap a highlight later to change its colour, add a note or remove it.</p>
+<p>Contents has <strong>Notes</strong>: one list of every highlight, bookmark and word you have looked up in this book, in the order they appear. Search it, tap a moment to jump there, swipe to remove it, or use the remove button. For a highlight, More still lets you change the colour or edit the note.</p>
 <p><strong>Copy</strong> adds where the words came from: the author, the book and the chapter. <strong>Share</strong> turns the words into a picture, in light, sepia or dark, ready to send or save to Photos.</p>
 <p>The phone’s own menu stays hidden while you select. <strong>Define</strong> looks up the word you selected, and from there you can still reach the phone’s dictionary.</p>
 <blockquote><p>Try it on this sentence: highlight it, then add a note saying what you think of it.</p></blockquote>
-<p>Every word you define is saved in the <strong>Notes</strong> tab under Words, along with the sentence you found it in. The Notes tab also gathers the highlights, notes and bookmarks from every book, so you can find them without opening each one. To delete a bookmark there, swipe it to the left and tap <strong>Delete</strong>.</p>
+<p>The <strong>Notes</strong> tab gathers every book’s highlights, bookmarks and looked-up words in one stream, grouped by book. Search across all of them, tap a moment to jump there, or swipe left and tap <strong>Delete</strong> to remove it — there is also a remove button if you prefer. You can Undo a delete from the toast that follows.</p>
 <p>To keep them somewhere else, tap <strong>Export</strong> beside a book in the Notes tab, or <strong>Export highlights and notes</strong> in the book’s three dots. You get one document with every highlight, note and bookmark, grouped by chapter, to print, save as a PDF or paste into another app.</p>
 <h2>Footnotes</h2>
 <p>Books often tuck extra detail into footnotes.<a href="#note1"><sup>1</sup></a> Tap the small number and the note opens without losing your place.</p>
