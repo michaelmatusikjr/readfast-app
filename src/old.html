@@ -1160,21 +1160,33 @@ $('#defineBtn').onclick=()=>{
 function sentenceAt(k){ const s=Math.max(sentStart(k),k-25), e=Math.min(sentEndIdx(k),k+25); return {text:R.words.slice(s,e+1).join(' '), s, e}; }
 async function defineWord(w, k){
   const sent=sentenceAt(k);
-  const dup=WORDS.find(x=>x.word.toLowerCase()===w.toLowerCase() && x.docId===R.meta.id && x.pos===k);
-  let item;
-  if(!dup){
+  let item=WORDS.find(x=>x.word.toLowerCase()===w.toLowerCase() && x.docId===R.meta.id && x.pos===k);
+  if(!item){
     item={id:uid(), word:w, sentence:sent.text, docId:R.meta.id, docTitle:R.meta.title, pos:k, at:Date.now(), def:''};
     WORDS.unshift(item); saveWords(); renderWords();
+  }
+  // Open sheet immediately
+  const extra = item.def ? '<p class="note" style="margin-top:8px;font-style:italic">'+esc(item.def)+'</p>' : '<p class="note" id="defStatus">Looking up definition…</p>';
+  lookupSheet(w, extra);
+  // Fetch in background if missing
+  if(!item.def){
     try{
-      const resp=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(w.toLowerCase()));
+      const ctrl=new AbortController();
+      const t=setTimeout(()=>ctrl.abort(), 8000);
+      const resp=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(w.toLowerCase()), {signal:ctrl.signal});
+      clearTimeout(t);
       if(resp.ok){
         const data=await resp.json();
         const meaning=data[0]&&data[0].meanings&&data[0].meanings[0]&&data[0].meanings[0].definitions&&data[0].meanings[0].definitions[0]&&data[0].meanings[0].definitions[0].definition;
-        if(meaning){ item.def=meaning; saveWords(); renderWords(); }
-      }
-    }catch(err){}
-  } else item=dup;
-  lookupSheet(w, item.def ? 'Saved to Words with definition.' : 'Saved to Words.');
+        if(meaning){
+          item.def=meaning; saveWords(); renderWords();
+          const st=$('#defStatus'); if(st) st.outerHTML='<p class="note" style="margin-top:8px;font-style:italic">'+esc(meaning)+'</p>';
+        } else if($('#defStatus')) $('#defStatus').textContent='No definition found.';
+      } else if($('#defStatus')) $('#defStatus').textContent='Could not look up definition.';
+    }catch(err){
+      if($('#defStatus')) $('#defStatus').textContent='No internet or lookup failed.';
+    }
+  }
 }
 function lookupSheet(w, extra){
   openSheet('Look up', `

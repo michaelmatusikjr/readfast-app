@@ -735,7 +735,7 @@ async function openDoc(id){
     });
   }
   buildSections(); R.sIdx=null; R.backPos=null; $('#backPill').hidden=true; diffCache={s:-1,e:-1,f:1};
-  R.pos=clamp(meta.finished?0:meta.pos,0,R.n-1); if(meta.finished) meta.finished=false;
+  R.pos=clamp(meta.pos,0,R.n-1); // keep finished status when reopening
   R.tear=LS.get('tear.'+meta.id,null); if(R.tear!=null && !(R.tear>0 && R.tear<R.n)) R.tear=null;
   R.tearCenter= R.tear!=null && Math.abs(R.tear-R.pos)<400; R.tearShow=false;
   R.lastNav=false; R.playing=false; R.hasPlayed=false;

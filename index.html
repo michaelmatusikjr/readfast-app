@@ -185,12 +185,10 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #v-reader.chrome-off .run{opacity:1}
 #v-reader[data-mode="speed"] .run{display:none}
 
-#v-reader[data-mode="speed"] #rTop{opacity:.45;transform:scale(.92);transform-origin:top center}
-#v-reader[data-mode="speed"] #rTop .title{font-size:.75rem}
-#v-reader[data-mode="speed"] #stage .word{font-size:clamp(3.2rem,14vw,6.2rem)!important}
-#v-reader[data-mode="speed"] .stage-hint{display:none!important}
-#v-reader[data-mode="speed"] #context{opacity:.55;font-size:.85rem;max-height:2.6em;overflow:hidden}
-#v-reader[data-mode="speed"] #pauseTools{opacity:.8}
+#v-reader[data-mode="speed"] #rTop{opacity:.7}
+#v-reader[data-mode="speed"] .stage-hint{display:none}
+#v-reader[data-mode="speed"] #context{opacity:.7;font-size:.9rem}
+#v-reader[data-mode="speed"].playing #rTop{opacity:.4;transform:scale(.95);transform-origin:top}
 
 
 /* Auto-scroll bar */
@@ -628,7 +626,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 <input type="file" id="fileIn" accept=".epub,.pdf,.txt,.md,.markdown,.html,.htm,.xhtml,application/epub+zip,application/pdf,text/plain,text/markdown,text/html" hidden>
 <input type="file" id="restoreIn" accept=".json,application/json" hidden>
 
-<div id="verBadge" style="position:fixed;top:8px;right:8px;z-index:9999;background:rgba(0,0,0,.65);color:#fff;font:700 11px/1 system-ui,sans-serif;padding:4px 8px;border-radius:999px;cursor:grab;user-select:none;touch-action:none;box-shadow:0 1px 4px rgba(0,0,0,.3)">v…</div>
+<div id="verBadge" style="position:fixed;bottom:max(12px,env(safe-area-inset-bottom));right:max(8px,env(safe-area-inset-right));z-index:9999;background:rgba(0,0,0,.65);color:#fff;font:700 11px/1 system-ui,sans-serif;padding:4px 8px;border-radius:999px;cursor:grab;user-select:none;touch-action:none;box-shadow:0 1px 4px rgba(0,0,0,.3)">v…</div>
 
 <script>
 'use strict';
@@ -2359,7 +2357,7 @@ async function openDoc(id){
     });
   }
   buildSections(); R.sIdx=null; R.backPos=null; $('#backPill').hidden=true; diffCache={s:-1,e:-1,f:1};
-  R.pos=clamp(meta.finished?0:meta.pos,0,R.n-1); if(meta.finished) meta.finished=false;
+  R.pos=clamp(meta.pos,0,R.n-1); // keep finished status when reopening
   R.tear=LS.get('tear.'+meta.id,null); if(R.tear!=null && !(R.tear>0 && R.tear<R.n)) R.tear=null;
   R.tearCenter= R.tear!=null && Math.abs(R.tear-R.pos)<400; R.tearShow=false;
   R.lastNav=false; R.playing=false; R.hasPlayed=false;
@@ -3718,9 +3716,9 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.9';
+const APP_VERSION='2026.11.18.10';
 const WHATSNEW=[
-  ['Definitions saved with words','Defining a word now fetches and saves its definition. Missing definitions are filled the next time you open the app online.'],
+  ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
   ['Clearer empty library','When filters or search leave nothing, the empty state is clearer and offers a one-tap Clear filters button.'],
   ['Quieter Speed mode','Speed mode hides extra hints and keeps the focus on the word.'],
@@ -3981,21 +3979,33 @@ $('#defineBtn').onclick=()=>{
 function sentenceAt(k){ const s=Math.max(sentStart(k),k-25), e=Math.min(sentEndIdx(k),k+25); return {text:textOf(s,e), s, e}; }
 async function defineWord(w, k){
   const sent=sentenceAt(k);
-  const dup=WORDS.find(x=>x.word.toLowerCase()===w.toLowerCase() && x.docId===R.meta.id && x.pos===k);
-  let item;
-  if(!dup){
+  let item=WORDS.find(x=>x.word.toLowerCase()===w.toLowerCase() && x.docId===R.meta.id && x.pos===k);
+  if(!item){
     item={id:uid(), word:w, sentence:sent.text, docId:R.meta.id, docTitle:R.meta.title, pos:k, at:Date.now(), def:''};
     WORDS.unshift(item); saveWords(); renderWords();
+  }
+  // Open sheet immediately
+  const extra = item.def ? '<p class="note" style="margin-top:8px;font-style:italic">'+esc(item.def)+'</p>' : '<p class="note" id="defStatus">Looking up definition…</p>';
+  lookupSheet(w, extra);
+  // Fetch in background if missing
+  if(!item.def){
     try{
-      const resp=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(w.toLowerCase()));
+      const ctrl=new AbortController();
+      const t=setTimeout(()=>ctrl.abort(), 8000);
+      const resp=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(w.toLowerCase()), {signal:ctrl.signal});
+      clearTimeout(t);
       if(resp.ok){
         const data=await resp.json();
         const meaning=data[0]&&data[0].meanings&&data[0].meanings[0]&&data[0].meanings[0].definitions&&data[0].meanings[0].definitions[0]&&data[0].meanings[0].definitions[0].definition;
-        if(meaning){ item.def=meaning; saveWords(); renderWords(); }
-      }
-    }catch(err){}
-  } else item=dup;
-  lookupSheet(w, item.def ? 'Saved to Words with definition.' : 'Saved to Words.');
+        if(meaning){
+          item.def=meaning; saveWords(); renderWords();
+          const st=$('#defStatus'); if(st) st.outerHTML='<p class="note" style="margin-top:8px;font-style:italic">'+esc(meaning)+'</p>';
+        } else if($('#defStatus')) $('#defStatus').textContent='No definition found.';
+      } else if($('#defStatus')) $('#defStatus').textContent='Could not look up definition.';
+    }catch(err){
+      if($('#defStatus')) $('#defStatus').textContent='No internet or lookup failed.';
+    }
+  }
 }
 function lookupSheet(w, extra){
   openSheet('Look up', `
@@ -4059,18 +4069,6 @@ function renderStats(){
       <div class="tile"><div class="v">${today.words.toLocaleString()}</div><div class="k">Words today</div></div>
       <div class="tile"><div class="v">${streak}</div><div class="k">Day streak</div></div>
       <div class="tile"><div class="v">${avg||'—'}</div><div class="k">Average WPM, all time</div></div>
-      <div class="tile"><div class="v">${fmtMins(tms/60000)}</div><div class="k">Time reading</div></div>
-      <div class="tile"><div class="v">${tw.toLocaleString()}</div><div class="k">Words read</div></div>
-      <div class="tile"><div class="v">${fin}</div><div class="k">Documents finished</div></div>
-    </div>
-    <div class="chart"><h2>Words per day</h2><p class="note" style="margin:2px 0 0">Last 7 days</p>
-      <div class="bars">${week.map(w=>`<div class="b"><em>${w.w?fmtK(w.w):''}</em><i class="${w.w?'':'zero'}" style="height:${Math.round(100*w.w/max)}%"></i></div>`).join('')}</div>
-      <div class="bars-x">${week.map(w=>`<span>${w.lbl}</span>`).join('')}</div>
-    </div>
-    <p class="note">Average WPM counts time spent playing, including pauses at punctuation, so it runs a little below your slider setting.</p>`;
-}
-
-/* ---------- settings ---------- */
 
 /* ---------- stats and daily goal ---------- */
 function recordStats(ms, words){
