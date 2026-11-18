@@ -1,5 +1,5 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.8';
+const APP_VERSION='2026.11.18.9';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Missing definitions are filled the next time you open the app online.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],

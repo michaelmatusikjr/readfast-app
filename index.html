@@ -3718,7 +3718,7 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.8';
+const APP_VERSION='2026.11.18.9';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Missing definitions are filled the next time you open the app online.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
@@ -5266,25 +5266,3 @@ boot();
 </script>
 </body>
 </html>
-
-/* fill missing definitions on next open when online */
-if(typeof WORDS!=='undefined' && navigator.onLine){
-  var missing=WORDS.filter(function(x){return !x.def;});
-  if(missing.length){
-    (async function(){
-      var changed=false;
-      for(var i=0;i<missing.length;i++){
-        var it=missing[i];
-        try{
-          var r=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(it.word.toLowerCase()));
-          if(r.ok){
-            var data=await r.json();
-            var meaning=data[0]&&data[0].meanings&&data[0].meanings[0]&&data[0].meanings[0].definitions&&data[0].meanings[0].definitions[0]&&data[0].meanings[0].definitions[0].definition;
-            if(meaning){it.def=meaning;changed=true;}
-          }
-        }catch(e){}
-      }
-      if(changed){saveWords();if(typeof renderWords==='function')renderWords();}
-    })();
-  }
-}
