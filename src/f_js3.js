@@ -1137,7 +1137,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=18;
+const SAMPLE_V=19;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1145,7 +1145,7 @@ const SAMPLE_HTML=`
 <p>While you read, the controls stay out of the way. The chapter name sits at the top and your page number at the bottom.</p>
 <h2>Three ways to read</h2>
 <p>Tap <strong>Aa</strong> at the top to choose how you read:</p>
-<ul><li><strong>Pages</strong> turns pages like a printed book.</li><li><strong>Scroll</strong> gives you one long column to scroll through. Whenever you leave and come back, a torn edge marked <strong>Previously read</strong> shows exactly where you stopped.</li><li><strong>Speed</strong> flashes the words one at a time in the same spot, so your eyes never have to move.</li></ul>
+<ul><li><strong>Pages</strong> turns pages like a printed book.</li><li><strong>Scroll</strong> gives you one long column to scroll through. Whenever you leave and come back, a torn edge marked <strong>Previously read</strong> shows exactly where you stopped.</li><li><strong>Speed</strong> flashes the words one at a time in the same spot, so your eyes never have to move. While a word is playing, the buttons fade; tap or pause to bring them back.</li></ul>
 <p>All three share your place, down to the word. Switch in the middle of a sentence and you carry on <em>exactly</em> where you were.</p>
 <h2>Auto-scroll</h2>
 <p>In Scroll, tap the <strong>auto-scroll</strong> button (the arrow pointing down) at the bottom. A play button and a speed slider appear. The text then moves by itself at the words per minute you set, easing in gently when it starts. Tap the page to pause. After that, a tap simply shows or hides the controls so you can read at your own pace; press the play button when you want it to move again.</p>

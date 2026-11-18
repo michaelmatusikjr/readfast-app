@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
-/* === REIMAGINE: quiet Speed mode === */
-#v-speed.playing .speed-chrome { opacity: 0; pointer-events: none; transition: opacity .3s; }
-#v-speed.playing:hover .speed-chrome, #v-speed.playing.paused .speed-chrome { opacity: 1; pointer-events: auto; }
 
 </style>
 <title>Tooz eReader</title>
@@ -189,10 +186,35 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #v-reader.chrome-off .run{opacity:1}
 #v-reader[data-mode="speed"] .run{display:none}
 
-#v-reader[data-mode="speed"] #rTop{opacity:.7}
-#v-reader[data-mode="speed"] .stage-hint{display:none}
-#v-reader[data-mode="speed"] #context{opacity:.7;font-size:.9rem}
-#v-reader[data-mode="speed"].playing #rTop{opacity:.4;transform:scale(.95);transform-origin:top}
+/* Quiet Speed: chrome fades while playing, stays tappable, wakes on touch */
+#v-reader.speed-playing #rTop,
+#v-reader.speed-playing #context,
+#v-reader.speed-playing #stageHint,
+#v-reader.speed-playing #pauseTools,
+#v-reader.speed-playing #speedView .scrub,
+#v-reader.speed-playing #speedView .controls,
+#v-reader.speed-playing #speedView .speed{
+  opacity:.15;transition:opacity .3s ease;
+}
+#v-reader.speed-playing.speed-awake #rTop,
+#v-reader.speed-playing.speed-awake #context,
+#v-reader.speed-playing.speed-awake #stageHint,
+#v-reader.speed-playing.speed-awake #pauseTools,
+#v-reader.speed-playing.speed-awake #speedView .scrub,
+#v-reader.speed-playing.speed-awake #speedView .controls,
+#v-reader.speed-playing.speed-awake #speedView .speed{
+  opacity:1;
+}
+#v-reader.speed-playing #pauseTools{min-height:0}
+@media (prefers-reduced-motion: reduce){
+  #v-reader.speed-playing #rTop,
+  #v-reader.speed-playing #context,
+  #v-reader.speed-playing #stageHint,
+  #v-reader.speed-playing #pauseTools,
+  #v-reader.speed-playing #speedView .scrub,
+  #v-reader.speed-playing #speedView .controls,
+  #v-reader.speed-playing #speedView .speed{transition:none}
+}
 
 
 /* Auto-scroll bar */
@@ -501,9 +523,6 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 #libTools .libtools-head{display:flex;justify-content:flex-end;align-items:center;min-height:44px}
 #libTools.open .libtools-head{margin-bottom:2px}
 
-/* === REIMAGINE: quiet Speed mode === */
-#v-speed.playing .speed-chrome { opacity: 0; pointer-events: none; transition: opacity .3s; }
-#v-speed.playing:hover .speed-chrome, #v-speed.playing.paused .speed-chrome { opacity: 1; pointer-events: auto; }
 
 
 /* Version chip: under the status bar, hidden while a book is open so it never covers Search/Aa */
@@ -514,7 +533,7 @@ body:has(#v-reader:not([hidden])) #verBadge{display:none}
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.23</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.24</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -1679,6 +1698,36 @@ const wpmIn=$('#wpm');
 function setWpm(v){ S.wpm=clamp(Math.round(v/10)*10,100,1000); wpmIn.value=S.wpm; $('#wpmLabel').innerHTML=`${S.wpm} <small>wpm</small>`; saveSettings(); if(R.meta) updateProgress(); }
 wpmIn.addEventListener('input',()=>setWpm(+wpmIn.value));
 $('#wpmDown').onclick=()=>setWpm(S.wpm-10); $('#wpmUp').onclick=()=>setWpm(S.wpm+10);
+
+/* Quiet Speed: fade chrome while a word is playing; a tap or move brings it back. First tap on a control still works. */
+function syncSpeedPlaying(){
+  const on=!!(R.mode==='speed' && R.playing);
+  const v=$('#v-reader'), sp=$('#speedView');
+  if(v) v.classList.toggle('speed-playing', on);
+  if(sp) sp.classList.toggle('speed-playing', on);
+  if(R.mode==='speed'){
+    const pt=$('#pauseTools'), h=$('#stageHint');
+    if(pt) pt.style.visibility='';
+    if(h) h.style.visibility='';
+  }
+  if(!on){
+    if(v) v.classList.remove('speed-awake');
+    if(sp) sp.classList.remove('speed-awake');
+    clearTimeout(syncSpeedPlaying._t);
+  }
+}
+function wakeSpeedChrome(){
+  const v=$('#v-reader'); if(!v || !v.classList.contains('speed-playing')) return;
+  v.classList.add('speed-awake');
+  const sp=$('#speedView'); if(sp) sp.classList.add('speed-awake');
+  clearTimeout(syncSpeedPlaying._t);
+  syncSpeedPlaying._t=setTimeout(()=>{
+    v.classList.remove('speed-awake');
+    const sp2=$('#speedView'); if(sp2) sp2.classList.remove('speed-awake');
+  }, 2500);
+}
+setPlayUI=(function(orig){ return function(){ orig(); syncSpeedPlaying(); }; })(setPlayUI);
+{ const host=$('#v-reader'); if(host) for(const ev of ['pointerdown','touchstart','mousemove']) host.addEventListener(ev, wakeSpeedChrome, {passive:true}); }
 
 /* after dragging the faded background text in Speed mode, rebuild it around the word under the guide line */
 function speedBrowseRebuild(){
@@ -3754,11 +3803,9 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.23-hero';
+const APP_VERSION='2026.11.18.24-quiet-speed';
 const WHATSNEW=[
-  ['A Continue reading card','The book you were last reading sits at the top as a large card, with your progress and a Continue button. The rest of the shelf is quieter, and finished books sit at the bottom.'],
-  ['Search when you need it','Search, sort and filter stay behind a search button until you tap it.'],
-  ['Version badge stays out of the way','The small version number sits under the status bar and hides while you read, so it doesn’t cover Search or Aa.']
+  ['Quieter Speed mode','While a word is playing, the bars and buttons fade so the word stays in focus. Tap or move to bring them back for a moment; they return fully when you pause.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -3955,27 +4002,6 @@ function yearHTML(st, met){
   const b=$('#verBadge'); if(!b) return;
   b.textContent='v'+APP_VERSION;
   b.addEventListener('click', ()=>whatsNewSheet());
-})();
-
-
-/* === REIMAGINE: quiet Speed mode === */
-(function(){
-  const origPlay = window.asPlay;
-  if(origPlay){
-    window.asPlay = function(){
-      origPlay.apply(this, arguments);
-      const v = document.getElementById('v-speed');
-      if(v) v.classList.add('playing');
-    };
-  }
-  const origPause = window.asPause;
-  if(origPause){
-    window.asPause = function(){
-      origPause.apply(this, arguments);
-      const v = document.getElementById('v-speed');
-      if(v) v.classList.remove('playing');
-    };
-  }
 })();
 
 
@@ -5196,7 +5222,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=18;
+const SAMPLE_V=19;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -5204,7 +5230,7 @@ const SAMPLE_HTML=`
 <p>While you read, the controls stay out of the way. The chapter name sits at the top and your page number at the bottom.</p>
 <h2>Three ways to read</h2>
 <p>Tap <strong>Aa</strong> at the top to choose how you read:</p>
-<ul><li><strong>Pages</strong> turns pages like a printed book.</li><li><strong>Scroll</strong> gives you one long column to scroll through. Whenever you leave and come back, a torn edge marked <strong>Previously read</strong> shows exactly where you stopped.</li><li><strong>Speed</strong> flashes the words one at a time in the same spot, so your eyes never have to move.</li></ul>
+<ul><li><strong>Pages</strong> turns pages like a printed book.</li><li><strong>Scroll</strong> gives you one long column to scroll through. Whenever you leave and come back, a torn edge marked <strong>Previously read</strong> shows exactly where you stopped.</li><li><strong>Speed</strong> flashes the words one at a time in the same spot, so your eyes never have to move. While a word is playing, the buttons fade; tap or pause to bring them back.</li></ul>
 <p>All three share your place, down to the word. Switch in the middle of a sentence and you carry on <em>exactly</em> where you were.</p>
 <h2>Auto-scroll</h2>
 <p>In Scroll, tap the <strong>auto-scroll</strong> button (the arrow pointing down) at the bottom. A play button and a speed slider appear. The text then moves by itself at the words per minute you set, easing in gently when it starts. Tap the page to pause. After that, a tap simply shows or hides the controls so you can read at your own pace; press the play button when you want it to move again.</p>

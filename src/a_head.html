@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
-/* === REIMAGINE: quiet Speed mode === */
-#v-speed.playing .speed-chrome { opacity: 0; pointer-events: none; transition: opacity .3s; }
-#v-speed.playing:hover .speed-chrome, #v-speed.playing.paused .speed-chrome { opacity: 1; pointer-events: auto; }
 
 </style>
 <title>Tooz eReader</title>
@@ -189,10 +186,35 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #v-reader.chrome-off .run{opacity:1}
 #v-reader[data-mode="speed"] .run{display:none}
 
-#v-reader[data-mode="speed"] #rTop{opacity:.7}
-#v-reader[data-mode="speed"] .stage-hint{display:none}
-#v-reader[data-mode="speed"] #context{opacity:.7;font-size:.9rem}
-#v-reader[data-mode="speed"].playing #rTop{opacity:.4;transform:scale(.95);transform-origin:top}
+/* Quiet Speed: chrome fades while playing, stays tappable, wakes on touch */
+#v-reader.speed-playing #rTop,
+#v-reader.speed-playing #context,
+#v-reader.speed-playing #stageHint,
+#v-reader.speed-playing #pauseTools,
+#v-reader.speed-playing #speedView .scrub,
+#v-reader.speed-playing #speedView .controls,
+#v-reader.speed-playing #speedView .speed{
+  opacity:.15;transition:opacity .3s ease;
+}
+#v-reader.speed-playing.speed-awake #rTop,
+#v-reader.speed-playing.speed-awake #context,
+#v-reader.speed-playing.speed-awake #stageHint,
+#v-reader.speed-playing.speed-awake #pauseTools,
+#v-reader.speed-playing.speed-awake #speedView .scrub,
+#v-reader.speed-playing.speed-awake #speedView .controls,
+#v-reader.speed-playing.speed-awake #speedView .speed{
+  opacity:1;
+}
+#v-reader.speed-playing #pauseTools{min-height:0}
+@media (prefers-reduced-motion: reduce){
+  #v-reader.speed-playing #rTop,
+  #v-reader.speed-playing #context,
+  #v-reader.speed-playing #stageHint,
+  #v-reader.speed-playing #pauseTools,
+  #v-reader.speed-playing #speedView .scrub,
+  #v-reader.speed-playing #speedView .controls,
+  #v-reader.speed-playing #speedView .speed{transition:none}
+}
 
 
 /* Auto-scroll bar */
@@ -501,9 +523,6 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 #libTools .libtools-head{display:flex;justify-content:flex-end;align-items:center;min-height:44px}
 #libTools.open .libtools-head{margin-bottom:2px}
 
-/* === REIMAGINE: quiet Speed mode === */
-#v-speed.playing .speed-chrome { opacity: 0; pointer-events: none; transition: opacity .3s; }
-#v-speed.playing:hover .speed-chrome, #v-speed.playing.paused .speed-chrome { opacity: 1; pointer-events: auto; }
 
 
 /* Version chip: under the status bar, hidden while a book is open so it never covers Search/Aa */

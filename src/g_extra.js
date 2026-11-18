@@ -1,9 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.23-hero';
+const APP_VERSION='2026.11.18.24-quiet-speed';
 const WHATSNEW=[
-  ['A Continue reading card','The book you were last reading sits at the top as a large card, with your progress and a Continue button. The rest of the shelf is quieter, and finished books sit at the bottom.'],
-  ['Search when you need it','Search, sort and filter stay behind a search button until you tap it.'],
-  ['Version badge stays out of the way','The small version number sits under the status bar and hides while you read, so it doesn’t cover Search or Aa.']
+  ['Quieter Speed mode','While a word is playing, the bars and buttons fade so the word stays in focus. Tap or move to bring them back for a moment; they return fully when you pause.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -200,25 +198,4 @@ function yearHTML(st, met){
   const b=$('#verBadge'); if(!b) return;
   b.textContent='v'+APP_VERSION;
   b.addEventListener('click', ()=>whatsNewSheet());
-})();
-
-
-/* === REIMAGINE: quiet Speed mode === */
-(function(){
-  const origPlay = window.asPlay;
-  if(origPlay){
-    window.asPlay = function(){
-      origPlay.apply(this, arguments);
-      const v = document.getElementById('v-speed');
-      if(v) v.classList.add('playing');
-    };
-  }
-  const origPause = window.asPause;
-  if(origPause){
-    window.asPause = function(){
-      origPause.apply(this, arguments);
-      const v = document.getElementById('v-speed');
-      if(v) v.classList.remove('playing');
-    };
-  }
 })();

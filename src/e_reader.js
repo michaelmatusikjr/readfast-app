@@ -20,6 +20,36 @@ const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
 /* speed */
 /*@@OLD:1124-1127@@*/
 
+/* Quiet Speed: fade chrome while a word is playing; a tap or move brings it back. First tap on a control still works. */
+function syncSpeedPlaying(){
+  const on=!!(R.mode==='speed' && R.playing);
+  const v=$('#v-reader'), sp=$('#speedView');
+  if(v) v.classList.toggle('speed-playing', on);
+  if(sp) sp.classList.toggle('speed-playing', on);
+  if(R.mode==='speed'){
+    const pt=$('#pauseTools'), h=$('#stageHint');
+    if(pt) pt.style.visibility='';
+    if(h) h.style.visibility='';
+  }
+  if(!on){
+    if(v) v.classList.remove('speed-awake');
+    if(sp) sp.classList.remove('speed-awake');
+    clearTimeout(syncSpeedPlaying._t);
+  }
+}
+function wakeSpeedChrome(){
+  const v=$('#v-reader'); if(!v || !v.classList.contains('speed-playing')) return;
+  v.classList.add('speed-awake');
+  const sp=$('#speedView'); if(sp) sp.classList.add('speed-awake');
+  clearTimeout(syncSpeedPlaying._t);
+  syncSpeedPlaying._t=setTimeout(()=>{
+    v.classList.remove('speed-awake');
+    const sp2=$('#speedView'); if(sp2) sp2.classList.remove('speed-awake');
+  }, 2500);
+}
+setPlayUI=(function(orig){ return function(){ orig(); syncSpeedPlaying(); }; })(setPlayUI);
+{ const host=$('#v-reader'); if(host) for(const ev of ['pointerdown','touchstart','mousemove']) host.addEventListener(ev, wakeSpeedChrome, {passive:true}); }
+
 /* after dragging the faded background text in Speed mode, rebuild it around the word under the guide line */
 function speedBrowseRebuild(){
   if(!R.spans || R.winA==null) return; const line=$('#scrollLine'); if(!line) return;
