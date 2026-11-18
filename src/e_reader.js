@@ -563,7 +563,7 @@ document.addEventListener('keydown',e=>{
 }, true);
 function stopActivity(){ if(R.playing) pause(); if(SC.auto) asStop(true); if(TTS.on) ttsStop(); }
 function setBack(prev){ if(prev==null) return; R.backPos=prev; $('#backPill').hidden=false; clearTimeout(R.backT); R.backT=setTimeout(()=>{ $('#backPill').hidden=true; }, 6000); }
-$('#backGo').onclick=()=>{ const p=R.backPos; if(p==null) return; $('#backPill').hidden=true; goTo(p,true); };
+$('#backGo').onclick=()=>{ const p=R.backPos; if(p==null) return; $('#backPill').hidden=true; R.backPos=null; goTo(p,'back'); };
 $('#backX').onclick=()=>{ $('#backPill').hidden=true; R.backPos=null; };
 /* Endnotes: the number in front of each note leads back to where it was cited.
    R.backTo: a link inside a note that points at its reference (the book's own back-link). R.back: a plain note number. */
@@ -584,7 +584,7 @@ async function goTo(i, jump){
   const prev=R.pos; stopActivity(); selClear();
   R.pos=clamp(i|0,0,R.n-1); R.lastNav=true;
   if(R.meta.finished&&R.pos<R.n-1) R.meta.finished=false;
-  if(jump && Math.abs(prev-R.pos)>30) setBack(prev);
+  if(jump && jump!=='back' && Math.abs(prev-R.pos)>30) setBack(prev);
   if(jump) setChrome(true);
   await MODES[R.mode].show(R.pos);
   saveProgress(true); resetClock(); updateChrome();

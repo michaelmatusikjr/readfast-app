@@ -394,16 +394,16 @@ function clearFilters(){ for(const [k] of FSEC) F[k].clear(); }
 function pruneFilters(){ for(const k of [...F.ti]) if(!LIB.some(d=>d.id===k)) F.ti.delete(k); for(const k of [...F.au]) if(!LIB.some(d=>authorOf(d).toLowerCase()===k)) F.au.delete(k); for(const k of [...F.tg]) if(!LIB.some(d=>tagsOf(d).some(t=>t.toLowerCase()===k))) F.tg.delete(k); }
 const SECCLS={st:'f-st',ti:'f-ti',au:'f-au',tg:'f-tg'}, SECKEY={st:'Status',ti:'Title',au:'Author',tg:'Tag'};
 function syncLibTools(){
-  if(fCount() || (LIBV.q||'').trim()) LIBTOOLS_OPEN=true;
+  if((LIBV.q||'').trim()) LIBTOOLS_OPEN=true;
   const box=$('#libTools'); if(box) box.classList.toggle('open', !!LIBTOOLS_OPEN);
   const b=$('#libSearchBtn'); if(b){ b.innerHTML=LIBTOOLS_OPEN?ICON.close:ICON.search; b.setAttribute('aria-expanded', LIBTOOLS_OPEN?'true':'false'); b.setAttribute('aria-label', LIBTOOLS_OPEN?'Close search':'Search, sort and filter'); }
 }
 function renderLibTools(){
   syncLibTools();
   $('#sortBtn').innerHTML=ICON.sort; const n=fCount();
-  $('#filterBtn').innerHTML=ICON.filter+(n?`<span class="badge">${n}</span>`:''); $('#filterBtn').classList.toggle('on',!!n);
-  const pills=[]; for(const [sec] of FSEC) for(const k of F[sec]) pills.push(`<button class="pill ${SECCLS[sec]}" type="button" data-unf="${sec}" data-k="${esc(k)}" aria-label="Remove ${SECKEY[sec]} filter ${esc(labelOf(sec,k))}"><span class="x">✕</span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(labelOf(sec,k))}</span></button>`);
-  if(pills.length>1) pills.push('<button class="pill clear" type="button" data-unf="all">Clear all</button>');
+  $('#filterBtn').innerHTML=ICON.filter; $('#filterBtn').classList.toggle('on',!!n);
+  const pills=[]; for(const [sec] of FSEC) for(const k of F[sec]) pills.push(`<button class="pill ${SECCLS[sec]}" type="button" data-unf="${sec}" data-k="${esc(k)}" aria-label="Remove filter: ${esc(labelOf(sec,k))}"><span class="dot" aria-hidden="true"></span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(labelOf(sec,k))}</span><span class="x" aria-hidden="true">✕</span></button>`);
+  if(pills.length>1) pills.push('<button class="pill clear" type="button" data-unf="all" aria-label="Clear all filters">Clear all</button>');
   $('#libPills').hidden=!pills.length; $('#libPills').innerHTML=pills.join('');
   renderSuggest();
 }
@@ -483,7 +483,7 @@ function fillFilter(){
     const box=document.querySelector(`#sheet [data-opts="${sec}"]`); if(!box) return;
     const q=FQ[sec].trim().toLowerCase();
     const opts=secOptions(sec).filter(o=>!q || o.label.toLowerCase().includes(q));
-    box.innerHTML=opts.length? opts.map(o=>`<button class="fopt" type="button" data-fopt="${sec}" data-k="${esc(o.key)}" aria-pressed="${F[sec].has(o.key)}"><span class="bx">${F[sec].has(o.key)?'✓':''}</span><span class="lb">${esc(o.label)}</span><span class="ct">${o.n}</span></button>`).join('') : `<p class="note" style="margin:6px 8px">${q?'Nothing matches.':'No matching books.'}</p>`;
+    box.innerHTML=opts.length? opts.map(o=>`<button class="fopt" type="button" data-fopt="${sec}" data-k="${esc(o.key)}" aria-pressed="${F[sec].has(o.key)}"><span class="dot" aria-hidden="true"></span><span class="bx">${F[sec].has(o.key)?'✓':''}</span><span class="lb">${esc(o.label)}</span><span class="ct">${o.n}</span></button>`).join('') : `<p class="note" style="margin:6px 8px">${q?'Nothing matches.':'No matching books.'}</p>`;
     const n=document.querySelector(`#sheet [data-n="${sec}"]`); if(n) n.textContent=F[sec].size? F[sec].size+' selected' : '';
   }
   const shown=LIB.filter(d=>matchAll(d)).length; const b=$('#fDone'); if(b) b.textContent=`Show ${shown} book${shown===1?'':'s'}`;
@@ -516,7 +516,7 @@ $('#v-library').addEventListener('click',e=>{
   const g=e.target.closest('[data-sug]'); if(g){ toggleFilter(g.dataset.sug,g.dataset.k,true); LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
 });
 $('#libFind').addEventListener('input',e=>{ LIBV.q=e.target.value; if((LIBV.q||'').trim()) LIBTOOLS_OPEN=true; renderLibrary(); });
-$('#libFind').addEventListener('search',e=>{ if(!(e.target.value||'').trim() && !fCount()){ LIBTOOLS_OPEN=false; renderLibTools(); } });
+$('#libFind').addEventListener('search',e=>{ if(!(e.target.value||'').trim()){ LIBTOOLS_OPEN=false; renderLibTools(); } });
 $('#addBtn').innerHTML=ICON.plus+'Add to library';
 $('#addBtn').onclick=()=>openSheet('Add to library', `
   <button class="addopt" type="button" data-act="file">${ICON.file}<span><b>Open a file</b><small>EPUB, PDF, TXT, Markdown or HTML</small></span></button>
@@ -1125,7 +1125,7 @@ document.addEventListener('keydown',e=>{
   else if($('#imgOverlay')) $('#imgOverlay').remove();
   else if(!$('#v-library').hidden && $('#libTools') && $('#libTools').classList.contains('open')){
     if(LIBV.q){ LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
-    else if(!fCount()){ LIBTOOLS_OPEN=false; renderLibTools(); const b=$('#libSearchBtn'); if(b) b.focus(); }
+    else { LIBTOOLS_OPEN=false; renderLibTools(); const b=$('#libSearchBtn'); if(b) b.focus(); }
   }
 });
 function toast(msg, action, ms, progress){
@@ -1150,7 +1150,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=20;
+const SAMPLE_V=21;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -1203,7 +1203,7 @@ const SAMPLE_HTML=`
 <p>The book you were last reading sits at the top as a large <strong>Continue reading</strong> card, with a Continue button and a fill that shows your progress. The rest of the shelf is quieter, and finished books sit at the bottom.</p>
 <p>Tap the <strong>search</strong> button to search, sort or filter. The <strong>sort</strong> button orders the library by recently read, title or author. The <strong>filter</strong> button opens four sections: reading status, title, author and tags. Pick as many as you like: books matching any choice in a section are shown, and every section you use must match. Once you pick something, the other sections only offer choices that still have books.</p>
 <p>To find words inside your books, type three letters or more and tap <strong>Search inside books</strong>. You see every book that has them, with each passage; tap one to open the book right there.</p>
-<p>Start typing in the search bar and matching titles, authors and tags appear underneath; tap one to filter by it. Each filter shows as a coloured pill under the search bar; tap its ✕ to remove it. Filters clear when you close the app.</p>
+<p>Tap the search button to find a book or to sort and filter. Start typing and matching titles, authors and tags appear underneath; tap one to filter by it. Each active filter shows as a coloured pill on your library; tap the pill to remove it. When two or more filters are on, Clear all removes them together. Filters clear when you close the app.</p>
 <p>If a book is 98% read but not marked finished, Tooz asks whether you finished it when you come back to the library.</p>
 <h2>Tags</h2>
 <p>Tap the three dots on any book to change its title or author and to tag it. As you add tags, Tooz suggests some: the subjects the publisher or library gave the book, its form (poetry, sermons, letters, short stories), and topics drawn from the words in the book itself (download a free book first to see them). Your other tags are folded away underneath; tap to open them. Type a few letters to narrow the list. Filter by a tag to see those books together.</p>

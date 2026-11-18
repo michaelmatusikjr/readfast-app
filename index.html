@@ -74,15 +74,19 @@ h2{font-size:1.15rem;font-weight:600}
 .tbtn.on{border-color:var(--accent);color:var(--accent)}
 .tbtn .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:var(--surface);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
 #libSug,#libPills{gap:6px}
+#libPills{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:2px}
+#libPills::-webkit-scrollbar{display:none}
 .tagchips .chip{padding:5px 10px;font-size:.82rem;border-radius:999px}
-/* filter colors: status, title, author, tag */
+/* filter colors: status, title, author, tag — colour via tint, border and dot; label text is always --ink */
 .pill{--c:var(--accent);display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 8px;border-radius:999px;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);background:color-mix(in srgb,var(--c) 22%,var(--surface));color:var(--ink);max-width:100%}
-.pill .x{font-size:.7rem;opacity:.75;color:var(--c)}
-.pill .k{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--c);font-weight:700}
-.pill span.v{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill .dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--c)}
+.pill .x{font-size:.7rem;opacity:.7;color:var(--ink)}
+.pill .k{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink);font-weight:700}
+.pill span.v{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
 .f-st{--c:#2f9e6e}.f-ti{--c:#3a6fd8}.f-au{--c:#c47a12}.f-tg{--c:#9b4dca}
 .pill.clear{--c:var(--muted);font-weight:500}
 .pill.ftpill{--c:var(--ink)}
+#libPills .pill{flex:none;min-height:44px;padding:0 12px 0 10px;max-width:min(80vw,20rem)}
 button.hlrow.ftrow{width:100%;background:none;border:0;border-bottom:1px solid var(--line);font:inherit;color:inherit;text-align:left;cursor:pointer}
 .ftrow mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 .wn-i{padding:10px 0;border-bottom:1px solid var(--line)}.wn-i:last-child{border:0}.wn-i .small{margin-top:3px;line-height:1.45}
@@ -99,6 +103,7 @@ details.yr{margin-top:10px}
 .fsec .fin{margin:0 12px 8px;width:calc(100% - 24px);box-sizing:border-box}
 .fsec .fopts{max-height:260px;overflow:auto;padding:0 6px 8px}
 .fopt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 8px;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer;border-radius:8px}
+.fopt .dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--c)}
 .fopt .bx{flex:none;width:20px;height:20px;border-radius:6px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--surface)}
 .fopt[aria-pressed=true] .bx{background:var(--c);border-color:var(--c)}
 .fopt .lb{flex:1;min-width:0}.fopt .ct{color:var(--muted);font-size:.8rem}
@@ -279,7 +284,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;anima
 #v-reader:not([data-mode="speed"]) .rchrome{position:absolute;left:0;right:0}
 #v-reader:not([data-mode="speed"]) #rTop{top:0}
 #v-reader:not([data-mode="speed"]) #rFoot{bottom:0}
-#scrollView{top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+#scrollView{top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 #barHint{position:absolute;left:0;right:0;top:0;height:calc(14px + env(safe-area-inset-top,0px));z-index:6;pointer-events:none;background:linear-gradient(to bottom,color-mix(in srgb,var(--page-link) 40%,transparent),transparent);opacity:0}
 #barHint.on{animation:barHintPulse 1.4s ease 1}
 @keyframes barHintPulse{0%,100%{opacity:0}25%,55%{opacity:1}}
@@ -287,7 +292,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;anima
 #pgFlow.anim-slide{transition:transform .28s cubic-bezier(.3,.6,.2,1)}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
 /* Scroll */
-#scrollView{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#scrollView{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #scFlow{padding:18px var(--mx) 45vh}
 /* Scroll mode's "previously read" tear: the page torn across, with the gap showing what's behind it */
 #scFlow .tear{--gap:color-mix(in srgb,var(--page-bg) 84%,var(--page-ink));position:relative;margin:1.1em calc(-1 * var(--mx));background:linear-gradient(var(--page-bg) 0 8px,var(--gap) 8px calc(100% - 8px),var(--page-bg) calc(100% - 8px));text-indent:0;-webkit-user-select:none;user-select:none}
@@ -559,7 +564,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.27</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.28</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -683,7 +688,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
         <button class="icon-btn" id="rTts" type="button" aria-label="Read aloud"></button>
       </div>
     </footer>
-    <div id="backPill" hidden><button type="button" id="backGo">Back to where you were</button><button type="button" id="backX" aria-label="Dismiss">✕</button></div>
+    <div id="backPill" hidden role="status" aria-live="polite"><button type="button" id="backGo">Back to where you were</button><button type="button" id="backX" aria-label="Dismiss">✕</button></div>
     <div id="barHint" hidden aria-hidden="true"></div>
     <div class="run" id="runHead"></div>
     <div class="run" id="runFoot"></div>
@@ -2269,7 +2274,7 @@ document.addEventListener('keydown',e=>{
 }, true);
 function stopActivity(){ if(R.playing) pause(); if(SC.auto) asStop(true); if(TTS.on) ttsStop(); }
 function setBack(prev){ if(prev==null) return; R.backPos=prev; $('#backPill').hidden=false; clearTimeout(R.backT); R.backT=setTimeout(()=>{ $('#backPill').hidden=true; }, 6000); }
-$('#backGo').onclick=()=>{ const p=R.backPos; if(p==null) return; $('#backPill').hidden=true; goTo(p,true); };
+$('#backGo').onclick=()=>{ const p=R.backPos; if(p==null) return; $('#backPill').hidden=true; R.backPos=null; goTo(p,'back'); };
 $('#backX').onclick=()=>{ $('#backPill').hidden=true; R.backPos=null; };
 /* Endnotes: the number in front of each note leads back to where it was cited.
    R.backTo: a link inside a note that points at its reference (the book's own back-link). R.back: a plain note number. */
@@ -2290,7 +2295,7 @@ async function goTo(i, jump){
   const prev=R.pos; stopActivity(); selClear();
   R.pos=clamp(i|0,0,R.n-1); R.lastNav=true;
   if(R.meta.finished&&R.pos<R.n-1) R.meta.finished=false;
-  if(jump && Math.abs(prev-R.pos)>30) setBack(prev);
+  if(jump && jump!=='back' && Math.abs(prev-R.pos)>30) setBack(prev);
   if(jump) setChrome(true);
   await MODES[R.mode].show(R.pos);
   saveProgress(true); resetClock(); updateChrome();
@@ -3910,10 +3915,10 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.27-reader-bar-fix';
+const APP_VERSION='2026.11.18.28-filter-pills';
 const WHATSNEW=[
-  ['The page stays put when the bars hide','Hiding the top bar no longer reshuffles the pages. A little space at the top and bottom keeps the running title and the page label off the text.'],
-  ['Search jumps to the match','A search result opens the page with that word, highlights it briefly, and offers a “Back to where you were” chip for a few seconds.']
+  ['Colour-coded filter pills','When a filter is on, a compact row of coloured pills shows on your library. Tap a pill to remove that filter, or Clear all when more than one is on. The search bar can stay closed.'],
+  ['Back stays back','The “Back to where you were” chip no longer offers a new jump after you use it.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -4588,16 +4593,16 @@ function clearFilters(){ for(const [k] of FSEC) F[k].clear(); }
 function pruneFilters(){ for(const k of [...F.ti]) if(!LIB.some(d=>d.id===k)) F.ti.delete(k); for(const k of [...F.au]) if(!LIB.some(d=>authorOf(d).toLowerCase()===k)) F.au.delete(k); for(const k of [...F.tg]) if(!LIB.some(d=>tagsOf(d).some(t=>t.toLowerCase()===k))) F.tg.delete(k); }
 const SECCLS={st:'f-st',ti:'f-ti',au:'f-au',tg:'f-tg'}, SECKEY={st:'Status',ti:'Title',au:'Author',tg:'Tag'};
 function syncLibTools(){
-  if(fCount() || (LIBV.q||'').trim()) LIBTOOLS_OPEN=true;
+  if((LIBV.q||'').trim()) LIBTOOLS_OPEN=true;
   const box=$('#libTools'); if(box) box.classList.toggle('open', !!LIBTOOLS_OPEN);
   const b=$('#libSearchBtn'); if(b){ b.innerHTML=LIBTOOLS_OPEN?ICON.close:ICON.search; b.setAttribute('aria-expanded', LIBTOOLS_OPEN?'true':'false'); b.setAttribute('aria-label', LIBTOOLS_OPEN?'Close search':'Search, sort and filter'); }
 }
 function renderLibTools(){
   syncLibTools();
   $('#sortBtn').innerHTML=ICON.sort; const n=fCount();
-  $('#filterBtn').innerHTML=ICON.filter+(n?`<span class="badge">${n}</span>`:''); $('#filterBtn').classList.toggle('on',!!n);
-  const pills=[]; for(const [sec] of FSEC) for(const k of F[sec]) pills.push(`<button class="pill ${SECCLS[sec]}" type="button" data-unf="${sec}" data-k="${esc(k)}" aria-label="Remove ${SECKEY[sec]} filter ${esc(labelOf(sec,k))}"><span class="x">✕</span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(labelOf(sec,k))}</span></button>`);
-  if(pills.length>1) pills.push('<button class="pill clear" type="button" data-unf="all">Clear all</button>');
+  $('#filterBtn').innerHTML=ICON.filter; $('#filterBtn').classList.toggle('on',!!n);
+  const pills=[]; for(const [sec] of FSEC) for(const k of F[sec]) pills.push(`<button class="pill ${SECCLS[sec]}" type="button" data-unf="${sec}" data-k="${esc(k)}" aria-label="Remove filter: ${esc(labelOf(sec,k))}"><span class="dot" aria-hidden="true"></span><span class="k">${SECKEY[sec]}</span><span class="v">${esc(labelOf(sec,k))}</span><span class="x" aria-hidden="true">✕</span></button>`);
+  if(pills.length>1) pills.push('<button class="pill clear" type="button" data-unf="all" aria-label="Clear all filters">Clear all</button>');
   $('#libPills').hidden=!pills.length; $('#libPills').innerHTML=pills.join('');
   renderSuggest();
 }
@@ -4677,7 +4682,7 @@ function fillFilter(){
     const box=document.querySelector(`#sheet [data-opts="${sec}"]`); if(!box) return;
     const q=FQ[sec].trim().toLowerCase();
     const opts=secOptions(sec).filter(o=>!q || o.label.toLowerCase().includes(q));
-    box.innerHTML=opts.length? opts.map(o=>`<button class="fopt" type="button" data-fopt="${sec}" data-k="${esc(o.key)}" aria-pressed="${F[sec].has(o.key)}"><span class="bx">${F[sec].has(o.key)?'✓':''}</span><span class="lb">${esc(o.label)}</span><span class="ct">${o.n}</span></button>`).join('') : `<p class="note" style="margin:6px 8px">${q?'Nothing matches.':'No matching books.'}</p>`;
+    box.innerHTML=opts.length? opts.map(o=>`<button class="fopt" type="button" data-fopt="${sec}" data-k="${esc(o.key)}" aria-pressed="${F[sec].has(o.key)}"><span class="dot" aria-hidden="true"></span><span class="bx">${F[sec].has(o.key)?'✓':''}</span><span class="lb">${esc(o.label)}</span><span class="ct">${o.n}</span></button>`).join('') : `<p class="note" style="margin:6px 8px">${q?'Nothing matches.':'No matching books.'}</p>`;
     const n=document.querySelector(`#sheet [data-n="${sec}"]`); if(n) n.textContent=F[sec].size? F[sec].size+' selected' : '';
   }
   const shown=LIB.filter(d=>matchAll(d)).length; const b=$('#fDone'); if(b) b.textContent=`Show ${shown} book${shown===1?'':'s'}`;
@@ -4710,7 +4715,7 @@ $('#v-library').addEventListener('click',e=>{
   const g=e.target.closest('[data-sug]'); if(g){ toggleFilter(g.dataset.sug,g.dataset.k,true); LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
 });
 $('#libFind').addEventListener('input',e=>{ LIBV.q=e.target.value; if((LIBV.q||'').trim()) LIBTOOLS_OPEN=true; renderLibrary(); });
-$('#libFind').addEventListener('search',e=>{ if(!(e.target.value||'').trim() && !fCount()){ LIBTOOLS_OPEN=false; renderLibTools(); } });
+$('#libFind').addEventListener('search',e=>{ if(!(e.target.value||'').trim()){ LIBTOOLS_OPEN=false; renderLibTools(); } });
 $('#addBtn').innerHTML=ICON.plus+'Add to library';
 $('#addBtn').onclick=()=>openSheet('Add to library', `
   <button class="addopt" type="button" data-act="file">${ICON.file}<span><b>Open a file</b><small>EPUB, PDF, TXT, Markdown or HTML</small></span></button>
@@ -5319,7 +5324,7 @@ document.addEventListener('keydown',e=>{
   else if($('#imgOverlay')) $('#imgOverlay').remove();
   else if(!$('#v-library').hidden && $('#libTools') && $('#libTools').classList.contains('open')){
     if(LIBV.q){ LIBV.q=''; $('#libFind').value=''; renderLibrary(); }
-    else if(!fCount()){ LIBTOOLS_OPEN=false; renderLibTools(); const b=$('#libSearchBtn'); if(b) b.focus(); }
+    else { LIBTOOLS_OPEN=false; renderLibTools(); const b=$('#libSearchBtn'); if(b) b.focus(); }
   }
 });
 function toast(msg, action, ms, progress){
@@ -5344,7 +5349,7 @@ $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown'
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
 
 /* ---------- sample book ---------- */
-const SAMPLE_V=20;
+const SAMPLE_V=21;
 const SAMPLE_HTML=`
 <h2>Welcome to Tooz eReader</h2>
 <p>This short book is a tour of Tooz. It opens by itself the first time you use the app. When you close it, Tooz asks whether to keep it in your library or tuck it away in <strong>Settings → Tutorial</strong>, where you can open it again any time.</p>
@@ -5397,7 +5402,7 @@ const SAMPLE_HTML=`
 <p>The book you were last reading sits at the top as a large <strong>Continue reading</strong> card, with a Continue button and a fill that shows your progress. The rest of the shelf is quieter, and finished books sit at the bottom.</p>
 <p>Tap the <strong>search</strong> button to search, sort or filter. The <strong>sort</strong> button orders the library by recently read, title or author. The <strong>filter</strong> button opens four sections: reading status, title, author and tags. Pick as many as you like: books matching any choice in a section are shown, and every section you use must match. Once you pick something, the other sections only offer choices that still have books.</p>
 <p>To find words inside your books, type three letters or more and tap <strong>Search inside books</strong>. You see every book that has them, with each passage; tap one to open the book right there.</p>
-<p>Start typing in the search bar and matching titles, authors and tags appear underneath; tap one to filter by it. Each filter shows as a coloured pill under the search bar; tap its ✕ to remove it. Filters clear when you close the app.</p>
+<p>Tap the search button to find a book or to sort and filter. Start typing and matching titles, authors and tags appear underneath; tap one to filter by it. Each active filter shows as a coloured pill on your library; tap the pill to remove it. When two or more filters are on, Clear all removes them together. Filters clear when you close the app.</p>
 <p>If a book is 98% read but not marked finished, Tooz asks whether you finished it when you come back to the library.</p>
 <h2>Tags</h2>
 <p>Tap the three dots on any book to change its title or author and to tag it. As you add tags, Tooz suggests some: the subjects the publisher or library gave the book, its form (poetry, sermons, letters, short stories), and topics drawn from the words in the book itself (download a free book first to see them). Your other tags are folded away underneath; tap to open them. Type a few letters to narrow the list. Filter by a tag to see those books together.</p>

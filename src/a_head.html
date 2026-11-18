@@ -74,15 +74,19 @@ h2{font-size:1.15rem;font-weight:600}
 .tbtn.on{border-color:var(--accent);color:var(--accent)}
 .tbtn .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:var(--surface);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
 #libSug,#libPills{gap:6px}
+#libPills{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:2px}
+#libPills::-webkit-scrollbar{display:none}
 .tagchips .chip{padding:5px 10px;font-size:.82rem;border-radius:999px}
-/* filter colors: status, title, author, tag */
+/* filter colors: status, title, author, tag — colour via tint, border and dot; label text is always --ink */
 .pill{--c:var(--accent);display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 8px;border-radius:999px;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);background:color-mix(in srgb,var(--c) 22%,var(--surface));color:var(--ink);max-width:100%}
-.pill .x{font-size:.7rem;opacity:.75;color:var(--c)}
-.pill .k{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--c);font-weight:700}
-.pill span.v{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill .dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--c)}
+.pill .x{font-size:.7rem;opacity:.7;color:var(--ink)}
+.pill .k{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink);font-weight:700}
+.pill span.v{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
 .f-st{--c:#2f9e6e}.f-ti{--c:#3a6fd8}.f-au{--c:#c47a12}.f-tg{--c:#9b4dca}
 .pill.clear{--c:var(--muted);font-weight:500}
 .pill.ftpill{--c:var(--ink)}
+#libPills .pill{flex:none;min-height:44px;padding:0 12px 0 10px;max-width:min(80vw,20rem)}
 button.hlrow.ftrow{width:100%;background:none;border:0;border-bottom:1px solid var(--line);font:inherit;color:inherit;text-align:left;cursor:pointer}
 .ftrow mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 .wn-i{padding:10px 0;border-bottom:1px solid var(--line)}.wn-i:last-child{border:0}.wn-i .small{margin-top:3px;line-height:1.45}
@@ -99,6 +103,7 @@ details.yr{margin-top:10px}
 .fsec .fin{margin:0 12px 8px;width:calc(100% - 24px);box-sizing:border-box}
 .fsec .fopts{max-height:260px;overflow:auto;padding:0 6px 8px}
 .fopt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 8px;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer;border-radius:8px}
+.fopt .dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--c)}
 .fopt .bx{flex:none;width:20px;height:20px;border-radius:6px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--surface)}
 .fopt[aria-pressed=true] .bx{background:var(--c);border-color:var(--c)}
 .fopt .lb{flex:1;min-width:0}.fopt .ct{color:var(--muted);font-size:.8rem}
@@ -279,7 +284,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;anima
 #v-reader:not([data-mode="speed"]) .rchrome{position:absolute;left:0;right:0}
 #v-reader:not([data-mode="speed"]) #rTop{top:0}
 #v-reader:not([data-mode="speed"]) #rFoot{bottom:0}
-#scrollView{top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+#scrollView{top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 #barHint{position:absolute;left:0;right:0;top:0;height:calc(14px + env(safe-area-inset-top,0px));z-index:6;pointer-events:none;background:linear-gradient(to bottom,color-mix(in srgb,var(--page-link) 40%,transparent),transparent);opacity:0}
 #barHint.on{animation:barHintPulse 1.4s ease 1}
 @keyframes barHintPulse{0%,100%{opacity:0}25%,55%{opacity:1}}
@@ -287,7 +292,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;anima
 #pgFlow.anim-slide{transition:transform .28s cubic-bezier(.3,.6,.2,1)}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
 /* Scroll */
-#scrollView{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#scrollView{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #scFlow{padding:18px var(--mx) 45vh}
 /* Scroll mode's "previously read" tear: the page torn across, with the gap showing what's behind it */
 #scFlow .tear{--gap:color-mix(in srgb,var(--page-bg) 84%,var(--page-ink));position:relative;margin:1.1em calc(-1 * var(--mx));background:linear-gradient(var(--page-bg) 0 8px,var(--gap) 8px calc(100% - 8px),var(--page-bg) calc(100% - 8px));text-indent:0;-webkit-user-select:none;user-select:none}

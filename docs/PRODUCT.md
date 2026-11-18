@@ -55,7 +55,7 @@ and move items out of **Pending changes** once they're built.
   (poetry, sermons, letters…) and topic keywords; "Your other tags" and the Settings tag list start collapsed.
 - Sort (Recently read, Title A–Z, Author A–Z) and Filter (status/title/author/tag sections; multi-select; OR within a
   section, AND across; other sections narrow to matches). Search suggests titles/authors/tags. Active filters show as
-  colour-coded pills grouped by type. "Continue reading" shows only with no filters. Filters clear when the app
+  colour-coded pills grouped by type, only while a filter is on; tap a pill to remove it, or Clear all when two or more are on. "Continue reading" shows only with no filters. Filters clear when the app
   closes; sort is remembered.
 - Starter shelf of public-domain books (Christian classics, literary classics, the Bible), tagged "Christian Classics"
   or "Literary Classics" plus one or two more tags each.
