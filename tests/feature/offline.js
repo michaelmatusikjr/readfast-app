@@ -38,7 +38,7 @@ const fs=require('fs');
   /* decode chapter 2's mp3 to check the speech */
   const pcm=await pg.evaluate(async()=>{ const f=await abFile('abt','p1.mp3'); const ac=new OfflineAudioContext(1,16000*30,16000); const ab=await ac.decodeAudioData(await f.arrayBuffer()); const x=ab.getChannelData(0); const o=new Int16Array(x.length); for(let i=0;i<x.length;i++) o[i]=Math.max(-1,Math.min(1,x[i]))*32767; return {sr:ab.sampleRate, d:Array.from(o)}; });
   const buf=Buffer.alloc(44+pcm.d.length*2); buf.write('RIFF',0); buf.writeUInt32LE(36+pcm.d.length*2,4); buf.write('WAVE',8); buf.write('fmt ',12); buf.writeUInt32LE(16,16); buf.writeUInt16LE(1,20); buf.writeUInt16LE(1,22); buf.writeUInt32LE(pcm.sr,24); buf.writeUInt32LE(pcm.sr*2,28); buf.writeUInt16LE(2,32); buf.writeUInt16LE(16,34); buf.write('data',36); buf.writeUInt32LE(pcm.d.length*2,40);
-  pcm.d.forEach((v,i)=>buf.writeInt16LE(v,44+i*2)); fs.writeFileSync(S+'st/offline_ch2.wav',buf);
+  pcm.d.forEach((v,i)=>buf.writeInt16LE(v,44+i*2)); fs.writeFileSync(S+'offline_ch2.wav',buf);
   /* play from the saved audio, starting mid chapter 2 */
   await pg.evaluate(()=>{ closeSheet(); const k=R.words.indexOf('Philippians'); ttsPickWord(k); $('#ttsPlay').click(); }); await sleep(2500);
   const p1=await pg.evaluate(()=>[TTS.on, TTS.ab, R.words[TTS.cur], NAT.audio.currentTime.toFixed(2), NAT.audio.src.slice(0,5), navigator.mediaSession.metadata&&navigator.mediaSession.metadata.title]);

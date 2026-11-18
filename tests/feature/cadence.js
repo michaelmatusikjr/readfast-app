@@ -23,7 +23,7 @@ const fs=require('fs');
     const save=async g=>Array.from(new Uint8Array(await (await fetch(g.url)).arrayBuffer()));
     return {a:{raw:a.raw,dur:a.dur,sdur:a.sdur}, c:{raw:c.raw,dur:c.dur,sdur:c.sdur}, wa:await save(a), wc:await save(c)};
   });
-  fs.writeFileSync(S+'st/piper_r1.wav',Buffer.from(r.wa)); fs.writeFileSync(S+'st/piper_r15.wav',Buffer.from(r.wc));
+  fs.writeFileSync(S+'piper_r1.wav',Buffer.from(r.wa)); fs.writeFileSync(S+'piper_r15.wav',Buffer.from(r.wc));
   ok('1.5x is made faster by the voice', r.c.sdur < r.a.sdur*0.8 && r.c.sdur > r.a.sdur*0.55, [r.a, r.c]);
   ok('silence trimmed, exact pause added', Math.abs((r.a.dur-r.a.sdur)-0.18)<0.01 && Math.abs((r.c.dur-r.c.sdur)-0.18/1.5)<0.01 && r.a.sdur < r.a.raw);
   /* one sentence per stretch; a long sentence is cut at a comma */
