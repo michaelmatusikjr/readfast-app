@@ -3761,7 +3761,7 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.19-shelf';
+const APP_VERSION='2026.11.18.20-shelf-fix';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
@@ -4044,22 +4044,27 @@ function yearHTML(st, met){
 })();
 
 
-/* === REIMAGINE: promote Continue reading to a hero card === */
+/* === REIMAGINE: promote Continue reading to a hero card (fixed) === */
 (function(){
   const orig = window.renderLibrary;
   if(!orig) return;
   window.renderLibrary = function(){
     orig.apply(this, arguments);
-    const cont = document.querySelector('#v-library .section');
+    const list = document.getElementById('docList');
+    if(!list) return;
+    // Remove any previous hero
+    document.querySelectorAll('.continue-hero').forEach(el=>el.remove());
+    const cont = list.querySelector('.doc');
     if(!cont) return;
-    const first = cont.querySelector('.doc');
-    if(first && !document.querySelector('.continue-hero')){
-      const hero = document.createElement('div');
-      hero.className = 'continue-hero';
-      hero.innerHTML = '<div class="eyebrow">Continue reading</div>' + first.innerHTML;
-      cont.parentNode.insertBefore(hero, cont);
-      first.style.display = 'none';
-    }
+    const hero = document.createElement('div');
+    hero.className = 'continue-hero';
+    hero.innerHTML = '<div class="eyebrow" style="font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Continue reading</div>';
+    hero.appendChild(cont.cloneNode(true));
+    list.parentNode.insertBefore(hero, list);
+    cont.style.display = 'none';
+    // Make the hero tappable the same way
+    const id = cont.dataset.id;
+    if(id) hero.onclick = ()=> openBook(id);
   };
 })();
 
