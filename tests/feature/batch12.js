@@ -62,6 +62,6 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   // settings tags collapsed
   await pg.click('#tabs [data-tab=settings]'); await sleep(300);
   console.log('settings tags', await pg.evaluate(()=>[!!$('#tagDet'), $('#tagDet').open, $('#tagDet summary').textContent]));
-  await pg.screenshot({path:'b12_settings.png'});
+  await pg.screenshot({path:__E.SCRATCH+'b12_settings.png'});
   console.log('errors', errs); await b.close();
 })();

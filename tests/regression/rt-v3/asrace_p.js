@@ -1,3 +1,4 @@
+const __E=require('../../env');
 const H=require('../rt-modes/h.js');
 (async()=>{ const b=await H.launch();
  for(const touch of [true]){ const pg=await H.page(b,{touch,settings:{mode:'scroll',autoScroll:true,focus:true},fontRoute:async ctx=>{ await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort()); await ctx.route(/localhost:8750\/$/,r=>r.fulfill({path:__dirname+'/patched.html',contentType:'text/html'})); }});
@@ -12,6 +13,6 @@ const H=require('../rt-modes/h.js');
     if(p[0]){ await pg.evaluate(()=>asStop()); await H.sleep(300);} 
   }
   console.log('touch',touch,'paused-with-controls-hidden',bad,'/',N, res.join(' '));
-  if(bad){ await pg.screenshot({path:'asrace.png'}); }
+  if(bad){ await pg.screenshot({path:__E.SCRATCH+'asrace.png'}); }
   await pg.context().close(); }
  await b.close(); })();

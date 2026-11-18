@@ -41,12 +41,12 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   console.log('after download suggestions', await pg.evaluate(()=>[!$('#sheet').hidden, [...document.querySelectorAll('#tagSug .chip')].map(c=>c.dataset.v)]));
   await pg.fill('#edTag','apol'); await sleep(100);
   console.log('typing filters', await pg.evaluate(()=>[...document.querySelectorAll('#tagSug .chip, #knownTags .chip')].filter(c=>!c.hidden).map(c=>c.dataset.v)));
-  await pg.screenshot({path:'b10_tags.png'});
+  await pg.screenshot({path:__E.SCRATCH+'b10_tags.png'});
   await pg.evaluate(()=>closeSheet()); await sleep(450);
   // #2 tile fill
   await pg.evaluate(async()=>{ const m=LIB.find(x=>x.id==='shelf-orthodoxy'); m.pos=Math.round(m.count*0.4); m.lastRead=Date.now(); touch(m); renderLibrary(); });
   console.log('tile fill', await pg.evaluate(()=>[getComputedStyle(document.querySelector('[data-open="shelf-orthodoxy"]')).backgroundImage.slice(0,90), !!document.querySelector('.doc .bar')]));
-  await pg.screenshot({path:'b10_lib.png'});
+  await pg.screenshot({path:__E.SCRATCH+'b10_lib.png'});
   // #1 start over -> not started
   await pg.click('[data-more="shelf-orthodoxy"]'); await sleep(500); await pg.click('#sheet [data-act=restart]'); await sleep(300);
   console.log('start over status', await pg.evaluate(()=>{ const m=LIB.find(x=>x.id==='shelf-orthodoxy'); return [isReading(m), m.pos, m.lastRead]; }));
@@ -58,7 +58,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await pg.click('#sheet [data-act=no]'); await sleep(500);
   console.log('dnf sheet', await pg.evaluate(()=>[$('#sheet h2').textContent, [...document.querySelectorAll('#sheet [data-act=kp]')].map(c=>c.textContent), !!$('#arcReview')]));
   await pg.click('#sheet [data-act=kp][data-k=highlights]'); await sleep(450);
-  await pg.screenshot({path:'b10_arch.png'});
+  await pg.screenshot({path:__E.SCRATCH+'b10_arch.png'});
   await pg.click('#sheet [data-act=go]'); await sleep(800);
   console.log('archived dnf', await pg.evaluate(()=>{ const a=ARCH.list()[0]; return [LIB.some(m=>m.id==='shelf-orthodoxy'), a.status, a.kept.highlights.length, a.kept.highlights[0].noteOnly, a.kept.highlights[0].q.slice(0,30), a.kept.progress.pct, a.kept.bookmarks.length]; }));
   // finish flow: finish a book, leave reader -> prompt
@@ -70,7 +70,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await pg.fill('#arcReview','Loved the ending.');
   await pg.click('#sheet [data-act=star][data-v="5"]'); await sleep(450);
   console.log('review kept across rerender', await pg.evaluate(()=>[$('#arcReview').value, document.querySelectorAll('#sheet .stars [aria-pressed=true]').length]));
-  await pg.screenshot({path:'b10_finish.png'});
+  await pg.screenshot({path:__E.SCRATCH+'b10_finish.png'});
   await pg.click('#sheet [data-act=go]'); await sleep(800);
   console.log('archived finished', await pg.evaluate(()=>{ const a=ARCH.list()[0]; return [a.title, a.status, a.rating, a.review, !!a.finishedAt, LIB.some(m=>m.id==='shelf-gatsby')]; }));
   // keep option
@@ -82,7 +82,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await pg.click('#tabs [data-tab=settings]'); await sleep(300);
   console.log('archive list', await pg.evaluate(()=>[...document.querySelectorAll('#archSet [data-arch]')].map(b=>b.textContent)));
   await pg.click('#archSet [data-arch="1"]'); await sleep(500);
-  await pg.screenshot({path:'b10_archview.png'});
+  await pg.screenshot({path:__E.SCRATCH+'b10_archview.png'});
   await pg.click('#sheet [data-act=back]'); await sleep(600);
   console.log('added back', await pg.evaluate(()=>{ const m=LIB.find(x=>x.id==='shelf-orthodoxy'); return m&&[m.pending&&1, m.pos, m.highlights.length, m.highlights[0].note, m.bookmarks.length, ARCH.list().length]; }));
   // delete permanently

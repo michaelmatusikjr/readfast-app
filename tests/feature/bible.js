@@ -21,7 +21,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await pg.evaluate(()=>{ const m=LIB.find(x=>x.id==='shelf-gatsby'); }); 
   console.log('top', await pg.evaluate(()=>[...document.querySelectorAll('#docList > *')].slice(0,6).map(e=>e.classList.contains('grp')?'## '+e.textContent:e.querySelector('.t').textContent).join(' | ')));
   console.log('status chips', await pg.evaluate(()=>[...document.querySelectorAll('#libStatus button')].map(b=>b.textContent+(b.getAttribute('aria-pressed')==='true'?'*':''))));
-  await pg.screenshot({path:'lib_reading.png'});
+  await pg.screenshot({path:__E.SCRATCH+'lib_reading.png'});
   await pg.click('#libStatus [data-st=reading]'); await sleep(200);
   console.log('reading filter', await pg.evaluate(()=>[...document.querySelectorAll('#docList .doc .t')].map(e=>e.textContent)));
   await pg.click('#libStatus [data-st=done]'); await sleep(200);
