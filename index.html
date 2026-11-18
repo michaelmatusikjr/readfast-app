@@ -43,7 +43,7 @@ button{font:inherit;color:inherit}
 input,textarea,select{font:inherit;color:var(--ink)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 html{overflow:hidden}
-#app{position:fixed;inset:0;height:auto;display:flex;flex-direction:column}
+#app{position:fixed;inset:0;height:auto;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
 .view{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 24px}
 .wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
@@ -289,8 +289,8 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 #context span{cursor:pointer;border-radius:4px}
 #context span.cur{color:var(--page-ink);background:var(--accent-soft);font-weight:700}
 .pause-tools{display:flex;justify-content:center;gap:10px;min-height:40px}
-.pill{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:19px;border:1px solid var(--page-line);background:var(--page-bg);color:var(--page-ink);font-weight:700;font-size:.9rem;cursor:pointer}
-.pill svg{width:18px;height:18px}
+.speed-pill{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:19px;border:1px solid var(--page-line);background:var(--page-bg);color:var(--page-ink);font-weight:700;font-size:.9rem;cursor:pointer}
+.speed-pill svg{width:18px;height:18px}
 .scrub{display:flex;flex-direction:column;gap:2px;padding:0 8px}
 .scrub-meta{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:.74rem;color:var(--page-muted);font-variant-numeric:tabular-nums}
 input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
@@ -525,7 +525,6 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
       <button class="icon-btn" id="rBack" type="button" aria-label="Back to library"></button>
       <div class="title"><span id="rTitle"></span><span class="sub" id="rSub"></span></div>
       <button class="icon-btn" id="rSearch" type="button" aria-label="Search in this book"></button>
-      <button class="icon-btn" id="rNotes" type="button" aria-label="Highlights, notes and bookmarks"></button>
       <button class="icon-btn" id="rToc" type="button" aria-label="Contents, bookmarks and highlights"></button>
       <button class="icon-btn" id="rAa" type="button" aria-label="Reading options">Aa</button>
     </header>
@@ -546,8 +545,8 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
         </div>
         <div id="context" aria-label="Sentence in context"></div>
         <div class="pause-tools" id="pauseTools">
-          <button class="pill" id="defineBtn" type="button"></button>
-          <button class="pill" id="markBtn" type="button"></button>
+          <button class="speed-pill" id="defineBtn" type="button"></button>
+          <button class="speed-pill" id="markBtn" type="button"></button>
         </div>
         <div class="scrub">
           <input type="range" id="scrub" min="0" max="1" value="0" step="1" aria-label="Position in document">
@@ -3003,7 +3002,6 @@ function bindPanel(root){
 }
 $('#rAa').onclick=openPanel;
 $('#rToc').onclick=()=>openToc('toc');
-$('#rNotes').onclick=()=>openToc('hls');
 $('#rSearch').onclick=openSearch;
 $('#markBtn').onclick=()=>openToc('marks');
 /* night theme switch and phone light/dark changes */
@@ -5028,7 +5026,6 @@ function showView(v){
 }
 const TABS={library:['book','Library'], words:['note','Notes'], stats:['stats','Stats'], settings:['gear','Settings']};
 document.querySelectorAll('#tabs button').forEach(b=>{ const [ic,l]=TABS[b.dataset.tab]; b.innerHTML=ICON[ic]+l; b.onclick=()=>showView(b.dataset.tab); });
-$('#rBack').innerHTML=ICON.back; $('#rSearch').innerHTML=ICON.search; $('#rToc').innerHTML=ICON.toc; $('#rNotes').innerHTML=ICON.note; $('#rMark').innerHTML=ICON.mark; $('#rTts').innerHTML=ICON.speaker;
 $('#bSent').innerHTML=ICON.bsent; $('#bWord').innerHTML=ICON.back; $('#fWord').innerHTML=ICON.fwd; $('#fSent').innerHTML=ICON.fsent;
 $('#wpmDown').innerHTML=ICON.minus; $('#wpmUp').innerHTML=ICON.plus; $('#asDown').innerHTML=ICON.minus; $('#asUp').innerHTML=ICON.plus; $('#asPlay').innerHTML=ICON.play;
 $('#defineBtn').innerHTML=ICON.define+'Define'; $('#markBtn').innerHTML=ICON.mark+'Bookmarks';
