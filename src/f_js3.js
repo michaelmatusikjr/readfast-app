@@ -1,4 +1,15 @@
 
+/* early icon assignment so buttons are never blank */
+(function setEarlyIcons(){
+  try{
+    if(typeof ICON==='undefined') return;
+    const sb=document.getElementById('sortBtn'); if(sb) sb.innerHTML=ICON.sort||'↕';
+    const fb=document.getElementById('filterBtn'); if(fb) fb.innerHTML=ICON.filter||'☰';
+    const ab=document.getElementById('addBtn'); if(ab && !ab.textContent.trim()) ab.innerHTML=(ICON.plus||'+')+' Add to library';
+  }catch(e){}
+})();
+
+
 /* ---------- define + word list ---------- */
 /*@@OLD:1151-1250@@*/
 

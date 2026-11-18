@@ -496,7 +496,7 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.15</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.16</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -3735,7 +3735,7 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.15-reimagine';
+const APP_VERSION='2026.11.18.16-reimagine';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
@@ -4013,6 +4013,17 @@ function yearHTML(st, met){
   }, true);
   // Show chrome briefly on open
   setTimeout(showChrome, 400);
+})();
+
+
+/* early icon assignment so buttons are never blank */
+(function setEarlyIcons(){
+  try{
+    if(typeof ICON==='undefined') return;
+    const sb=document.getElementById('sortBtn'); if(sb) sb.innerHTML=ICON.sort||'↕';
+    const fb=document.getElementById('filterBtn'); if(fb) fb.innerHTML=ICON.filter||'☰';
+    const ab=document.getElementById('addBtn'); if(ab && !ab.textContent.trim()) ab.innerHTML=(ICON.plus||'+')+' Add to library';
+  }catch(e){}
 })();
 
 
