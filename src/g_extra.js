@@ -1,5 +1,5 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.11';
+const APP_VERSION='2026.11.18.12-reimagine';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
@@ -246,4 +246,35 @@ function yearHTML(st, met){
   b.addEventListener('pointermove', move);
   b.addEventListener('pointerup', up);
   b.addEventListener('pointercancel', up);
+})();
+
+
+/* === REIMAGINE PROTOTYPE === */
+(function(){
+  const v = document.getElementById('v-reader');
+  if(!v) return;
+  v.classList.add('reimagine');
+  let hideTimer = null;
+  function showChrome(){
+    v.classList.add('chrome-on');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(()=>v.classList.remove('chrome-on'), 3200);
+  }
+  // Center-tap zone (middle 40% of the stage)
+  document.addEventListener('click', function(e){
+    if(v.hidden) return;
+    const stage = document.getElementById('stage') || document.getElementById('scrollView') || document.getElementById('speedView');
+    if(!stage || !stage.contains(e.target)) return;
+    const r = stage.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const midX = r.width * 0.3 < x && x < r.width * 0.7;
+    const midY = r.height * 0.3 < y && y < r.height * 0.7;
+    if(midX && midY){
+      e.stopPropagation();
+      if(v.classList.contains('chrome-on')) v.classList.remove('chrome-on');
+      else showChrome();
+    }
+  }, true);
+  // Show chrome briefly on open
+  setTimeout(showChrome, 400);
 })();

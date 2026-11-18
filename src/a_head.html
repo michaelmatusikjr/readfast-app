@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
+
+/* === REIMAGINE PROTOTYPE: bare reading surface === */
+#v-reader.reimagine #rTop,
+#v-reader.reimagine #rFoot { opacity:0; pointer-events:none; transition:opacity .25s; }
+#v-reader.reimagine.chrome-on #rTop,
+#v-reader.reimagine.chrome-on #rFoot { opacity:1; pointer-events:auto; }
+#v-reader.reimagine .run { display:none; }
+#v-reader.reimagine #speedView { padding-top: env(safe-area-inset-top, 0px); }
+
 </style>
 <title>Tooz eReader</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -474,5 +483,14 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 /* phones: Tooz does its own selection in a book, so the phone's selection and menu stay off */
 @media (hover:none),(pointer:coarse){ #pagesView,#pagesView *,#scFlow,#scFlow *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important} }
+
+/* === REIMAGINE PROTOTYPE: bare reading surface === */
+#v-reader.reimagine #rTop,
+#v-reader.reimagine #rFoot { opacity:0; pointer-events:none; transition:opacity .25s; }
+#v-reader.reimagine.chrome-on #rTop,
+#v-reader.reimagine.chrome-on #rFoot { opacity:1; pointer-events:auto; }
+#v-reader.reimagine .run { display:none; }
+#v-reader.reimagine #speedView { padding-top: env(safe-area-inset-top, 0px); }
+
 </style>
 </head>

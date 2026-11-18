@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
+
+/* === REIMAGINE PROTOTYPE: bare reading surface === */
+#v-reader.reimagine #rTop,
+#v-reader.reimagine #rFoot { opacity:0; pointer-events:none; transition:opacity .25s; }
+#v-reader.reimagine.chrome-on #rTop,
+#v-reader.reimagine.chrome-on #rFoot { opacity:1; pointer-events:auto; }
+#v-reader.reimagine .run { display:none; }
+#v-reader.reimagine #speedView { padding-top: env(safe-area-inset-top, 0px); }
+
 </style>
 <title>Tooz eReader</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -474,6 +483,15 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 /* phones: Tooz does its own selection in a book, so the phone's selection and menu stay off */
 @media (hover:none),(pointer:coarse){ #pagesView,#pagesView *,#scFlow,#scFlow *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important} }
+
+/* === REIMAGINE PROTOTYPE: bare reading surface === */
+#v-reader.reimagine #rTop,
+#v-reader.reimagine #rFoot { opacity:0; pointer-events:none; transition:opacity .25s; }
+#v-reader.reimagine.chrome-on #rTop,
+#v-reader.reimagine.chrome-on #rFoot { opacity:1; pointer-events:auto; }
+#v-reader.reimagine .run { display:none; }
+#v-reader.reimagine #speedView { padding-top: env(safe-area-inset-top, 0px); }
+
 </style>
 </head>
 
@@ -3716,7 +3734,7 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.11';
+const APP_VERSION='2026.11.18.12-reimagine';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
@@ -3963,6 +3981,37 @@ function yearHTML(st, met){
   b.addEventListener('pointermove', move);
   b.addEventListener('pointerup', up);
   b.addEventListener('pointercancel', up);
+})();
+
+
+/* === REIMAGINE PROTOTYPE === */
+(function(){
+  const v = document.getElementById('v-reader');
+  if(!v) return;
+  v.classList.add('reimagine');
+  let hideTimer = null;
+  function showChrome(){
+    v.classList.add('chrome-on');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(()=>v.classList.remove('chrome-on'), 3200);
+  }
+  // Center-tap zone (middle 40% of the stage)
+  document.addEventListener('click', function(e){
+    if(v.hidden) return;
+    const stage = document.getElementById('stage') || document.getElementById('scrollView') || document.getElementById('speedView');
+    if(!stage || !stage.contains(e.target)) return;
+    const r = stage.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const midX = r.width * 0.3 < x && x < r.width * 0.7;
+    const midY = r.height * 0.3 < y && y < r.height * 0.7;
+    if(midX && midY){
+      e.stopPropagation();
+      if(v.classList.contains('chrome-on')) v.classList.remove('chrome-on');
+      else showChrome();
+    }
+  }, true);
+  // Show chrome briefly on open
+  setTimeout(showChrome, 400);
 })();
 
 
