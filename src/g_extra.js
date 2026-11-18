@@ -1,6 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.1';
+const APP_VERSION='2026.11.18.2';
 const WHATSNEW=[
+  ['Update banner','When a new version is ready, a blue “Update available — Reload” bar appears at the bottom so you can pick it up immediately.'],
   ['Preview badge','A small version number now sits in the top-right corner so you can tell when the app has updated. Drag it out of the way; tap it to see what’s new (newest first).'],
   ['Where you left off, in Scroll','Whenever you leave a book in Scroll mode, even for a moment, the page shows a tear when you come back: what you’d read sits above it, marked Previously read, and the tear is in the middle of the screen so you can pick up right below it.'],
   ['One pause for an ellipsis','Three dots in a row (..., . . . or …) are read as a single pause instead of three.'],
