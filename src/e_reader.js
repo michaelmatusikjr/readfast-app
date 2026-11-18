@@ -589,7 +589,7 @@ function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor=
 function holdPlace(){ if(R.mode && R.meta && R.anchor==null && R.mode!=='speed') R.anchor = R.mode==='pages' && P.topWord!=null && P.k>=0 ? P.topWord : R.pos; }
 /* iPhone can leave the whole app scrolled up after a rotation, hiding the top bar */
 function pinApp(){ if(window.scrollY || document.documentElement.scrollTop || document.body.scrollTop){ window.scrollTo(0,0); document.documentElement.scrollTop=0; document.body.scrollTop=0; } }
-window.addEventListener('resize', ()=>{ holdPlace(); pinApp(); relayoutSoon(); });
+window.addEventListener('resize', ()=>{ holdPlace(); pinApp(); relayoutSoon(); fitAaSheetForWord(); });
 window.addEventListener('orientationchange', ()=>{ holdPlace(); relayoutSoon(); setTimeout(()=>{ pinApp(); relayoutSoon(); }, 500); });
 window.addEventListener('scroll', pinApp, {passive:true});
 try{ let rbSize=''; new ResizeObserver(()=>{ const rb=document.getElementById('rBody'); if(!rb) return; const k=rb.clientWidth+'x'+rb.clientHeight; if(k!==rbSize){ const prev=rbSize; rbSize=k; if(prev && !/^0x|x0$/.test(prev) && !/^0x|x0$/.test(k)){ holdPlace(); relayoutSoon(); } } }).observe(document.getElementById('rBody')); }catch(e){}
@@ -1231,7 +1231,7 @@ $('#spOpts').onclick=openSpeedOpts;
 
 /* ---------- reading options panel (Aa) ---------- */
 const FMT={ lineH:v=>(+v).toFixed(2), dim:v=>v+'%', warmth:v=>v+'%', scrollWpm:v=>v+' wpm', wpm:v=>v+' wpm', rampSecs:v=>v+' sec', charBudget:v=>v+' letters',
-  commaPause:v=>(+v).toFixed(1)+'×', sentPause:v=>(+v).toFixed(1)+'×', paraPause:v=>(+v).toFixed(1)+'×', autoRewind:v=>+v?v+' words':'Off', speedSize:v=>v+' pt', ttsRate:v=>(+v).toFixed(2)+'×', size:v=>v+' px' };
+  commaPause:v=>(+v).toFixed(1)+'×', sentPause:v=>(+v).toFixed(1)+'×', paraPause:v=>(+v).toFixed(1)+'×', autoRewind:v=>+v?v+' words':'Off', speedSize:v=>v+' px', ttsRate:v=>(+v).toFixed(2)+'×', size:v=>v+' px' };
 const LAYOUT_KEYS=new Set(['font','size','lineH','margin','para','justify','hyphen','boldText','wordStart','twoCol']);
 const REPANEL_KEYS=new Set(['mode','autoScroll','nightAuto','ramp','multi']);
 const pRange=(key,label,min,max,step,desc)=>`<div class="set"><div class="hd"><label for="o_${key}">${label}</label><span class="val" data-val="${key}">${FMT[key]?FMT[key](S[key]):S[key]}</span></div><input type="range" id="o_${key}" data-set="${key}" data-type="range" min="${min}" max="${max}" step="${step}" value="${S[key]}">${desc?`<div class="desc">${desc}</div>`:''}</div>`;
@@ -1352,6 +1352,20 @@ function openPanel(){
   openSheet('Reading options', panelHTML(), READ_ACTS, 'short');
   $('#sheet .sheet-body').dataset.aa='1';
   bindPanel();
+  requestAnimationFrame(fitAaSheetForWord);
+}
+/* Keep the Speed word box in the gap above the Aa sheet so size changes stay visible. */
+function fitAaSheetForWord(){
+  const sh=$('#sheet'); if(!sh) return;
+  const aa=sh.querySelector('.sheet-body[data-aa="1"]');
+  if(sh.hidden || !aa || R.mode!=='speed' || $('#v-reader').hidden){
+    if(sh.style.maxHeight) sh.style.maxHeight='';
+    return;
+  }
+  const word=$('#word'); if(!word) return;
+  const wr=word.getBoundingClientRect();
+  const room=Math.max(240, Math.round(window.innerHeight - wr.bottom - 16));
+  sh.style.maxHeight=room+'px';
 }
 /* re-draw whichever reading controls are on screen (the Aa menu, the Settings page section) */
 function refreshPanel(){
@@ -1377,7 +1391,7 @@ function resetReading(){
 }
 function afterSet(key){
   saveSettings();
-  if(key==='mode'){ refreshPanel(); switchMode(S.mode).then(refreshPanel); return; }
+  if(key==='mode'){ refreshPanel(); switchMode(S.mode).then(()=>{ refreshPanel(); fitAaSheetForWord(); }); return; }
   if(key==='wpm') setWpm(S.wpm);
   if(key==='scrollWpm'||key==='autoScroll'){ if(!S.autoScroll && SC.auto) asStop(true); asUI(); }
   if(key==='focus') setChrome(true);
@@ -1387,6 +1401,7 @@ function afterSet(key){
   if((key==='pipVoice'||key==='ttsVoice') && TTS.on){ clearTimeout(TTS.restartT); TTS.restartT=setTimeout(()=>{ if(TTS.on) ttsRestart(); },400); }
   applyLook();
   if(key==='speedSize'||key==='focusColor'||key==='boldText'){ if(R.mode==='speed') showChunk(R.pos); }
+  requestAnimationFrame(fitAaSheetForWord);
   if((key==='font'||key==='speedFont') && R.mode==='speed'){ document.fonts&&document.fonts.ready.then(()=>{ if(R.mode==='speed'){ showChunk(R.pos); syncScroll(true); } }); }
   if(key==='context' && R.mode==='speed') renderContext();
   if(LAYOUT_KEYS.has(key) && R.mode!=='speed') relayoutSoon();

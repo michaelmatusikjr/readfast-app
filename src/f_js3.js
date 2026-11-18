@@ -1105,11 +1105,11 @@ let sheetActs={}, sheetAt=0;
 const ghost=()=>performance.now()-sheetAt<420;
 function openSheet(title, body, acts, cls){
   sheetActs=acts||{}; selHide(); sheetAt=performance.now();
-  const sh=$('#sheet'); sh.className=cls||'';
+  const sh=$('#sheet'); sh.className=cls||''; sh.style.maxHeight='';
   sh.innerHTML=`<div class="grab"></div><div class="sheet-head"><h2>${esc(title)}</h2><button class="icon-btn" type="button" data-act="__close" aria-label="Close">${ICON.close}</button></div><div class="sheet-body">${body}</div>`;
   sh.hidden=false; const bd=$('#backdrop'); bd.className=cls&&cls.includes('short')?'light':''; bd.hidden=false;
 }
-function closeSheet(){ $('#sheet').hidden=true; $('#backdrop').hidden=true; sheetActs={}; }
+function closeSheet(){ const sh=$('#sheet'); sh.hidden=true; sh.style.maxHeight=''; $('#backdrop').hidden=true; sheetActs={}; }
 $('#sheet').addEventListener('click',e=>{ if(ghost()){ e.preventDefault(); return; } const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act; if(a==='__close'){ closeSheet(); return; } const fn=sheetActs[a]; if(fn) fn(b,e); });
 $('#backdrop').onclick=()=>{ if(!ghost()) closeSheet(); };
 document.addEventListener('keydown',e=>{
@@ -1223,6 +1223,28 @@ function touch(m){ m.mod=Date.now(); Store.put('meta',m).catch(()=>{}); }
 function fetchText(meta){ if(meta.kind!=='sample') return null; return sampleText(meta.id, sampleDoc()); }
 
 /* ---------- boot ---------- */
+const SW_HAD_CONTROLLER=!!(navigator.serviceWorker&&navigator.serviceWorker.controller);
+function shouldShowSwUpdate(hadController, runningVersion, waitingVersion){
+  if(!hadController) return false;
+  if(!waitingVersion || waitingVersion===runningVersion) return false;
+  return true;
+}
+function askSwVersion(worker){
+  return new Promise(resolve=>{
+    if(!worker) return resolve(null);
+    const ch=new MessageChannel();
+    const t=setTimeout(()=>resolve(null), 800);
+    ch.port1.onmessage=e=>{ clearTimeout(t); resolve((e.data&&e.data.version)||null); };
+    try{ worker.postMessage({type:'version'},[ch.port2]); }
+    catch(err){ clearTimeout(t); resolve(null); }
+  });
+}
+async function maybeShowSwUpdate(worker){
+  if($('#swUpdate') || sessionStorage.getItem('rf.swUpdateDismissed')) return;
+  const ver=await askSwVersion(worker);
+  if(!shouldShowSwUpdate(SW_HAD_CONTROLLER, APP_VERSION, ver)) return;
+  showSwUpdate();
+}
 function positionSwUpdate(){
   const bar=$('#swUpdate'); if(!bar) return;
   const tabs=$('#tabs');
@@ -1234,7 +1256,12 @@ function showSwUpdate(){
   bar.id='swUpdate';
   bar.setAttribute('role','status');
   bar.innerHTML='<span>Update available</span><div class="sw-actions"><button type="button" class="sw-reload">Reload</button><button type="button" class="sw-dismiss" aria-label="Dismiss update notice">'+(ICON.close||'×')+'</button></div>';
-  bar.querySelector('.sw-reload').onclick=()=>location.reload();
+  bar.querySelector('.sw-reload').onclick=()=>{
+    navigator.serviceWorker.getRegistration().then(reg=>{
+      if(reg&&reg.waiting) try{ reg.waiting.postMessage({type:'skipWaiting'}); }catch(e){}
+      location.reload();
+    }).catch(()=>location.reload());
+  };
   bar.querySelector('.sw-dismiss').onclick=()=>{ try{ sessionStorage.setItem('rf.swUpdateDismissed','1'); }catch(e){} bar.remove(); };
   document.body.appendChild(bar);
   positionSwUpdate();
@@ -1257,12 +1284,12 @@ async function boot(){
   try{
   if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){
     navigator.serviceWorker.register('sw.js').then(reg=>{
-      if(reg.waiting) showSwUpdate();
+      if(reg.waiting) maybeShowSwUpdate(reg.waiting);
       reg.addEventListener('updatefound',()=>{
         const nw=reg.installing;
         if(!nw) return;
         nw.addEventListener('statechange',()=>{
-          if(nw.state==='installed' && navigator.serviceWorker.controller) showSwUpdate();
+          if(nw.state==='installed') maybeShowSwUpdate(nw);
         });
       });
     }).catch(()=>{});

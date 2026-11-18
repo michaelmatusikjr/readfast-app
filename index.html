@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
+<style>:root{color-scheme:light;box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
 
 </style>
 <title>Tooz eReader</title>
@@ -45,6 +45,8 @@ input,textarea,select{font:inherit;color:var(--ink)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 html{overflow:hidden}
 #app{position:fixed;inset:0;height:auto;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+/* Reader is full-bleed: the header, not #app, clears the notch, so the top inset is not applied twice. */
+#app:has(#v-reader:not([hidden])){padding-top:0}
 .view{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 24px}
 .wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
@@ -166,7 +168,7 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #v-reader{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;background:var(--page-bg);color:var(--page-ink)}
 .rchrome{flex:none;transition:opacity .2s ease;background:var(--page-bg);position:relative;z-index:5}
 #v-reader.chrome-off .rchrome{opacity:0;pointer-events:none}
-#rTop{display:flex;align-items:center;gap:0;padding:2px max(4px,env(safe-area-inset-right,0px)) 2px max(4px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--page-line)}
+#rTop{display:flex;align-items:center;gap:0;padding:max(2px,env(safe-area-inset-top,0px)) max(4px,env(safe-area-inset-right,0px)) 2px max(4px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--page-line)}
 #rTop .title{flex:1;min-width:0;text-align:center;font-weight:700;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;line-height:1.25}
 #rTop .sub{display:block;font-weight:400;font-size:.75rem;color:var(--page-muted);overflow:hidden;text-overflow:ellipsis}
 #rAa{font-family:Georgia,serif;font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
@@ -180,7 +182,7 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #rMark.on{color:var(--page-link)}
 #rTts.on{color:var(--page-link)}
 .run{position:absolute;left:0;right:0;z-index:4;text-align:center;font-size:.72rem;color:var(--page-muted);opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 56px;font-variant-numeric:tabular-nums}
-#runHead{top:16px}
+#runHead{top:calc(16px + env(safe-area-inset-top,0px))}
 #runFoot{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
 #v-reader input[type=range]{accent-color:var(--page-link)}
 #v-reader.chrome-off .run{opacity:1}
@@ -274,8 +276,8 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
 #v-reader.overlay:not([data-mode="speed"]) .rchrome{position:absolute;left:0;right:0}
 #v-reader.overlay:not([data-mode="speed"]) #rTop{top:0}
 #v-reader.overlay:not([data-mode="speed"]) #rFoot{bottom:0}
-#v-reader.overlay #pgClip{top:50px;bottom:46px}
-#v-reader.overlay #scrollView{top:48px;bottom:46px}
+#v-reader.overlay #pgClip{top:calc(50px + env(safe-area-inset-top,0px));bottom:46px}
+#v-reader.overlay #scrollView{top:calc(48px + env(safe-area-inset-top,0px));bottom:46px}
 #pgFlow.anim-slide{transition:transform .28s cubic-bezier(.3,.6,.2,1)}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
 /* Scroll */
@@ -540,6 +542,7 @@ body:has(#v-reader:not([hidden])) #verBadge{display:none}
 #swUpdate{position:fixed;left:12px;right:12px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:15;background:#1d4ed8;color:#fff;padding:12px 16px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 15px/1.3 system-ui,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.25)}
 body:not(:has(#tabs[hidden])) #swUpdate{bottom:calc(56px + max(6px, env(safe-area-inset-bottom, 0px)) + 8px)}
 body:has(#sheet:not([hidden])) #swUpdate{display:none}
+body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #swUpdate .sw-actions{display:flex;align-items:center;gap:8px;flex:none}
 #swUpdate .sw-reload{background:#fff;color:#1d4ed8;border:0;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;min-height:44px}
 #swUpdate .sw-dismiss{background:transparent;color:#fff;border:0;width:44px;height:44px;padding:0;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
@@ -549,7 +552,7 @@ body:has(#sheet:not([hidden])) #swUpdate{display:none}
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.24</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.25</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -1516,7 +1519,7 @@ function renderWord(text, target){
   t.l.textContent=text.slice(0,p); t.p.textContent=text[p]||''; t.r.textContent=text.slice(p+1);
   t.box.style.fontSize='';
   const half=t.box.clientWidth/2-6; const need=Math.max(t.l.offsetWidth,t.r.offsetWidth)+t.p.offsetWidth/2;
-  if(need>half&&half>0){ t.box.style.fontSize=Math.max(14,Math.floor(S.fontSize*half/need))+'px'; }
+  if(need>half&&half>0){ t.box.style.fontSize=Math.max(14,Math.floor((S.speedSize||S.size||44)*half/need))+'px'; }
 }
 function buildScrollText(){
   if(!R.words) return;
@@ -2284,7 +2287,7 @@ function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor=
 function holdPlace(){ if(R.mode && R.meta && R.anchor==null && R.mode!=='speed') R.anchor = R.mode==='pages' && P.topWord!=null && P.k>=0 ? P.topWord : R.pos; }
 /* iPhone can leave the whole app scrolled up after a rotation, hiding the top bar */
 function pinApp(){ if(window.scrollY || document.documentElement.scrollTop || document.body.scrollTop){ window.scrollTo(0,0); document.documentElement.scrollTop=0; document.body.scrollTop=0; } }
-window.addEventListener('resize', ()=>{ holdPlace(); pinApp(); relayoutSoon(); });
+window.addEventListener('resize', ()=>{ holdPlace(); pinApp(); relayoutSoon(); fitAaSheetForWord(); });
 window.addEventListener('orientationchange', ()=>{ holdPlace(); relayoutSoon(); setTimeout(()=>{ pinApp(); relayoutSoon(); }, 500); });
 window.addEventListener('scroll', pinApp, {passive:true});
 try{ let rbSize=''; new ResizeObserver(()=>{ const rb=document.getElementById('rBody'); if(!rb) return; const k=rb.clientWidth+'x'+rb.clientHeight; if(k!==rbSize){ const prev=rbSize; rbSize=k; if(prev && !/^0x|x0$/.test(prev) && !/^0x|x0$/.test(k)){ holdPlace(); relayoutSoon(); } } }).observe(document.getElementById('rBody')); }catch(e){}
@@ -2926,7 +2929,7 @@ $('#spOpts').onclick=openSpeedOpts;
 
 /* ---------- reading options panel (Aa) ---------- */
 const FMT={ lineH:v=>(+v).toFixed(2), dim:v=>v+'%', warmth:v=>v+'%', scrollWpm:v=>v+' wpm', wpm:v=>v+' wpm', rampSecs:v=>v+' sec', charBudget:v=>v+' letters',
-  commaPause:v=>(+v).toFixed(1)+'×', sentPause:v=>(+v).toFixed(1)+'×', paraPause:v=>(+v).toFixed(1)+'×', autoRewind:v=>+v?v+' words':'Off', speedSize:v=>v+' pt', ttsRate:v=>(+v).toFixed(2)+'×', size:v=>v+' px' };
+  commaPause:v=>(+v).toFixed(1)+'×', sentPause:v=>(+v).toFixed(1)+'×', paraPause:v=>(+v).toFixed(1)+'×', autoRewind:v=>+v?v+' words':'Off', speedSize:v=>v+' px', ttsRate:v=>(+v).toFixed(2)+'×', size:v=>v+' px' };
 const LAYOUT_KEYS=new Set(['font','size','lineH','margin','para','justify','hyphen','boldText','wordStart','twoCol']);
 const REPANEL_KEYS=new Set(['mode','autoScroll','nightAuto','ramp','multi']);
 const pRange=(key,label,min,max,step,desc)=>`<div class="set"><div class="hd"><label for="o_${key}">${label}</label><span class="val" data-val="${key}">${FMT[key]?FMT[key](S[key]):S[key]}</span></div><input type="range" id="o_${key}" data-set="${key}" data-type="range" min="${min}" max="${max}" step="${step}" value="${S[key]}">${desc?`<div class="desc">${desc}</div>`:''}</div>`;
@@ -3047,6 +3050,20 @@ function openPanel(){
   openSheet('Reading options', panelHTML(), READ_ACTS, 'short');
   $('#sheet .sheet-body').dataset.aa='1';
   bindPanel();
+  requestAnimationFrame(fitAaSheetForWord);
+}
+/* Keep the Speed word box in the gap above the Aa sheet so size changes stay visible. */
+function fitAaSheetForWord(){
+  const sh=$('#sheet'); if(!sh) return;
+  const aa=sh.querySelector('.sheet-body[data-aa="1"]');
+  if(sh.hidden || !aa || R.mode!=='speed' || $('#v-reader').hidden){
+    if(sh.style.maxHeight) sh.style.maxHeight='';
+    return;
+  }
+  const word=$('#word'); if(!word) return;
+  const wr=word.getBoundingClientRect();
+  const room=Math.max(240, Math.round(window.innerHeight - wr.bottom - 16));
+  sh.style.maxHeight=room+'px';
 }
 /* re-draw whichever reading controls are on screen (the Aa menu, the Settings page section) */
 function refreshPanel(){
@@ -3072,7 +3089,7 @@ function resetReading(){
 }
 function afterSet(key){
   saveSettings();
-  if(key==='mode'){ refreshPanel(); switchMode(S.mode).then(refreshPanel); return; }
+  if(key==='mode'){ refreshPanel(); switchMode(S.mode).then(()=>{ refreshPanel(); fitAaSheetForWord(); }); return; }
   if(key==='wpm') setWpm(S.wpm);
   if(key==='scrollWpm'||key==='autoScroll'){ if(!S.autoScroll && SC.auto) asStop(true); asUI(); }
   if(key==='focus') setChrome(true);
@@ -3082,6 +3099,7 @@ function afterSet(key){
   if((key==='pipVoice'||key==='ttsVoice') && TTS.on){ clearTimeout(TTS.restartT); TTS.restartT=setTimeout(()=>{ if(TTS.on) ttsRestart(); },400); }
   applyLook();
   if(key==='speedSize'||key==='focusColor'||key==='boldText'){ if(R.mode==='speed') showChunk(R.pos); }
+  requestAnimationFrame(fitAaSheetForWord);
   if((key==='font'||key==='speedFont') && R.mode==='speed'){ document.fonts&&document.fonts.ready.then(()=>{ if(R.mode==='speed'){ showChunk(R.pos); syncScroll(true); } }); }
   if(key==='context' && R.mode==='speed') renderContext();
   if(LAYOUT_KEYS.has(key) && R.mode!=='speed') relayoutSoon();
@@ -3819,9 +3837,11 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.24-quiet-speed';
+const APP_VERSION='2026.11.18.25-safe-top';
 const WHATSNEW=[
-  ['Quieter Speed mode','While a word is playing, the bars and buttons fade so the word stays in focus. Tap or move to bring them back for a moment; they return fully when you pause.']
+  ['Reader header clears the status bar','In a book, the top bar now sits below the iPhone notch or status bar. The bar’s background fills the inset, so there isn’t an extra gap above it.'],
+  ['Update notice only when needed','The blue “Update available” bar now appears only when a newer version is actually waiting, and it stays off the page while you are in a book.'],
+  ['Word size stays in pixels','In Speed mode, the Aa word-size stepper keeps using px, and the current word stays visible in its box while the Aa sheet is open.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -5207,11 +5227,11 @@ let sheetActs={}, sheetAt=0;
 const ghost=()=>performance.now()-sheetAt<420;
 function openSheet(title, body, acts, cls){
   sheetActs=acts||{}; selHide(); sheetAt=performance.now();
-  const sh=$('#sheet'); sh.className=cls||'';
+  const sh=$('#sheet'); sh.className=cls||''; sh.style.maxHeight='';
   sh.innerHTML=`<div class="grab"></div><div class="sheet-head"><h2>${esc(title)}</h2><button class="icon-btn" type="button" data-act="__close" aria-label="Close">${ICON.close}</button></div><div class="sheet-body">${body}</div>`;
   sh.hidden=false; const bd=$('#backdrop'); bd.className=cls&&cls.includes('short')?'light':''; bd.hidden=false;
 }
-function closeSheet(){ $('#sheet').hidden=true; $('#backdrop').hidden=true; sheetActs={}; }
+function closeSheet(){ const sh=$('#sheet'); sh.hidden=true; sh.style.maxHeight=''; $('#backdrop').hidden=true; sheetActs={}; }
 $('#sheet').addEventListener('click',e=>{ if(ghost()){ e.preventDefault(); return; } const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act; if(a==='__close'){ closeSheet(); return; } const fn=sheetActs[a]; if(fn) fn(b,e); });
 $('#backdrop').onclick=()=>{ if(!ghost()) closeSheet(); };
 document.addEventListener('keydown',e=>{
@@ -5325,6 +5345,28 @@ function touch(m){ m.mod=Date.now(); Store.put('meta',m).catch(()=>{}); }
 function fetchText(meta){ if(meta.kind!=='sample') return null; return sampleText(meta.id, sampleDoc()); }
 
 /* ---------- boot ---------- */
+const SW_HAD_CONTROLLER=!!(navigator.serviceWorker&&navigator.serviceWorker.controller);
+function shouldShowSwUpdate(hadController, runningVersion, waitingVersion){
+  if(!hadController) return false;
+  if(!waitingVersion || waitingVersion===runningVersion) return false;
+  return true;
+}
+function askSwVersion(worker){
+  return new Promise(resolve=>{
+    if(!worker) return resolve(null);
+    const ch=new MessageChannel();
+    const t=setTimeout(()=>resolve(null), 800);
+    ch.port1.onmessage=e=>{ clearTimeout(t); resolve((e.data&&e.data.version)||null); };
+    try{ worker.postMessage({type:'version'},[ch.port2]); }
+    catch(err){ clearTimeout(t); resolve(null); }
+  });
+}
+async function maybeShowSwUpdate(worker){
+  if($('#swUpdate') || sessionStorage.getItem('rf.swUpdateDismissed')) return;
+  const ver=await askSwVersion(worker);
+  if(!shouldShowSwUpdate(SW_HAD_CONTROLLER, APP_VERSION, ver)) return;
+  showSwUpdate();
+}
 function positionSwUpdate(){
   const bar=$('#swUpdate'); if(!bar) return;
   const tabs=$('#tabs');
@@ -5336,7 +5378,12 @@ function showSwUpdate(){
   bar.id='swUpdate';
   bar.setAttribute('role','status');
   bar.innerHTML='<span>Update available</span><div class="sw-actions"><button type="button" class="sw-reload">Reload</button><button type="button" class="sw-dismiss" aria-label="Dismiss update notice">'+(ICON.close||'×')+'</button></div>';
-  bar.querySelector('.sw-reload').onclick=()=>location.reload();
+  bar.querySelector('.sw-reload').onclick=()=>{
+    navigator.serviceWorker.getRegistration().then(reg=>{
+      if(reg&&reg.waiting) try{ reg.waiting.postMessage({type:'skipWaiting'}); }catch(e){}
+      location.reload();
+    }).catch(()=>location.reload());
+  };
   bar.querySelector('.sw-dismiss').onclick=()=>{ try{ sessionStorage.setItem('rf.swUpdateDismissed','1'); }catch(e){} bar.remove(); };
   document.body.appendChild(bar);
   positionSwUpdate();
@@ -5359,12 +5406,12 @@ async function boot(){
   try{
   if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){
     navigator.serviceWorker.register('sw.js').then(reg=>{
-      if(reg.waiting) showSwUpdate();
+      if(reg.waiting) maybeShowSwUpdate(reg.waiting);
       reg.addEventListener('updatefound',()=>{
         const nw=reg.installing;
         if(!nw) return;
         nw.addEventListener('statechange',()=>{
-          if(nw.state==='installed' && navigator.serviceWorker.controller) showSwUpdate();
+          if(nw.state==='installed') maybeShowSwUpdate(nw);
         });
       });
     }).catch(()=>{});

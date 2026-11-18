@@ -906,7 +906,7 @@ function renderWord(text, target){
   t.l.textContent=text.slice(0,p); t.p.textContent=text[p]||''; t.r.textContent=text.slice(p+1);
   t.box.style.fontSize='';
   const half=t.box.clientWidth/2-6; const need=Math.max(t.l.offsetWidth,t.r.offsetWidth)+t.p.offsetWidth/2;
-  if(need>half&&half>0){ t.box.style.fontSize=Math.max(14,Math.floor(S.fontSize*half/need))+'px'; }
+  if(need>half&&half>0){ t.box.style.fontSize=Math.max(14,Math.floor((S.speedSize||S.size||44)*half/need))+'px'; }
 }
 
 function buildScrollText(){

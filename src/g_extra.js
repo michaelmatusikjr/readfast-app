@@ -1,7 +1,9 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.24-quiet-speed';
+const APP_VERSION='2026.11.18.25-safe-top';
 const WHATSNEW=[
-  ['Quieter Speed mode','While a word is playing, the bars and buttons fade so the word stays in focus. Tap or move to bring them back for a moment; they return fully when you pause.']
+  ['Reader header clears the status bar','In a book, the top bar now sits below the iPhone notch or status bar. The bar’s background fills the inset, so there isn’t an extra gap above it.'],
+  ['Update notice only when needed','The blue “Update available” bar now appears only when a newer version is actually waiting, and it stays off the page while you are in a book.'],
+  ['Word size stays in pixels','In Speed mode, the Aa word-size stepper keeps using px, and the current word stays visible in its box while the Aa sheet is open.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
