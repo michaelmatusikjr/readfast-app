@@ -220,6 +220,7 @@ function tourDemoPages(show){
   const td=$('#tourDots'); if(td) td.style.bottom='';
   const p2=$('#tourPageB'); if(p2) p2.hidden=true;
   const p1=$('#tourPageA'); if(p1) p1.hidden=false;
+  const hold=$('#tourHoldWord'); if(hold) hold.classList.remove('sel');
 }
 
 function tourFocusSkip(){
@@ -365,10 +366,16 @@ async function tourRunStep(n){
   }
 
   if(n===5){
+    /* Speed has no pill: leave the Speed demo and show a Pages spread before the pill appears. */
     tourDemoPages(true);
     document.querySelectorAll('#tourDemo .tour-pulse, #tourTocIcon.tour-pulse').forEach(el=>el.classList.remove('tour-pulse'));
-    const d=tourDemo(); if(d) d.classList.add('chrome-off');
-    const a=$('#tourPageA'), b=$('#tourPageB'); if(a) a.hidden=true; if(b) b.hidden=true;
+    const d=tourDemo();
+    if(d){ d.setAttribute('data-mode','pages'); d.classList.remove('speed-on','chrome-off'); }
+    const word=$('#tourSpeedWord'); if(word){ word.hidden=true; word.classList.remove('flash'); }
+    const chrome=$('#tourDemoTop'); if(chrome) chrome.classList.remove('away');
+    const a=$('#tourPageA'), b=$('#tourPageB');
+    if(a){ a.hidden=false; a.classList.remove('turn'); }
+    if(b){ b.hidden=true; b.classList.remove('in'); }
     const root=$('#tour'); if(root) root.classList.add('tour-listen');
     const pill=$('#tourPill');
     tourSay('Tap to listen hands-free.');

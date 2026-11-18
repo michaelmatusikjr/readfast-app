@@ -682,6 +682,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourPill .tour-pill-close svg{width:16px;height:16px}
 #tourPill .tour-pill-track{position:absolute;left:14px;right:14px;bottom:4px;height:2px;border-radius:1px;background:color-mix(in srgb,var(--page-ink,#111) 16%,transparent);pointer-events:none}
 #tour.tour-listen #tourDots{bottom:calc(12px + var(--rfoot-h,96px) + 68px)}
+#tour.tour-listen .tour-page{bottom:calc(12px + var(--rfoot-h,96px) + 80px)}
 #tourFinger{position:absolute;z-index:7;width:28px;height:28px;margin:-6px 0 0 -14px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none}
 #tourFinger.tap{animation:tourTap .8s ease-out}
 @keyframes tourTap{0%{transform:scale(1);opacity:1}40%{transform:scale(.72);opacity:1}100%{transform:scale(1);opacity:.4}}
@@ -705,7 +706,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.33</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.34</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -4721,10 +4722,10 @@ async function ttsDownloadNatural(){
 $('#ttsNatChip')&&$('#ttsNatChip').addEventListener('click',()=>{ ttsHideNatChip(true); openVoiceSheet(); });
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.33-tutorial';
+const APP_VERSION='2026.11.18.34-tutorial';
 const WHATSNEW=[
   ['A quick first tour','The first time you open Tooz, a short tour shows the shelf, a page turn, notes, Speed and listen. Skip it any time. Replay it later from Settings → Help.'],
-  ['A floating read-aloud pill','The speaker now opens a small floating pill with play/pause and speed, instead of replacing the bottom bar. Nothing plays until you press play. Tap a word to choose where to start, or to jump while it is reading. Swipe the pill to skip a sentence, and touch and hold it for voice options. If the natural voice is not downloaded yet, Tooz starts with the iPhone voice and offers the better one without waiting.'],
+  ['A floating read-aloud pill','The speaker opens a small floating pill with play/pause, a speed chip and a close button. Nothing plays until you press play. Tap a word to choose where to start, or to jump while it is reading. Swipe the pill to skip a sentence. Touch and hold the body of the pill (not Play or the speed chip) for voice options; a one-time Hold for voices hint appears next to the speed chip. The pill stays when you switch between Pages and Scroll; Speed has no pill. Tap the X or the speaker again to close it. If the natural voice is not downloaded yet, Tooz starts with the iPhone voice and offers the better one without waiting.'],
   ['Read-aloud pill fixes','The read-aloud pill now keeps your place when it opens or closes, sits in a reserved strip so it doesn’t cover the last lines or the “Back to where you were” chip, and works with a mouse or trackpad as well as a finger. A close button is on the pill, and a second tap on the speaker still puts it away.'],
   ['Read-aloud stays with you','Closing the read-aloud pill leaves you on the page you were listening to, and opening or closing it no longer nudges the view in Scroll. Long sentences stay softly highlighted around the word being read, and the first-time hint no longer changes the page count.']
 ];
@@ -5148,6 +5149,7 @@ function tourDemoPages(show){
   const td=$('#tourDots'); if(td) td.style.bottom='';
   const p2=$('#tourPageB'); if(p2) p2.hidden=true;
   const p1=$('#tourPageA'); if(p1) p1.hidden=false;
+  const hold=$('#tourHoldWord'); if(hold) hold.classList.remove('sel');
 }
 
 function tourFocusSkip(){
@@ -5293,10 +5295,16 @@ async function tourRunStep(n){
   }
 
   if(n===5){
+    /* Speed has no pill: leave the Speed demo and show a Pages spread before the pill appears. */
     tourDemoPages(true);
     document.querySelectorAll('#tourDemo .tour-pulse, #tourTocIcon.tour-pulse').forEach(el=>el.classList.remove('tour-pulse'));
-    const d=tourDemo(); if(d) d.classList.add('chrome-off');
-    const a=$('#tourPageA'), b=$('#tourPageB'); if(a) a.hidden=true; if(b) b.hidden=true;
+    const d=tourDemo();
+    if(d){ d.setAttribute('data-mode','pages'); d.classList.remove('speed-on','chrome-off'); }
+    const word=$('#tourSpeedWord'); if(word){ word.hidden=true; word.classList.remove('flash'); }
+    const chrome=$('#tourDemoTop'); if(chrome) chrome.classList.remove('away');
+    const a=$('#tourPageA'), b=$('#tourPageB');
+    if(a){ a.hidden=false; a.classList.remove('turn'); }
+    if(b){ b.hidden=true; b.classList.remove('in'); }
     const root=$('#tour'); if(root) root.classList.add('tour-listen');
     const pill=$('#tourPill');
     tourSay('Tap to listen hands-free.');
@@ -6821,9 +6829,9 @@ const SAMPLE_HTML=`
 <p>The list icon at the top opens the contents. At the top of that sheet you can search this book, or open this book’s highlights, notes and bookmarks. In very long books, like the Bible, the contents show the books first; tap one to see its chapters. The bookmark at the bottom marks the page you are on, and the bar above it lets you drag to anywhere in the book. Tap the middle of a page to hide or show the bars while you read.</p>
 <p>After any jump, a <strong>Back to where you were</strong> button appears, so a quick look ahead never costs you your place. Wherever you land, nothing moves until you press play.</p>
 <h2>Read aloud</h2>
-<p>Tap the speaker at the bottom to open a small floating pill with play, speed and a close button. Nothing plays yet: tap a word to choose where to start, then press play. The spoken sentence is softly marked and the page keeps up. Tap another word while it plays to jump there. Swipe the pill left or right to skip a sentence, and touch and hold it to choose a voice or download one. The pill stays on screen until you tap the close button on it, or tap the speaker again.</p>
+<p>Tap the speaker at the bottom to open a small floating pill with play, a speed chip and a close button (the X). Nothing plays yet: tap a word to choose where to start, then press play. The spoken sentence is softly highlighted around the word being read, and the page keeps up. Tap another word while it plays to jump there. Swipe the pill left or right to skip a sentence. Tap the X to close the pill, or tap the speaker again to put it away. The pill stays open when you switch between Pages and Scroll. Speed mode has no pill.</p>
 <p>Read aloud skips footnote numbers and the notes themselves, pauses a little longer before a new heading, and reads Bible references in full: Rom. 8:28 is read as “Romans chapter 8 verse 28”, and 1 Cor. 10:31 as “First Corinthians chapter 10 verse 31”. Abbreviations like e.g. and Dr. are read as words. While it reads in Scroll, the page moves so the spoken word stays near the middle of the screen.</p>
-<p>Touch and hold the pill to choose a voice. There are two kinds. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
+<p>Touch and hold the body of the pill (not Play or the speed chip) to choose a voice. The first time, a Hold for voices hint appears next to the speed chip. There are two kinds. <strong>Natural</strong> voices sound like a person reading and run on your phone; each one downloads once (about 60 MB) and then works offline. <strong>Lessac</strong> is a good place to start; tap <strong>Hear this voice</strong> to try others. <strong>iPhone</strong> voices start instantly but sound more robotic. To free up space, Settings → Storage has <strong>Remove all downloaded voices</strong>.</p>
 <p>To listen with the screen locked, open the voice settings and tap <strong>Download this book’s audio</strong> under <strong>Listen offline</strong>. Tooz makes the audio while the app is open and saves it on your phone, then plays it from the saved copy with the screen locked, with play, pause and skip on the lock screen. <strong>Save as audio files</strong> exports one MP3 per chapter, so you can play the book in the Files app or another audio app even with Tooz closed.</p>
 <h2>Helpful extras</h2>
 <ul><li><strong>Word-start emphasis</strong> bolds the first part of each word, which helps some readers move faster.</li><li><strong>Adaptive pacing</strong> slows Speed and Auto-scroll a little on long sentences and long words, and speeds up on easy stretches.</li><li><strong>Daily reading goal</strong> lives on the Stats tab. Pick a number of minutes and watch your streak grow.</li><li><strong>Your year in books</strong>, also on Stats, lists the books you finished each year, your longest streak, and a goal for how many books to finish this year.</li></ul>

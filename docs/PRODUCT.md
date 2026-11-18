@@ -90,7 +90,7 @@ and move items out of **Pending changes** once they're built.
   replacing the footer. Tap a word to choose where to start, then play; tap a word while playing to jump. Swipe the
   pill to skip a sentence; touch and hold the body of the pill (not Play or the speed chip), or use the Voice
   control, for voice choice and downloads. A second tap on the speaker, or the close button on the pill, puts it
-  away. The pill stays when switching between Pages and Scroll, and stays on screen if the reader bars hide. In
+  away. The pill stays when switching between Pages and Scroll, and stays on screen if the reader bars hide. Speed mode has no pill. In
   Pages and Scroll the text clip shrinks so the pill and the “Back to where you were” chip do not cover the last
   lines; your place is kept when the pill opens or closes, including after listening has moved to a later page.
   The first-time hint sits in that reserved strip and does not change the page count. The spoken sentence is softly
