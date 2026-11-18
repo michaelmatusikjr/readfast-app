@@ -3718,8 +3718,9 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.5';
+const APP_VERSION='2026.11.18.8';
 const WHATSNEW=[
+  ['Definitions saved with words','Defining a word now fetches and saves its definition. Missing definitions are filled in the next time you open the app online.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
   ['Clearer empty library','When filters or search leave nothing, the empty state is clearer and offers a one-tap Clear filters button.'],
   ['Quieter Speed mode','Speed mode hides extra hints and keeps the focus on the word.'],
@@ -5218,3 +5219,59 @@ boot();
 </script>
 </body>
 </html>
+
+/* definition feature */
+(function(){
+  if(typeof defineWord!=="function") return;
+  var orig=defineWord;
+  defineWord=async function(w,k){
+    var sent=sentenceAt(k);
+    var dup=WORDS.find(function(x){return x.word.toLowerCase()===w.toLowerCase()&&x.docId===R.meta.id&&x.pos===k;});
+    var item;
+    if(!dup){
+      item={id:uid(),word:w,sentence:sent.text,docId:R.meta.id,docTitle:R.meta.title,pos:k,at:Date.now(),def:""};
+      WORDS.unshift(item);saveWords();renderWords();
+      try{
+        var r=await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(w.toLowerCase()));
+        if(r.ok){
+          var data=await r.json();
+          var meaning=data[0]&&data[0].meanings&&data[0].meanings[0]&&data[0].meanings[0].definitions&&data[0].meanings[0].definitions[0]&&data[0].meanings[0].definitions[0].definition;
+          if(meaning){item.def=meaning;saveWords();renderWords();}
+        }
+      }catch(e){}
+    }else item=dup;
+    lookupSheet(w,item.def?"Saved to Words with definition.":"Saved to Words.");
+  };
+  var origR=renderWords;
+  renderWords=function(){
+    var el=$("#wordList");
+    if(!WORDS.length){el.innerHTML="<div class=\\"empty\\">Words you look up while reading appear here, with the sentence you found them in.</div>";return;}
+    el.innerHTML=WORDS.map(function(x){
+      var re=new RegExp("(^|[^\\\\p{L}])("+x.word.replace(/[.*+?^\${}()|[\\]\\\\]/g,"\\\\$&")+")(?=[^\\\\p{L}]|$)","iu");
+      var s=esc(x.sentence).replace(re,"$1<b>$2</b>");
+      var def=x.def?"<div class=\\"def\\" style=\\"margin-top:4px;font-size:.9rem;color:var(--ink);font-style:italic\\">"+esc(x.def)+"</div>":"";
+      return "<div class=\\"wcard\\" data-id=\\""+x.id+"\\"><span class=\\"del-under\\">Remove</span><div class=\\"winner\\"><div class=\\"grow\\" data-look=\\""+x.id+"\\"><div class=\\"w\\">"+esc(x.word)+"</div>"+def+"<div class=\\"s\\">"+s+"</div><div class=\\"src\\">"+esc(x.docTitle)+" · "+new Date(x.at).toLocaleDateString()+"</div></div><button class=\\"icon-btn wdel\\" type=\\"button\\" data-wdel=\\""+x.id+"\\" aria-label=\\"Remove "+esc(x.word)+"\\">"+ICON.trash+"</button></div></div>";
+    }).join("");
+  };
+  if(navigator.onLine){
+    var missing=WORDS.filter(function(x){return !x.def;});
+    if(missing.length){
+      (async function(){
+        var changed=false;
+        for(var i=0;i<missing.length;i++){
+          var it=missing[i];
+          try{
+            var r=await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(it.word.toLowerCase()));
+            if(r.ok){
+              var data=await r.json();
+              var meaning=data[0]&&data[0].meanings&&data[0].meanings[0]&&data[0].meanings[0].definitions&&data[0].meanings[0].definitions[0]&&data[0].meanings[0].definitions[0].definition;
+              if(meaning){it.def=meaning;changed=true;}
+            }
+          }catch(e){}
+        }
+        if(changed){saveWords();renderWords();}
+      })();
+    }
+  }
+})();
+
