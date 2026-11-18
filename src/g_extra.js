@@ -1,5 +1,5 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.20-shelf-fix';
+const APP_VERSION='2026.11.18.21-quiet-speed';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
@@ -304,4 +304,25 @@ function yearHTML(st, met){
     const id = cont.dataset.id;
     if(id) hero.onclick = ()=> openBook(id);
   };
+})();
+
+
+/* === REIMAGINE: quiet Speed mode === */
+(function(){
+  const origPlay = window.asPlay;
+  if(origPlay){
+    window.asPlay = function(){
+      origPlay.apply(this, arguments);
+      const v = document.getElementById('v-speed');
+      if(v) v.classList.add('playing');
+    };
+  }
+  const origPause = window.asPause;
+  if(origPause){
+    window.asPause = function(){
+      origPause.apply(this, arguments);
+      const v = document.getElementById('v-speed');
+      if(v) v.classList.remove('playing');
+    };
+  }
 })();

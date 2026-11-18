@@ -26,6 +26,11 @@
 #v-library .continue-hero .meta { color: var(--muted); font-size: .85rem; }
 #v-library .lib-quiet .libbar { opacity: .7; }
 
+
+/* === REIMAGINE: quiet Speed mode === */
+#v-speed.playing .speed-chrome { opacity: 0; pointer-events: none; transition: opacity .3s; }
+#v-speed.playing:hover .speed-chrome, #v-speed.playing.paused .speed-chrome { opacity: 1; pointer-events: auto; }
+
 </style>
 <title>Tooz eReader</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -517,6 +522,11 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 #v-library .continue-hero .title { font-size: 1.15rem; font-weight: 700; margin: 0 0 4px; }
 #v-library .continue-hero .meta { color: var(--muted); font-size: .85rem; }
 #v-library .lib-quiet .libbar { opacity: .7; }
+
+
+/* === REIMAGINE: quiet Speed mode === */
+#v-speed.playing .speed-chrome { opacity: 0; pointer-events: none; transition: opacity .3s; }
+#v-speed.playing:hover .speed-chrome, #v-speed.playing.paused .speed-chrome { opacity: 1; pointer-events: auto; }
 
 </style>
 </head>
@@ -3761,7 +3771,7 @@ async function shareFiles(fs){
 }
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.20-shelf-fix';
+const APP_VERSION='2026.11.18.21-quiet-speed';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
@@ -4066,6 +4076,27 @@ function yearHTML(st, met){
     const id = cont.dataset.id;
     if(id) hero.onclick = ()=> openBook(id);
   };
+})();
+
+
+/* === REIMAGINE: quiet Speed mode === */
+(function(){
+  const origPlay = window.asPlay;
+  if(origPlay){
+    window.asPlay = function(){
+      origPlay.apply(this, arguments);
+      const v = document.getElementById('v-speed');
+      if(v) v.classList.add('playing');
+    };
+  }
+  const origPause = window.asPause;
+  if(origPause){
+    window.asPause = function(){
+      origPause.apply(this, arguments);
+      const v = document.getElementById('v-speed');
+      if(v) v.classList.remove('playing');
+    };
+  }
 })();
 
 
