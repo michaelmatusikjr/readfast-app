@@ -1158,11 +1158,23 @@ $('#defineBtn').onclick=()=>{
   openSheet('Which word?', `<div class="chips">${list.map(x=>`<button class="chip" type="button" data-act="pick" data-k="${x.k}">${esc(x.w)}</button>`).join('')}</div>`, { pick:(b)=>defineWord(clean(R.words[+b.dataset.k]), +b.dataset.k) });
 };
 function sentenceAt(k){ const s=Math.max(sentStart(k),k-25), e=Math.min(sentEndIdx(k),k+25); return {text:R.words.slice(s,e+1).join(' '), s, e}; }
-function defineWord(w, k){
+async function defineWord(w, k){
   const sent=sentenceAt(k);
   const dup=WORDS.find(x=>x.word.toLowerCase()===w.toLowerCase() && x.docId===R.meta.id && x.pos===k);
-  if(!dup){ const item={id:uid(), word:w, sentence:sent.text, docId:R.meta.id, docTitle:R.meta.title, pos:k, at:Date.now()}; WORDS.unshift(item); saveWords(); renderWords(); }
-  lookupSheet(w, 'Saved to Words.');
+  let item;
+  if(!dup){
+    item={id:uid(), word:w, sentence:sent.text, docId:R.meta.id, docTitle:R.meta.title, pos:k, at:Date.now(), def:''};
+    WORDS.unshift(item); saveWords(); renderWords();
+    try{
+      const resp=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(w.toLowerCase()));
+      if(resp.ok){
+        const data=await resp.json();
+        const meaning=data[0]&&data[0].meanings&&data[0].meanings[0]&&data[0].meanings[0].definitions&&data[0].meanings[0].definitions[0]&&data[0].meanings[0].definitions[0].definition;
+        if(meaning){ item.def=meaning; saveWords(); renderWords(); }
+      }
+    }catch(err){}
+  } else item=dup;
+  lookupSheet(w, item.def ? 'Saved to Words with definition.' : 'Saved to Words.');
 }
 function lookupSheet(w, extra){
   openSheet('Look up', `
@@ -1178,7 +1190,8 @@ function renderWords(){
   el.innerHTML=WORDS.map(x=>{
     const re=new RegExp('(^|[^\\p{L}])('+x.word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')(?=[^\\p{L}]|$)','iu');
     const s=esc(x.sentence).replace(re,'$1<b>$2</b>');
-    return `<div class="wcard" data-id="${x.id}"><span class="del-under">Remove</span><div class="winner"><div class="grow" data-look="${x.id}"><div class="w">${esc(x.word)}</div><div class="s">${s}</div><div class="src">${esc(x.docTitle)} · ${new Date(x.at).toLocaleDateString()}</div></div></div></div>`;
+    const def=x.def?'<div class="def" style="margin-top:4px;font-size:.9rem;color:var(--ink);font-style:italic">'+esc(x.def)+'</div>':'';
+    return `<div class="wcard" data-id="${x.id}"><span class="del-under">Remove</span><div class="winner"><div class="grow" data-look="${x.id}"><div class="w">${esc(x.word)}</div>${def}<div class="s">${s}</div><div class="src">${esc(x.docTitle)} · ${new Date(x.at).toLocaleDateString()}</div></div></div></div>`;
   }).join('');
 }
 $('#wordList').addEventListener('click',e=>{

@@ -3720,7 +3720,7 @@ async function shareFiles(fs){
 /* ---------- version and what's new ---------- */
 const APP_VERSION='2026.11.18.8';
 const WHATSNEW=[
-  ['Definitions saved with words','Defining a word now fetches and saves its definition. Missing definitions are filled in the next time you open the app online.'],
+  ['Definitions saved with words','Defining a word now fetches and saves its definition. Missing definitions are filled the next time you open the app online.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
   ['Clearer empty library','When filters or search leave nothing, the empty state is clearer and offers a one-tap Clear filters button.'],
   ['Quieter Speed mode','Speed mode hides extra hints and keeps the focus on the word.'],
@@ -3979,11 +3979,23 @@ $('#defineBtn').onclick=()=>{
   openSheet('Which word?', `<div class="chips">${list.map(x=>`<button class="chip" type="button" data-act="pick" data-k="${x.k}">${esc(x.w)}</button>`).join('')}</div>`, { pick:(b)=>defineWord(clean(R.words[+b.dataset.k]), +b.dataset.k) });
 };
 function sentenceAt(k){ const s=Math.max(sentStart(k),k-25), e=Math.min(sentEndIdx(k),k+25); return {text:textOf(s,e), s, e}; }
-function defineWord(w, k){
+async function defineWord(w, k){
   const sent=sentenceAt(k);
   const dup=WORDS.find(x=>x.word.toLowerCase()===w.toLowerCase() && x.docId===R.meta.id && x.pos===k);
-  if(!dup){ const item={id:uid(), word:w, sentence:sent.text, docId:R.meta.id, docTitle:R.meta.title, pos:k, at:Date.now()}; WORDS.unshift(item); saveWords(); renderWords(); }
-  lookupSheet(w, 'Saved to Words.');
+  let item;
+  if(!dup){
+    item={id:uid(), word:w, sentence:sent.text, docId:R.meta.id, docTitle:R.meta.title, pos:k, at:Date.now(), def:''};
+    WORDS.unshift(item); saveWords(); renderWords();
+    try{
+      const resp=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(w.toLowerCase()));
+      if(resp.ok){
+        const data=await resp.json();
+        const meaning=data[0]&&data[0].meanings&&data[0].meanings[0]&&data[0].meanings[0].definitions&&data[0].meanings[0].definitions[0]&&data[0].meanings[0].definitions[0].definition;
+        if(meaning){ item.def=meaning; saveWords(); renderWords(); }
+      }
+    }catch(err){}
+  } else item=dup;
+  lookupSheet(w, item.def ? 'Saved to Words with definition.' : 'Saved to Words.');
 }
 function lookupSheet(w, extra){
   openSheet('Look up', `
@@ -3999,7 +4011,8 @@ function renderWords(){
   el.innerHTML=WORDS.map(x=>{
     const re=new RegExp('(^|[^\\p{L}])('+x.word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')(?=[^\\p{L}]|$)','iu');
     const s=esc(x.sentence).replace(re,'$1<b>$2</b>');
-    return `<div class="wcard" data-id="${x.id}"><span class="del-under">Remove</span><div class="winner"><div class="grow" data-look="${x.id}"><div class="w">${esc(x.word)}</div><div class="s">${s}</div><div class="src">${esc(x.docTitle)} · ${new Date(x.at).toLocaleDateString()}</div></div><button class="icon-btn wdel" type="button" data-wdel="${x.id}" aria-label="Remove ${esc(x.word)}">${ICON.trash}</button></div></div>`;
+    const def=x.def?'<div class="def" style="margin-top:4px;font-size:.9rem;color:var(--ink);font-style:italic">'+esc(x.def)+'</div>':'';
+    return `<div class="wcard" data-id="${x.id}"><span class="del-under">Remove</span><div class="winner"><div class="grow" data-look="${x.id}"><div class="w">${esc(x.word)}</div>${def}<div class="s">${s}</div><div class="src">${esc(x.docTitle)} · ${new Date(x.at).toLocaleDateString()}</div></div><button class="icon-btn wdel" type="button" data-wdel="${x.id}" aria-label="Remove ${esc(x.word)}">${ICON.trash}</button></div></div>`;
   }).join('');
 }
 function removeWord(id){ const idx=WORDS.findIndex(w=>w.id===id); if(idx<0) return; const item=WORDS[idx]; WORDS.splice(idx,1); saveWords(); renderWords(); toast('Removed “'+item.word+'”',{label:'Undo',fn:()=>{ WORDS.splice(idx,0,item); saveWords(); renderWords(); }}); }
@@ -4024,6 +4037,40 @@ const endSwipe=()=>{ const r=swipe.row; if(!r) return; swipe.row=null; r.classLi
   } else r.style.transform='';
   setTimeout(()=>{ swipe.moved=false; },50); };
 $('#wordList').addEventListener('pointerup',endSwipe); $('#wordList').addEventListener('pointercancel',endSwipe);
+
+/* ---------- full text ---------- */
+
+/* ---------- stats ---------- */
+function recordStats(ms, words){
+  if(words<1||ms<500) return; const st=LS.get('stats',{}); const k=dayKey(); const d=st[k]||{ms:0,words:0}; d.ms+=ms; d.words+=words; st[k]=d; LS.set('stats',st);
+}
+function renderStats(){
+  const st=LS.get('stats',{}); const days=Object.keys(st);
+  let tw=0,tms=0; for(const k of days){ tw+=st[k].words; tms+=st[k].ms; }
+  const today=st[dayKey()]||{ms:0,words:0};
+  let streak=0; const d=new Date(); if(!(st[dayKey(d)]?.words)) d.setDate(d.getDate()-1);
+  while(st[dayKey(d)]?.words>0){ streak++; d.setDate(d.getDate()-1); }
+  const avg=tms>0?Math.round(tw/(tms/60000)):0; const fin=LIB.filter(x=>x.finished).length;
+  const week=[]; for(let q=6;q>=0;q--){ const x=new Date(); x.setDate(x.getDate()-q); week.push({k:dayKey(x), lbl:x.toLocaleDateString(undefined,{weekday:'short'}).slice(0,2), w:st[dayKey(x)]?.words||0}); }
+  const max=Math.max(1,...week.map(w=>w.w));
+  const fmtK=(n)=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':String(n);
+  $('#statsBody').innerHTML=`
+    <div class="tiles">
+      <div class="tile"><div class="v">${today.words.toLocaleString()}</div><div class="k">Words today</div></div>
+      <div class="tile"><div class="v">${streak}</div><div class="k">Day streak</div></div>
+      <div class="tile"><div class="v">${avg||'—'}</div><div class="k">Average WPM, all time</div></div>
+      <div class="tile"><div class="v">${fmtMins(tms/60000)}</div><div class="k">Time reading</div></div>
+      <div class="tile"><div class="v">${tw.toLocaleString()}</div><div class="k">Words read</div></div>
+      <div class="tile"><div class="v">${fin}</div><div class="k">Documents finished</div></div>
+    </div>
+    <div class="chart"><h2>Words per day</h2><p class="note" style="margin:2px 0 0">Last 7 days</p>
+      <div class="bars">${week.map(w=>`<div class="b"><em>${w.w?fmtK(w.w):''}</em><i class="${w.w?'':'zero'}" style="height:${Math.round(100*w.w/max)}%"></i></div>`).join('')}</div>
+      <div class="bars-x">${week.map(w=>`<span>${w.lbl}</span>`).join('')}</div>
+    </div>
+    <p class="note">Average WPM counts time spent playing, including pauses at punctuation, so it runs a little below your slider setting.</p>`;
+}
+
+/* ---------- settings ---------- */
 
 /* ---------- stats and daily goal ---------- */
 function recordStats(ms, words){
@@ -5220,58 +5267,24 @@ boot();
 </body>
 </html>
 
-/* definition feature */
-(function(){
-  if(typeof defineWord!=="function") return;
-  var orig=defineWord;
-  defineWord=async function(w,k){
-    var sent=sentenceAt(k);
-    var dup=WORDS.find(function(x){return x.word.toLowerCase()===w.toLowerCase()&&x.docId===R.meta.id&&x.pos===k;});
-    var item;
-    if(!dup){
-      item={id:uid(),word:w,sentence:sent.text,docId:R.meta.id,docTitle:R.meta.title,pos:k,at:Date.now(),def:""};
-      WORDS.unshift(item);saveWords();renderWords();
-      try{
-        var r=await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(w.toLowerCase()));
-        if(r.ok){
-          var data=await r.json();
-          var meaning=data[0]&&data[0].meanings&&data[0].meanings[0]&&data[0].meanings[0].definitions&&data[0].meanings[0].definitions[0]&&data[0].meanings[0].definitions[0].definition;
-          if(meaning){item.def=meaning;saveWords();renderWords();}
-        }
-      }catch(e){}
-    }else item=dup;
-    lookupSheet(w,item.def?"Saved to Words with definition.":"Saved to Words.");
-  };
-  var origR=renderWords;
-  renderWords=function(){
-    var el=$("#wordList");
-    if(!WORDS.length){el.innerHTML="<div class=\\"empty\\">Words you look up while reading appear here, with the sentence you found them in.</div>";return;}
-    el.innerHTML=WORDS.map(function(x){
-      var re=new RegExp("(^|[^\\\\p{L}])("+x.word.replace(/[.*+?^\${}()|[\\]\\\\]/g,"\\\\$&")+")(?=[^\\\\p{L}]|$)","iu");
-      var s=esc(x.sentence).replace(re,"$1<b>$2</b>");
-      var def=x.def?"<div class=\\"def\\" style=\\"margin-top:4px;font-size:.9rem;color:var(--ink);font-style:italic\\">"+esc(x.def)+"</div>":"";
-      return "<div class=\\"wcard\\" data-id=\\""+x.id+"\\"><span class=\\"del-under\\">Remove</span><div class=\\"winner\\"><div class=\\"grow\\" data-look=\\""+x.id+"\\"><div class=\\"w\\">"+esc(x.word)+"</div>"+def+"<div class=\\"s\\">"+s+"</div><div class=\\"src\\">"+esc(x.docTitle)+" · "+new Date(x.at).toLocaleDateString()+"</div></div><button class=\\"icon-btn wdel\\" type=\\"button\\" data-wdel=\\""+x.id+"\\" aria-label=\\"Remove "+esc(x.word)+"\\">"+ICON.trash+"</button></div></div>";
-    }).join("");
-  };
-  if(navigator.onLine){
-    var missing=WORDS.filter(function(x){return !x.def;});
-    if(missing.length){
-      (async function(){
-        var changed=false;
-        for(var i=0;i<missing.length;i++){
-          var it=missing[i];
-          try{
-            var r=await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(it.word.toLowerCase()));
-            if(r.ok){
-              var data=await r.json();
-              var meaning=data[0]&&data[0].meanings&&data[0].meanings[0]&&data[0].meanings[0].definitions&&data[0].meanings[0].definitions[0]&&data[0].meanings[0].definitions[0].definition;
-              if(meaning){it.def=meaning;changed=true;}
-            }
-          }catch(e){}
-        }
-        if(changed){saveWords();renderWords();}
-      })();
-    }
+/* fill missing definitions on next open when online */
+if(typeof WORDS!=='undefined' && navigator.onLine){
+  var missing=WORDS.filter(function(x){return !x.def;});
+  if(missing.length){
+    (async function(){
+      var changed=false;
+      for(var i=0;i<missing.length;i++){
+        var it=missing[i];
+        try{
+          var r=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(it.word.toLowerCase()));
+          if(r.ok){
+            var data=await r.json();
+            var meaning=data[0]&&data[0].meanings&&data[0].meanings[0]&&data[0].meanings[0].definitions&&data[0].meanings[0].definitions[0]&&data[0].meanings[0].definitions[0].definition;
+            if(meaning){it.def=meaning;changed=true;}
+          }
+        }catch(e){}
+      }
+      if(changed){saveWords();if(typeof renderWords==='function')renderWords();}
+    })();
   }
-})();
-
+}
