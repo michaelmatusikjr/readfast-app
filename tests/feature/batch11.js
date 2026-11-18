@@ -1,10 +1,11 @@
-const { chromium } = require('playwright-core');
-const EP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-epub/';
+const __E=require('../env');
+const { chromium } = require('playwright');
+const EP=(__E.SCRATCH+'redteam-epub/');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:true, isMobile:true}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
-  await ctx.route(/cdnjs/,r=>r.fulfill({path:EP+'node_modules/jszip/dist/jszip.min.js',contentType:'application/javascript'}));
+  await ctx.route(/cdnjs/,r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',contentType:'application/javascript'}));
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(1500);
@@ -47,9 +48,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   console.log('tags narrowed', await pg.evaluate(()=>[...document.querySelectorAll('#sheet [data-opts=tg] .fopt .lb')].map(o=>o.textContent)));
   await pg.fill('#sheet [data-fq=tg]',''); await sleep(150);
   console.log('tags narrowed all', await pg.evaluate(()=>[...document.querySelectorAll('#sheet [data-opts=tg] .fopt .lb')].map(o=>o.textContent)));
-  await pg.screenshot({path:'b11_filter.png'});
+  await pg.screenshot({path:__E.SCRATCH+'b11_filter.png'});
   await pg.click('#sheet [data-act=done]'); await sleep(450);
-  await pg.screenshot({path:'b11_pills.png'});
+  await pg.screenshot({path:__E.SCRATCH+'b11_pills.png'});
   console.log('pills', await pg.evaluate(()=>[...document.querySelectorAll('#libPills .pill')].map(p=>p.className.split(' ')[1]+':'+p.textContent)));
   await pg.click('#libPills [data-unf=au][data-k="jane austen"]'); await sleep(200);
   console.log('removed pill', await pg.evaluate(()=>[...F.au]));

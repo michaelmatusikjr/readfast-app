@@ -1,7 +1,7 @@
-const { chromium } = require('playwright-core');
+const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   for(const touch of [false,true]){
     const ctx=await b.newContext({viewport:touch?{width:390,height:780}:{width:1100,height:800}, deviceScaleFactor:touch?2:1, serviceWorkers:'block', hasTouch:touch, isMobile:touch}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
     await ctx.route(/fonts\.|cdnjs/,r=>r.abort());

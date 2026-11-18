@@ -1,16 +1,17 @@
-const { chromium } = require('playwright-core');
-const S='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
+const __E=require('../env');
+const { chromium } = require('playwright');
+const S=__E.SCRATCH;
 const P=S+'pip/';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x).slice(0,400):''));
 const fs=require('fs');
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--autoplay-policy=no-user-gesture-required','--ignore-certificate-errors'], proxy:{server:process.env.HTTPS_PROXY, bypass:'localhost,127.0.0.1'}});
+  const b=await chromium.launch({args:['--autoplay-policy=no-user-gesture-required','--ignore-certificate-errors'], proxy:{server:process.env.HTTPS_PROXY, bypass:'localhost,127.0.0.1'}});
   const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', ignoreHTTPSErrors:true});
   await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
   const cors={'access-control-allow-origin':'*'};
-  await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/onnxruntime-web\/1\.18\.0\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:P+'build/node_modules/onnxruntime-web/dist/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/javascript'},cors)}); });
-  await ctx.route(/cdn\.jsdelivr\.net\/npm\/@diffusionstudio\/piper-wasm@1\.0\.0\/build\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:P+'pw/package/build/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/octet-stream'},cors)}); });
+  await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/onnxruntime-web\/1\.18\.0\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:__E.NM+'onnxruntime-web/dist/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/javascript'},cors)}); });
+  await ctx.route(/cdn\.jsdelivr\.net\/npm\/@diffusionstudio\/piper-wasm@1\.0\.0\/build\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:__E.NM+'@diffusionstudio/piper-wasm/build/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/octet-stream'},cors)}); });
   await ctx.route(/fonts\.(googleapis|gstatic)/, r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); pg.on('console',m=>{ if(m.type()==='error' && !/ERR_|net::/.test(m.text())) errs.push('console '+m.text()); });
   await pg.goto('http://localhost:8750/'); await sleep(1500);
@@ -37,7 +38,7 @@ const fs=require('fs');
   /* decode chapter 2's mp3 to check the speech */
   const pcm=await pg.evaluate(async()=>{ const f=await abFile('abt','p1.mp3'); const ac=new OfflineAudioContext(1,16000*30,16000); const ab=await ac.decodeAudioData(await f.arrayBuffer()); const x=ab.getChannelData(0); const o=new Int16Array(x.length); for(let i=0;i<x.length;i++) o[i]=Math.max(-1,Math.min(1,x[i]))*32767; return {sr:ab.sampleRate, d:Array.from(o)}; });
   const buf=Buffer.alloc(44+pcm.d.length*2); buf.write('RIFF',0); buf.writeUInt32LE(36+pcm.d.length*2,4); buf.write('WAVE',8); buf.write('fmt ',12); buf.writeUInt32LE(16,16); buf.writeUInt16LE(1,20); buf.writeUInt16LE(1,22); buf.writeUInt32LE(pcm.sr,24); buf.writeUInt32LE(pcm.sr*2,28); buf.writeUInt16LE(2,32); buf.writeUInt16LE(16,34); buf.write('data',36); buf.writeUInt32LE(pcm.d.length*2,40);
-  pcm.d.forEach((v,i)=>buf.writeInt16LE(v,44+i*2)); fs.writeFileSync(S+'st/offline_ch2.wav',buf);
+  pcm.d.forEach((v,i)=>buf.writeInt16LE(v,44+i*2)); fs.writeFileSync(S+'offline_ch2.wav',buf);
   /* play from the saved audio, starting mid chapter 2 */
   await pg.evaluate(()=>{ closeSheet(); const k=R.words.indexOf('Philippians'); ttsPickWord(k); $('#ttsPlay').click(); }); await sleep(2500);
   const p1=await pg.evaluate(()=>[TTS.on, TTS.ab, R.words[TTS.cur], NAT.audio.currentTime.toFixed(2), NAT.audio.src.slice(0,5), navigator.mediaSession.metadata&&navigator.mediaSession.metadata.title]);

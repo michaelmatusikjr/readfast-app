@@ -1,16 +1,17 @@
-const { chromium } = require('playwright-core');
+const __E=require('../env');
+const { chromium } = require('playwright');
 const fs=require('fs');
-const EP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-epub/';
+const EP=(__E.SCRATCH+'redteam-epub/');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:true, isMobile:true}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
-  await ctx.route(/cdnjs/,r=>r.fulfill({path:EP+'node_modules/jszip/dist/jszip.min.js',contentType:'application/javascript'}));
+  await ctx.route(/cdnjs/,r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',contentType:'application/javascript'}));
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(1300);
   // headings
-  const hd=await pg.evaluate(async(b64)=>{ const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const d=await parseFile(new File([bin],'hd.epub')); return [d.subjects, d.blocks.map(x=>x.t+(x.l?'L':'')+':'+d.words.slice(x.s,Math.min(x.e,x.s+4)).join(' '))]; }, fs.readFileSync('hd.epub').toString('base64'));
+  const hd=await pg.evaluate(async(b64)=>{ const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const d=await parseFile(new File([bin],'hd.epub')); return [d.subjects, d.blocks.map(x=>x.t+(x.l?'L':'')+':'+d.words.slice(x.s,Math.min(x.e,x.s+4)).join(' '))]; }, fs.readFileSync(__E.FEAT+'hd.epub').toString('base64'));
   console.log('headings', JSON.stringify(hd,null,0));
   console.log('tidy', await pg.evaluate(()=>tidySubjects(['Christian life -- Early works to 1800','Sermons, English','Lewis, C. S. (Clive Staples), 1898-1963','Browsing: Religion/Spirituality/Paranormal','Best Books Ever Listings','Whaling -- Fiction','Bible. N.T. Romans -- Commentaries','Sea stories','Juvenile fiction'])));
   // article fallback
@@ -61,6 +62,6 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   // settings tags collapsed
   await pg.click('#tabs [data-tab=settings]'); await sleep(300);
   console.log('settings tags', await pg.evaluate(()=>[!!$('#tagDet'), $('#tagDet').open, $('#tagDet summary').textContent]));
-  await pg.screenshot({path:'b12_settings.png'});
+  await pg.screenshot({path:__E.SCRATCH+'b12_settings.png'});
   console.log('errors', errs); await b.close();
 })();

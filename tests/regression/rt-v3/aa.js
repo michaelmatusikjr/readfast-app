@@ -1,3 +1,4 @@
+const __E=require('../../env');
 const H=require('../rt-modes/h.js');
 const fp=()=>{ const cs=(e,ps)=>{ if(!e) return null; const c=getComputedStyle(e); return ps.map(p=>c.getPropertyValue(p)).join('|'); };
   const host=R.mode==='pages'?pgFlow:R.mode==='scroll'?scFlow:null; const p=host&&host.querySelector('p'); const w=host&&host.querySelector('p w');
@@ -29,14 +30,14 @@ const fp=()=>{ const cs=(e,ps)=>{ if(!e) return null; const c=getComputedStyle(e
       const flag=(ok==='ok' && before===after)?'  <-- NO VISIBLE CHANGE':''; const sv=(JSON.stringify(s1)!==JSON.stringify(ls))?'  <-- NOT SAVED':'';
       if(ok!=='ok'&&ok!=='already'||flag||sv||JSON.stringify(s0)===JSON.stringify(s1)&&ok==='ok') console.log(mode,c.k,c.v||c.d||'',ok,JSON.stringify(s0),'->',JSON.stringify(s1),flag,sv);
     }
-    await pg.screenshot({path:`aa_${mode}_after.png`});
+    await pg.screenshot({path:__E.SCRATCH+`aa_${mode}_after.png`});
     const sBefore=await pg.evaluate(()=>JSON.stringify(S)); const fb=await pg.evaluate(()=>{closeSheet(); return 0;}); await H.sleep(300); const f1=await pg.evaluate(fp);
-    await pg.screenshot({path:`aa_${mode}_closed.png`});
+    await pg.screenshot({path:__E.SCRATCH+`aa_${mode}_closed.png`});
     await pg.reload(); await H.sleep(900); await pg.evaluate(id=>openDoc(id),id); await H.sleep(1200);
     const sAfter=await pg.evaluate(()=>JSON.stringify(S)); const f2=await pg.evaluate(fp);
     if(sBefore!==sAfter){ const a=JSON.parse(sBefore), bb=JSON.parse(sAfter); console.log(mode,'RELOAD S DIFF', Object.keys(a).filter(k=>JSON.stringify(a[k])!==JSON.stringify(bb[k])).map(k=>k+':'+JSON.stringify(a[k])+'->'+JSON.stringify(bb[k]))); }
     if(f1!==f2){ const a=JSON.parse(f1), bb=JSON.parse(f2); console.log(mode,'RELOAD LOOK DIFF', Object.keys(a).filter(k=>JSON.stringify(a[k])!==JSON.stringify(bb[k])).map(k=>k+': '+JSON.stringify(a[k])+' -> '+JSON.stringify(bb[k]))); }
-    await pg.screenshot({path:`aa_${mode}_reload.png`});
+    await pg.screenshot({path:__E.SCRATCH+`aa_${mode}_reload.png`});
     await pg.evaluate(()=>{ openPanel(); $('#sheet [data-act="resetlook"]').scrollIntoView(); }); await H.sleep(500); await pg.evaluate(()=>{ $('#sheet [data-act="resetlook"]').click(); }); await H.sleep(600); await pg.evaluate(()=>closeSheet());
   }
   console.log('errs',pg.errs); await b.close(); })().catch(e=>{console.error('FAIL',e);process.exit(1)});

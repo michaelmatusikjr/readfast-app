@@ -1,7 +1,7 @@
-const { chromium } = require('playwright-core');
+const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   for(const [w,h] of [[390,780],[430,932],[820,1180],[1280,800],[600,900]]){
     const ctx=await b.newContext({viewport:{width:w,height:h}, serviceWorkers:'block'}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
     await ctx.route(/fonts\.(googleapis|gstatic)|cdnjs/,r=>r.abort());

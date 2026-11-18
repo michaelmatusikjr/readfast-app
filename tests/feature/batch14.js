@@ -1,10 +1,11 @@
-const { chromium } = require('playwright-core');
-const S='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
+const __E=require('../env');
+const { chromium } = require('playwright');
+const S=__E.SCRATCH;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 const fs=require('fs');
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', hasTouch:true, isMobile:true, acceptDownloads:true});
   await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));

@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+tests/fixtures/*.epub
+tests/fixtures/*.EPUB
+tests/fixtures/*.pdf
+/*.png
+!/icon-*.png
+*.out

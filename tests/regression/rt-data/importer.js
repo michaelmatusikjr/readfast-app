@@ -1,9 +1,10 @@
+const __E=require('../../env');
 // Importer tests: parse EPUB cases with NEW and OLD versions, compare words, dump blocks/flags.
-const { chromium } = require('/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-r2/node_modules/playwright-core');
+const { chromium } = require('playwright');
 const fs=require('fs');
-const SP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
-const D=SP+'rt-data/', EP=SP+'redteam-epub/';
-const LIBS={'jszip.min.js':EP+'node_modules/jszip/dist/jszip.min.js','pdf.min.js':EP+'node_modules/pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':EP+'node_modules/pdfjs-dist/build/pdf.worker.min.js'};
+const SP=__E.SCRATCH;
+const D=SP+'rt-data/', EP=(__E.SCRATCH+'redteam-epub/');
+const LIBS={'jszip.min.js':__E.NM+'jszip/dist/jszip.min.js','pdf.min.js':__E.NM+'pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':__E.NM+'pdfjs-dist/build/pdf.worker.min.js'};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const log=(...a)=>console.log(...a.map(x=>typeof x==='string'?x:JSON.stringify(x)));
 async function open(b, file){
@@ -16,9 +17,9 @@ async function open(b, file){
 }
 const parse=(pg,path)=>pg.evaluate(async(b64)=>{ const bin=atob(b64); const a=new Uint8Array(bin.length); for(let k=0;k<bin.length;k++) a[k]=bin.charCodeAt(k); return await parseEpub(a.buffer,'x.epub'); }, fs.readFileSync(path).toString('base64'));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   const NEW=await open(b, D+'new.html'), OLD=await open(b, D+'old.html');
-  const files=[...fs.readdirSync(D+'cases').map(f=>D+'cases/'+f), SP+'tooz/t/rich.epub', ...['epub2_ncx.epub','epub3_nested.epub','epub_large.epub','epub_paths.epub','epub_badxml.epub','UPPER.EPUB'].map(f=>EP+'files/'+f)];
+  const files=[...fs.readdirSync(D+'cases').map(f=>D+'cases/'+f), S__E.FEAT+'rich.epub', ...['epub2_ncx.epub','epub3_nested.epub','epub_large.epub','epub_paths.epub','epub_badxml.epub','UPPER.EPUB'].map(f=>__E.FIX+f)];
   for(const f of files){
     let n,o; try{ n=await parse(NEW,f); }catch(e){ n={err:e.message}; } try{ o=await parse(OLD,f); }catch(e){ o={err:e.message}; }
     log(f.split('/').pop(), 'NEW words', n.words&&n.words.length, 'OLD words', o.words&&o.words.length, n.err||'', o.err||'');

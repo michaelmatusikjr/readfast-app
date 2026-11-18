@@ -1,16 +1,17 @@
+const __E=require('../env');
 // Usage: node harness.js [file ...]   (defaults to all in ./files)
 // Env: APP=/path/to/index.html  OFFLINE=1 (block CDN)  SLOWCDN=ms
-const { chromium } = require('playwright-core');
+const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
 const DIR = __dirname;
-const APP = process.env.APP || '/home/claude/readfast-app/index.html';
+const APP = process.env.APP || (__E.ROOT+'/index.html');
 const LOCAL = {
   'jszip.min.js': path.join(DIR, 'node_modules/jszip/dist/jszip.min.js'),
   'pdf.min.js': path.join(DIR, 'node_modules/pdfjs-dist/build/pdf.min.js'),
   'pdf.worker.min.js': path.join(DIR, 'node_modules/pdfjs-dist/build/pdf.worker.min.js'),
 };
 (async () => {
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox'] }).catch(() => chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }));
+  const browser = await chromium.launch({ args:['--no-sandbox'] }).catch(() => chromium.launch({ }));
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
   const page = await ctx.newPage();
   const errs = [];

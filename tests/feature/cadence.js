@@ -1,16 +1,17 @@
-const { chromium } = require('playwright-core');
-const S='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
+const __E=require('../env');
+const { chromium } = require('playwright');
+const S=__E.SCRATCH;
 const P=S+'pip/';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 const fs=require('fs');
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--autoplay-policy=no-user-gesture-required','--ignore-certificate-errors'], proxy:{server:process.env.HTTPS_PROXY||process.env.https_proxy, bypass:'localhost,127.0.0.1'}});
+  const b=await chromium.launch({args:['--autoplay-policy=no-user-gesture-required','--ignore-certificate-errors'], proxy:{server:process.env.HTTPS_PROXY||process.env.https_proxy, bypass:'localhost,127.0.0.1'}});
   const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', ignoreHTTPSErrors:true});
   await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
   const cors={'access-control-allow-origin':'*'};
-  await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/onnxruntime-web\/1\.18\.0\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:P+'build/node_modules/onnxruntime-web/dist/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/javascript'},cors)}); });
-  await ctx.route(/cdn\.jsdelivr\.net\/npm\/@diffusionstudio\/piper-wasm@1\.0\.0\/build\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:P+'pw/package/build/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/octet-stream'},cors)}); });
+  await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/onnxruntime-web\/1\.18\.0\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:__E.NM+'onnxruntime-web/dist/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/javascript'},cors)}); });
+  await ctx.route(/cdn\.jsdelivr\.net\/npm\/@diffusionstudio\/piper-wasm@1\.0\.0\/build\/(.*)/, r=>{ const f=r.request().url().split('/').pop(); r.fulfill({path:__E.NM+'@diffusionstudio/piper-wasm/build/'+f, headers:Object.assign({'content-type':f.endsWith('.wasm')?'application/wasm':'application/octet-stream'},cors)}); });
   await ctx.route(/fonts\.(googleapis|gstatic)/, r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(1500);
@@ -22,7 +23,7 @@ const fs=require('fs');
     const save=async g=>Array.from(new Uint8Array(await (await fetch(g.url)).arrayBuffer()));
     return {a:{raw:a.raw,dur:a.dur,sdur:a.sdur}, c:{raw:c.raw,dur:c.dur,sdur:c.sdur}, wa:await save(a), wc:await save(c)};
   });
-  fs.writeFileSync(S+'st/piper_r1.wav',Buffer.from(r.wa)); fs.writeFileSync(S+'st/piper_r15.wav',Buffer.from(r.wc));
+  fs.writeFileSync(S+'piper_r1.wav',Buffer.from(r.wa)); fs.writeFileSync(S+'piper_r15.wav',Buffer.from(r.wc));
   ok('1.5x is made faster by the voice', r.c.sdur < r.a.sdur*0.8 && r.c.sdur > r.a.sdur*0.55, [r.a, r.c]);
   ok('silence trimmed, exact pause added', Math.abs((r.a.dur-r.a.sdur)-0.18)<0.01 && Math.abs((r.c.dur-r.c.sdur)-0.18/1.5)<0.01 && r.a.sdur < r.a.raw);
   /* one sentence per stretch; a long sentence is cut at a comma */

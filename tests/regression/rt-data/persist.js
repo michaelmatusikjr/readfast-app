@@ -1,20 +1,21 @@
+const __E=require('../../env');
 // Persistence / integrity tests on the NEW version (persistent profile so reloads keep data).
-const { chromium } = require('/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-r2/node_modules/playwright-core');
+const { chromium } = require('playwright');
 const fs=require('fs');
-const SP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
-const D=SP+'rt-data/', EP=SP+'redteam-epub/';
-const LIBS={'jszip.min.js':EP+'node_modules/jszip/dist/jszip.min.js','pdf.min.js':EP+'node_modules/pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':EP+'node_modules/pdfjs-dist/build/pdf.worker.min.js'};
+const SP=__E.SCRATCH;
+const D=SP+'rt-data/', EP=(__E.SCRATCH+'redteam-epub/');
+const LIBS={'jszip.min.js':__E.NM+'jszip/dist/jszip.min.js','pdf.min.js':__E.NM+'pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':__E.NM+'pdfjs-dist/build/pdf.worker.min.js'};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const log=(...a)=>console.log(...a.map(x=>typeof x==='string'?x:JSON.stringify(x)));
 (async()=>{
   const prof=D+'profile-persist'; fs.rmSync(prof,{recursive:true,force:true});
-  const ctx=await chromium.launchPersistentContext(prof,{executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', viewport:{width:390,height:844}, serviceWorkers:'block'});
+  const ctx=await chromium.launchPersistentContext(prof,{viewport:{width:390,height:844}, serviceWorkers:'block'});
   await ctx.route(/cdnjs/,r=>{ const k=Object.keys(LIBS).find(k=>r.request().url().endsWith('/'+k)); return k?r.fulfill({path:LIBS[k],contentType:'application/javascript'}):r.abort(); });
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   await ctx.route(/localhost:8761\/(index\.html)?$/,r=>r.fulfill({path:D+'new.html',contentType:'text/html'}));
   const pg=ctx.pages()[0]; const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8761/'); await sleep(700);
-  await pg.setInputFiles('#fileIn', SP+'tooz/t/rich.epub'); await pg.waitForFunction(()=>LIB.some(m=>m.title==='Rich Test Book'),null,{timeout:20000});
+  await pg.setInputFiles('#fileIn', S__E.FEAT+'rich.epub'); await pg.waitForFunction(()=>LIB.some(m=>m.title==='Rich Test Book'),null,{timeout:20000});
   const id=await pg.evaluate(()=>LIB.find(m=>m.title==='Rich Test Book').id);
 
   // (a) scroll-mode reopen drift

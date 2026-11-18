@@ -1,0 +1,22 @@
+{
+  "name": "tooz-ereader",
+  "private": true,
+  "description": "Tooz eReader. The app is index.html (built from src/); these packages are only for building workers and running tests.",
+  "scripts": {
+    "build": "cd src && python3 assemble.py",
+    "serve": "python3 -m http.server 8750",
+    "fixtures": "node tests/fixtures/make-fixtures.js",
+    "build:piper": "node src/piper/build.mjs .",
+    "build:mp3": "sh src/audiobook/build.sh ."
+  },
+  "devDependencies": {
+    "@breezystack/lamejs": "1.2.7",
+    "@diffusionstudio/piper-wasm": "1.0.0",
+    "@mintplex-labs/piper-tts-web": "1.0.5",
+    "esbuild": "0.24.0",
+    "jszip": "3.10.1",
+    "onnxruntime-web": "1.18.0",
+    "pdfjs-dist": "3.11.174",
+    "playwright": "1.63.0"
+  }
+}

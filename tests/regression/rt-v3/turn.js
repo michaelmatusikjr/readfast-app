@@ -1,5 +1,6 @@
+const __E=require('../../env');
 const H=require('../rt-modes/h.js');
-(async()=>{ const b=await H.launch(); const SPD='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
+(async()=>{ const b=await H.launch(); const SPD=__E.SCRATCH;
  for(const zones of ['edges','anywhere']){ const pg=await H.page(b,{settings:{mode:'pages',focus:true,tapZones:zones}});
   const st=()=>pg.evaluate(()=>[P.k,P.page,P.pages,R.pos,R.chrome,!!$('#imgOverlay'),!$('#toast').hidden&&$('#toastMsg').textContent]);
   const tap=async(x,y)=>{ await pg.touchscreen.tap(x,y); await H.sleep(500); };

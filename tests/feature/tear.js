@@ -1,5 +1,6 @@
+const __E=require('../env');
 const { chromium } = require('playwright');
-const S='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
+const S=__E.SCRATCH;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 (async()=>{

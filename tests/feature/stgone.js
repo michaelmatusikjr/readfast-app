@@ -1,8 +1,8 @@
-const { chromium } = require('playwright-core');
+const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   const ctx=await b.newContext({serviceWorkers:'block'}); const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(1200);
   await pg.evaluate(async()=>{ localStorage.removeItem('rf.stGone'); localStorage.setItem('rf.pipReady.st-F1','true'); const s=JSON.parse(localStorage.getItem('rf.settings')||'{}'); s.pipVoice='st-F1'; localStorage.setItem('rf.settings',JSON.stringify(s)); const root=await navigator.storage.getDirectory(); const d=await root.getDirectoryHandle('supertonic-w8',{create:true}); await d.getFileHandle('x',{create:true}); });
