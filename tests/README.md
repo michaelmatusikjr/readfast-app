@@ -1,23 +1,40 @@
 # Tooz eReader tests
 
-Browser tests written with Playwright. They drive the built app (`index.html` at the repo root) in headless Chromium.
+Browser tests written with Playwright. They drive the built app (`index.html` at the repo root) in headless Chromium,
+at iPhone size. Each script prints `PASS`/`FAIL` lines (some print values to check) and is run on its own.
 
-## Setup
+## Setup (once)
 
-1. Build the app first: `cd src && python3 assemble.py`
-2. Serve the repo root on port 8750: `python3 -m http.server 8750`
-3. Install Playwright: `npm install playwright-core` (some tests also use `jszip` for making test EPUBs).
+```
+npm install                       # Playwright, jszip, pdf.js, onnxruntime-web, Piper's wasm (versions pinned in package.json)
+npx playwright install chromium   # skip if PLAYWRIGHT_BROWSERS_PATH already points at a Chromium for this Playwright version
+npm run fixtures                  # makes the test books in tests/fixtures/ (not committed)
+```
 
-## Paths to adjust
+## Running
 
-These scripts were written in a cloud workspace, so a few paths are absolute:
+```
+npm run build                     # rebuild index.html from src/
+npm run serve                     # serves the repo root on http://localhost:8750 (leave it running)
+node tests/feature/tear.js        # any test
+```
 
-- Chromium: `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (the `executablePath` in each script). Change it to your own Chromium, or remove the option to use Playwright's own browser.
-- Scratch folder: `/tmp/claude-0/.../scratchpad/` for screenshots, fixtures and the `redteam-epub` folder. Change the `EP`/`S` constants at the top of a script.
+Screenshots and other output go to `$TOOZ_SCRATCH` (default: `<system temp>/tooz-tests/`). Paths are set in
+`tests/env.js`.
 
 ## What's here
 
-- `feature/` — one script per feature batch (selection, notes, library, shelf, Bible, contents, footnotes, rotation, tutorial, and `batch13.js` for the November 12 update). Each prints `PASS`/`FAIL` lines or values to check.
-- `regression/` — the wider suite (`rt-v3`, `rt-modes`, `rt-data`, `rt-v2`, and the EPUB import harness). `runall.sh` runs them all and writes the output to `rt-v3/out/`. Look for `exit 0` at the end of each output file and no `pageerror` lines.
+- `feature/` — one script per feature or fix, newest first by date. The ones to run after read-aloud or reader
+  changes: `smoke`, `batch14`, `batch15`, `selend`, `seledge`, `audioctl`, `piper`, `cadence`, `offline`, `refsplit`,
+  `range`, `dash`, `dashsplit`, `paren`, `ellip`, `acro`, `bmswipe`, `tear`.
+  - `cadence.js` and `offline.js` use a real Piper voice from Hugging Face (network needed).
+  - `piper.js` and `audioctl.js` use the tiny fake voice in `feature/fake-piper/` instead.
+  - `dbg*.js`, `shots*.js`, `nshot.js` and `ttsbarshot.js` are one-off debugging or screenshot scripts, not tests.
+- `fixtures/make-fixtures.js` — makes the EPUBs and PDF the tests import (`epub_large.epub` is "Big Book", etc.).
+- `regression/` — the older, wider suite (`rt-v3`, `rt-modes`, `rt-v2`, `rt-data`, and the EPUB import harness).
+  Its fixtures were made in a workspace that no longer exists; `npm run fixtures` re-creates the EPUB/PDF files
+  under the same names, but `rt-data/` also needs an older build of the app (`old.html`, `new.html`) and a
+  `cases/` folder of odd EPUBs, which are gone. Treat failures there as "check whether the test or the fixture is
+  out of date" before assuming the app is broken.
 
 Tests set `window.__toozKeepSample=true` so the tutorial book stays in the library.

@@ -1,10 +1,11 @@
-const { chromium } = require('playwright-core');
-const EP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-epub/';
+const __E=require('../env');
+const { chromium } = require('playwright');
+const EP=(__E.SCRATCH+'redteam-epub/');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   const ctx=await b.newContext({viewport:{width:390,height:780}, deviceScaleFactor:2, serviceWorkers:'block', hasTouch:true, isMobile:true}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
-  await ctx.route(/cdnjs/,r=>r.fulfill({path:EP+'node_modules/jszip/dist/jszip.min.js',contentType:'application/javascript'}));
+  await ctx.route(/cdnjs/,r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',contentType:'application/javascript'}));
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
   await pg.goto('http://localhost:8750/'); await sleep(700);
@@ -27,7 +28,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   console.log('errs', errs);
   // big book counts
   await pg.evaluate(()=>closeReader());
-  await pg.setInputFiles('#fileIn', EP+'files/epub_large.epub'); await pg.waitForFunction(()=>LIB.some(m=>m.title==='Big Book'),null,{timeout:60000}); await sleep(300);
+  await pg.setInputFiles('#fileIn', __E.FIX+'epub_large.epub'); await pg.waitForFunction(()=>LIB.some(m=>m.title==='Big Book'),null,{timeout:60000}); await sleep(300);
   await pg.evaluate(()=>openDoc(LIB.find(m=>m.title==='Big Book').id)); await sleep(1000);
   for(const t of [0,3000,8000]){ await sleep(t?t-(t===8000?3000:0):0); console.log('big @'+t, await pg.evaluate(()=>[$('#rInfo').textContent, PC.counts.filter(Boolean).length+'/'+PC.counts.length])); }
   const t0=Date.now(); await pg.waitForFunction(()=>PC.counts.every(Boolean),null,{timeout:120000}); console.log('all counted after ~', Date.now()-t0+9000,'ms', await pg.evaluate(()=>$('#rInfo').textContent));

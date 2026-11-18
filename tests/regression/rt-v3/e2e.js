@@ -1,8 +1,9 @@
-const { chromium } = require('../tooz/t/node_modules/playwright-core'); const fs=require('fs');
-const SP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/'; const EP=SP+'redteam-epub/';
-const LIBS={'jszip.min.js':EP+'node_modules/jszip/dist/jszip.min.js','pdf.min.js':EP+'node_modules/pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':EP+'node_modules/pdfjs-dist/build/pdf.worker.min.js'};
+const __E=require('../../env');
+const { chromium } = require('playwright'); const fs=require('fs');
+const SP=__E.SCRATCH; const EP=(__E.SCRATCH+'redteam-epub/');
+const LIBS={'jszip.min.js':__E.NM+'jszip/dist/jszip.min.js','pdf.min.js':__E.NM+'pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':__E.NM+'pdfjs-dist/build/pdf.worker.min.js'};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const [W,Hh]=(process.argv[2]||'390x780').split('x').map(Number); const T=W+'_';
-(async()=>{ const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+(async()=>{ const b=await chromium.launch({});
  const ctx=await b.newContext({viewport:{width:W,height:Hh},deviceScaleFactor:2,serviceWorkers:'block',hasTouch:true,isMobile:true,acceptDownloads:true}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
  await ctx.route(/cdnjs/,r=>{ const k=Object.keys(LIBS).find(k=>r.request().url().endsWith('/'+k)); return k?r.fulfill({path:LIBS[k],contentType:'application/javascript'}):r.abort(); });
  await ctx.route(/fonts\.(googleapis|gstatic)|allorigins|corsproxy|example\.com/,r=>r.abort());
@@ -21,7 +22,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const [W,Hh]=(process.argv[2]|
  await tap(.9,.5); log('fwd1',await st()); await tap(.9,.5); log('fwd2',await st()); await shot('sample_p2'); await tap(.1,.5); log('back',await st()); await tap(.5,.5); log('mid',await st());
  await tapSel('#rBack'); await sleep(400); log('closed', await pg.evaluate(()=>[R.mode, !$('#v-library').hidden]));
  const imp=async(p)=>{ const n0=await pg.evaluate(()=>LIB.length); await pg.setInputFiles('#fileIn',p); try{ await pg.waitForFunction(n=>LIB.length>n,n0,{timeout:20000}); }catch(e){} await sleep(500); log('import',p.split('/').pop(),await pg.evaluate(()=>$('#toastMsg').textContent)); };
- for(const p of [SP+'tooz/t/rich.epub',SP+'rt-modes/assets/pic.epub',EP+'files/epub_images.epub',EP+'files/epub3_nested.epub',SP+'rt-data/cases/latin1.epub',SP+'rt-data/cases/fonts.epub',SP+'rt-data/cases/inline.epub',SP+'rt-data/cases/cover.epub',SP+'rt-data/cases/rtl.epub',EP+'files/simple.pdf',EP+'files/epub_drm.epub',EP+'files/epub_notzip.epub']) await imp(p);
+ for(const p of [S__E.FEAT+'rich.epub',SP+'rt-modes/assets/pic.epub',__E.FIX+'epub_images.epub',__E.FIX+'epub3_nested.epub',SP+'rt-data/cases/latin1.epub',SP+'rt-data/cases/fonts.epub',SP+'rt-data/cases/inline.epub',SP+'rt-data/cases/cover.epub',SP+'rt-data/cases/rtl.epub',__E.FIX+'simple.pdf',__E.FIX+'epub_drm.epub',__E.FIX+'epub_notzip.epub']) await imp(p);
  await shot('library_full');
  const open=async t=>{ const [tt,ix]=t.split('#'); const bx=await pg.evaluate(([t,ix])=>{ const d=[...document.querySelectorAll('#docList .doc .t')].filter(x=>x.textContent.includes(t))[+ix||0]; d.scrollIntoView({block:'center'}); const r=d.getBoundingClientRect(); return [r.left+20,r.top+8]; },[tt,ix]); await sleep(200); await pg.touchscreen.tap(bx[0],bx[1]); await sleep(1200); };
  for(const t of ['Picture Book','Images Book','Nested','Cases#0','Cases#1','Cases#2','Cases#3','Cases#4','simple']){ try{ await open(t); log('open',t,await st()); await shot('bk_'+t.replace(/\W/g,'')); await tap(.9,.5); await tap(.9,.5); await shot('bk_'+t.replace(/\W/g,'')+'_p2'); await pg.evaluate(()=>switchMode('scroll')); await sleep(600); await shot('bk_'+t.replace(/\W/g,'')+'_sc'); await pg.evaluate(()=>switchMode('pages')); await sleep(400); await pg.evaluate(()=>closeReader()); await sleep(300);}catch(e){ log('OPEN FAIL',t,e.message.slice(0,100)); log(await pg.evaluate(()=>LIB.map(m=>m.title))); } }

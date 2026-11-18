@@ -1,10 +1,11 @@
-const { chromium } = require('playwright-core');
-const EP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-epub/';
+const __E=require('../env');
+const { chromium } = require('playwright');
+const EP=(__E.SCRATCH+'redteam-epub/');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:true, isMobile:true}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
-  await ctx.route(/cdnjs/,r=>r.fulfill({path:EP+'node_modules/jszip/dist/jszip.min.js',contentType:'application/javascript'}));
+  await ctx.route(/cdnjs/,r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',contentType:'application/javascript'}));
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   let direct=0, proxied=0;
   await ctx.route(/^https:\/\/www\.gutenberg\.org/,r=>{ direct++; r.abort(); });   // pretend the phone is blocked from Gutenberg

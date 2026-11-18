@@ -1,9 +1,10 @@
-const { chromium } = require('playwright-core');
-const EP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-epub/';
-const LIB={'jszip.min.js':EP+'node_modules/jszip/dist/jszip.min.js','pdf.min.js':EP+'node_modules/pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':EP+'node_modules/pdfjs-dist/build/pdf.worker.min.js'};
+const __E=require('../env');
+const { chromium } = require('playwright');
+const EP=(__E.SCRATCH+'redteam-epub/');
+const LIB={'jszip.min.js':__E.NM+'jszip/dist/jszip.min.js','pdf.min.js':__E.NM+'pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':__E.NM+'pdfjs-dist/build/pdf.worker.min.js'};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   const ctx=await b.newContext({viewport:{width:390,height:844}, serviceWorkers:'block', hasTouch:false}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
   await ctx.route(/cdnjs/,r=>{ const k=Object.keys(LIB).find(k=>r.request().url().endsWith('/'+k)); return k?r.fulfill({path:LIB[k],contentType:'application/javascript'}):r.abort(); });
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());

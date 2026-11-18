@@ -1,11 +1,12 @@
+const __E=require('../../env');
 // shared harness
-const { chromium } = require('/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/tooz/t/node_modules/playwright-core');
-const EP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-epub/';
-const FILES=EP+'files/';
-const RICH='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/tooz/t/rich.epub';
-const LIB={'jszip.min.js':EP+'node_modules/jszip/dist/jszip.min.js','pdf.min.js':EP+'node_modules/pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':EP+'node_modules/pdfjs-dist/build/pdf.worker.min.js'};
+const { chromium } = require('playwright');
+const EP=(__E.SCRATCH+'redteam-epub/');
+const FILES=__E.FIX;
+const RICH=__E.FEAT+'rich.epub';
+const LIB={'jszip.min.js':__E.NM+'jszip/dist/jszip.min.js','pdf.min.js':__E.NM+'pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':__E.NM+'pdfjs-dist/build/pdf.worker.min.js'};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function launch(){ return chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'}); }
+async function launch(){ return chromium.launch({}); }
 async function page(b, {w=390,h=780,touch=true,settings=null,fontRoute=null}={}){
   const ctx=await b.newContext({viewport:{width:w,height:h}, deviceScaleFactor:2, serviceWorkers:'block', hasTouch:touch, isMobile:touch}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
   await ctx.route(/cdnjs/,r=>{ const k=Object.keys(LIB).find(k=>r.request().url().endsWith('/'+k)); return k?r.fulfill({path:LIB[k],contentType:'application/javascript'}):r.abort(); });

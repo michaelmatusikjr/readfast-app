@@ -1,14 +1,15 @@
+const __E=require('../../env');
 // Upgrade test: old ReadFast (87b274b) state -> new Tooz eReader, same origin, persistent profile.
-const { chromium } = require('/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/redteam-r2/node_modules/playwright-core');
+const { chromium } = require('playwright');
 const fs=require('fs');
-const SP='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
+const SP=__E.SCRATCH;
 const D=SP+'rt-data/';
-const EP=SP+'redteam-epub/';
-const LIBS={'jszip.min.js':EP+'node_modules/jszip/dist/jszip.min.js','pdf.min.js':EP+'node_modules/pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':EP+'node_modules/pdfjs-dist/build/pdf.worker.min.js'};
+const EP=(__E.SCRATCH+'redteam-epub/');
+const LIBS={'jszip.min.js':__E.NM+'jszip/dist/jszip.min.js','pdf.min.js':__E.NM+'pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':__E.NM+'pdfjs-dist/build/pdf.worker.min.js'};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let CUR=D+'old.html';
 async function launch(dir){
-  const ctx=await chromium.launchPersistentContext(dir,{executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', viewport:{width:390,height:844}, serviceWorkers:'block', acceptDownloads:true});
+  const ctx=await chromium.launchPersistentContext(dir,{viewport:{width:390,height:844}, serviceWorkers:'block', acceptDownloads:true});
   await ctx.route(/cdnjs/,r=>{ const k=Object.keys(LIBS).find(k=>r.request().url().endsWith('/'+k)); return k?r.fulfill({path:LIBS[k],contentType:'application/javascript'}):r.abort(); });
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   await ctx.route(/localhost:8761\/(index\.html)?(\?.*)?$/,r=>r.fulfill({path:CUR,contentType:'text/html'}));
@@ -22,9 +23,9 @@ async function addFile(pg,path,title){ await pg.setInputFiles('#fileIn', path); 
   // ---------- OLD VERSION ----------
   let ctx=await launch(prof); let pg=await page(ctx);
   log('OLD lib', await pg.evaluate(()=>LIB.map(m=>m.title)));
-  await addFile(pg, SP+'tooz/t/rich.epub', 'Rich Test');
-  await addFile(pg, EP+'files/epub_images.epub', '');
-  await addFile(pg, EP+'files/simple.pdf', '');
+  await addFile(pg, S__E.FEAT+'rich.epub', 'Rich Test');
+  await addFile(pg, __E.FIX+'epub_images.epub', '');
+  await addFile(pg, __E.FIX+'simple.pdf', '');
   await pg.evaluate(async()=>{ const m=fromPlainText('# Intro\nThis is the first pasted paragraph. It has two sentences.\n\nSecond paragraph here, with more words in it to read.\n\n## Part two\nThird paragraph under a subheading. The end.'); await addDoc({title:'Pasted thing', kind:'paste', ...m}); });
   await pg.evaluate(async()=>{ const html='<html><head><title>An Article</title></head><body><article><h1>Big Story</h1>'+Array.from({length:6},(_,k)=>'<p>Paragraph '+k+' of the article has enough words in it to count as real article text for the extractor, which needs a few hundred characters.</p>').join('')+'<blockquote><p>A pulled quote.</p></blockquote></article></body></html>'; const a=extractArticle(html,'https://ex.com/a'); await addDoc({...a, title:a.title, kind:'link', source:'https://ex.com/a'}); });
   log('OLD lib after import', await pg.evaluate(()=>LIB.map(m=>[m.title,m.kind,m.count,m.chapters.length,m.imageCount])));
@@ -76,7 +77,7 @@ async function addFile(pg,path,title){ await pg.setInputFiles('#fileIn', path); 
   // add a highlight and note in rich book (old import) then backup
   await pg.evaluate(async()=>{ const m=LIB.find(x=>x.title.includes('Rich')); await openDoc(m.id); addHighlight(10,20,3,'note A'); R.meta.bookmarks.push({i:50,name:'new bm',at:Date.now()}); touch(R.meta); closeReader(); });
   // import new rich book with font for round trip
-  await addFile(pg, SP+'tooz/t/rich.epub', 'Rich Test');
+  await addFile(pg, S__E.FEAT+'rich.epub', 'Rich Test');
   await pg.evaluate(async()=>{ const ms=LIB.filter(x=>x.title.includes('Rich')); const m=ms[ms.length-1]; await openDoc(m.id); addHighlight(30,40,2,'note B'); closeReader(); });
   await sleep(300);
   const dl2P=pg.waitForEvent('download'); await pg.evaluate(()=>backup()); const dl2=await dl2P; await dl2.saveAs(D+'dl/new-backup.json');

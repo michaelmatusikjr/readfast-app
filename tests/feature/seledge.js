@@ -1,9 +1,10 @@
-const { chromium } = require('playwright-core');
-const S='/tmp/claude-0/-home-claude/99ef2298-0981-5d84-8afa-8770d83afcea/scratchpad/';
+const __E=require('../env');
+const { chromium } = require('playwright');
+const S=__E.SCRATCH;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', hasTouch:true, isMobile:true, colorScheme:'dark'}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); await pg.goto('http://localhost:8750/'); await sleep(1500);
   const press=async(sel)=>pg.evaluate(async()=>{ const h=hostEl(); const ws=[...h.querySelectorAll('w')].filter(e=>{const r=e.getBoundingClientRect(); return r.width>0&&r.top>140&&r.top<300&&r.left>=0&&r.right<=innerWidth;}); const w=ws[0]; const r=w.getBoundingClientRect(); const x=r.left+r.width/2,y=r.top+r.height/2;

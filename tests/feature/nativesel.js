@@ -1,7 +1,7 @@
-const { chromium } = require('playwright-core');
+const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+  const b=await chromium.launch({});
   for(const touch of [true,false]){
   const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:touch, isMobile:touch}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); await pg.goto('http://localhost:8750/'); await sleep(1500);
