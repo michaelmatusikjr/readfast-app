@@ -44,7 +44,7 @@ and move items out of **Pending changes** once they're built.
 - App Settings holds only app-wide items: Reading (idle limit, what the bottom line shows, reset), Light, Backup and
   restore, Storage, Library, Adding books, Help (tutorial, version, What's new), Erase.
 - Bottom bars (tab bar and in-book bar) are tall enough and fill the home-indicator area.
-- Reader top bar: Back, Contents and Aa. Search and this book’s notes live at the top of the Contents sheet. The bars hide while he reads (on a page turn or scroll) and come back on a tap in the middle of the page.
+- Reader top bar: Back, Contents and Aa. Search and this book’s notes live at the top of the Contents sheet. The bars hide while he reads (on a page turn or scroll) and come back on a tap in the middle of the page. Hiding them does not change the page layout; thin reserved strips at the top and bottom keep the running title and page label off the text.
 - The OpenDyslexic title must not overflow the font picker.
 
 ## Library

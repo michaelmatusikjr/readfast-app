@@ -1,7 +1,8 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.26-reader-bar';
+const APP_VERSION='2026.11.18.27-reader-bar-fix';
 const WHATSNEW=[
-  ['A simpler reader bar','The top of a book now has just Back, Contents and Aa. Search this book, and this book’s notes and highlights, live at the top of the Contents sheet. The bars hide while you read and come back when you tap the middle of the page.']
+  ['The page stays put when the bars hide','Hiding the top bar no longer reshuffles the pages. A little space at the top and bottom keeps the running title and the page label off the text.'],
+  ['Search jumps to the match','A search result opens the page with that word, highlights it briefly, and offers a “Back to where you were” chip for a few seconds.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

@@ -282,7 +282,8 @@ function pgSet(page, anim){
 async function pgShow(i){
   const k=secAt(i);
   if(P.k!==k || !pgFlow.firstElementChild) await pgLoad(k);
-  let p=pgPageOfEl(wordEl(i)); while(p>0 && pgFirstWord(p-1)===i) p--; /* a picture-only page belongs before its word */
+  let w=wordEl(i); if(!w){ await new Promise(r=>requestAnimationFrame(r)); w=wordEl(i); }
+  let p=pgPageOfEl(w); while(p>0 && pgFirstWord(p-1)===i) p--; /* a picture-only page belongs before its word */
   pgSet(p, false);
   R.pos=i; updateChrome();
 }
@@ -302,7 +303,7 @@ async function pgTurn(d){
     else if(P.k>0){ P.busy=true; try{ await pgFade(async()=>{ await pgLoad(P.k-1); pgSet(P.pages-1,false); }); } finally{ P.busy=false; } }
     else return;
   }
-  R.pos=pgFirstWord(P.page); afterMove(); if(S.focus) setChrome(false);
+  R.pos=pgFirstWord(P.page); afterMove(); if(S.focus && !hasSelection() && !TS.edge) setChrome(false);
   if(TTS.on) ttsRestart();
 }
 let pgPt=null;
@@ -389,7 +390,7 @@ scView.addEventListener('scroll',()=>{
     const now=performance.now();
     if(now-SC.lastSave>2500){ SC.lastSave=now; saveProgress(); }
     if(now-SC.lastClock>3000){ SC.lastClock=now; noteProgress(); }
-    if(S.focus && !SC.auto && R.chrome && SC.userScrolled && performance.now()-(SC.stopT||0)>500) setChrome(false);
+    if(S.focus && !SC.auto && R.chrome && SC.userScrolled && !hasSelection() && performance.now()-(SC.stopT||0)>500) setChrome(false);
   });
 },{passive:true});
 let scPt=null;
@@ -531,7 +532,27 @@ function setChrome(on){
     const el=$('#'+id); if(!el) continue;
     if(on) el.removeAttribute('inert'); else el.setAttribute('inert','');
   }
-  if(was!==on && R.mode && R.mode!=='speed' && !v.hidden){ holdPlace(); relayoutSoon(); }
+  const foot=$('#rFoot');
+  if(foot) v.style.setProperty('--rfoot-h', Math.round(foot.getBoundingClientRect().height)+'px');
+  /* Insets are fixed; toggling the overlay bars must not relayout or repaginate. */
+  if(was && !on && R.mode && R.mode!=='speed') maybeHintBar();
+}
+function maybeHintBar(){
+  if(LS.get('hintBar', false)) return;
+  LS.set('hintBar', 1);
+  const el=$('#barHint'); if(!el) return;
+  el.hidden=false;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){
+    el.style.opacity='0.7';
+    setTimeout(()=>{ el.style.opacity=''; el.hidden=true; }, 900);
+  } else {
+    el.classList.add('on');
+    let done=false;
+    const hide=()=>{ if(done) return; done=true; el.classList.remove('on'); el.hidden=true; el.removeEventListener('animationend', hide); };
+    el.addEventListener('animationend', hide);
+    setTimeout(hide, 1600);
+  }
 }
 function toggleChrome(){ setChrome(!R.chrome); }
 document.addEventListener('keydown',e=>{
@@ -541,7 +562,7 @@ document.addEventListener('keydown',e=>{
   setChrome(true);
 }, true);
 function stopActivity(){ if(R.playing) pause(); if(SC.auto) asStop(true); if(TTS.on) ttsStop(); }
-function setBack(prev){ R.backPos=prev; $('#backPill').hidden=false; clearTimeout(R.backT); R.backT=setTimeout(()=>{ $('#backPill').hidden=true; }, 60000); }
+function setBack(prev){ if(prev==null) return; R.backPos=prev; $('#backPill').hidden=false; clearTimeout(R.backT); R.backT=setTimeout(()=>{ $('#backPill').hidden=true; }, 6000); }
 $('#backGo').onclick=()=>{ const p=R.backPos; if(p==null) return; $('#backPill').hidden=true; goTo(p,true); };
 $('#backX').onclick=()=>{ $('#backPill').hidden=true; R.backPos=null; };
 /* Endnotes: the number in front of each note leads back to where it was cited.
@@ -600,7 +621,7 @@ async function switchMode(m){
   await MODES[m].enter(); updateChrome(); resetClock();
 }
 let relayT=null;
-function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; pinApp(); applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
+function relayoutSoon(){ clearTimeout(relayT); relayT=setTimeout(async()=>{ if(!R.mode || $('#v-reader').hidden) return; if(hasSelection()) return; pinApp(); applyLook(); try{ await MODES[R.mode].relayout(); if(R.mode==='pages') pgCheckAnchor(); }catch(e){ console.error(e); } updateChrome(); },140); }
 /* after a rotation the page area can settle a moment later (the notch insets): if the anchor word isn't on screen, lay out once more */
 function pgCheckAnchor(){ setTimeout(async()=>{ if(R.mode!=='pages' || R.anchor==null || $('#v-reader').hidden) return; const w=wordEl(R.anchor); if(!w) return; const c=$('#pgClip').getBoundingClientRect(), r=w.getBoundingClientRect(); if(r.left<c.left-2 || r.right>c.right+2){ pgApplyGeom(); P.k=-1; await pgShow(R.anchor); } }, 400); }
 function holdPlace(){ if(R.mode && R.meta && R.anchor==null && R.mode!=='speed') R.anchor = R.mode==='pages' && P.topWord!=null && P.k>=0 ? P.topWord : R.pos; }
@@ -657,6 +678,8 @@ function bookmarkHere(){
 function updateChrome(){
   if(!R.meta) return;
   const ch=currentChapter(R.pos); $('#rSub').textContent=ch?ch.t:(KIND[R.meta.kind]||'');
+  const foot=$('#rFoot'), vr=$('#v-reader');
+  if(foot && vr) vr.style.setProperty('--rfoot-h', Math.round(foot.getBoundingClientRect().height)+'px');
   if(R.mode==='speed'||!R.mode) return;
   const sc=$('#rScrub'); sc.max=Math.max(1,R.n-1); if(!scrubbing) sc.value=R.pos;
   const info=infoText(); $('#rInfo').textContent=info; $('#runFoot').textContent=info; $('#runHead').textContent=ch?ch.t:R.meta.title;
@@ -953,6 +976,7 @@ async function tsEdgeTick(){
     SC.gestureAt=Date.now();
     tsExtendTo(wordNear(x, zone>0? H-EDGE.bottom-6 : EDGE.top+6));
   } else if(R.mode==='pages'){
+    if(!hasSelection()) return;
     const now=performance.now();
     if(!TS.dwellAt){ TS.dwellAt=now; return; }
     if(now-TS.dwellAt<EDGE.dwell || P.busy || TS.turning) return;
@@ -1108,7 +1132,7 @@ function openSearch(){
   stopActivity();
   setChrome(true);
   openSheet('Search this book', `<input class="input" id="srchIn" type="search" placeholder="Words or a phrase" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"><div id="srchMeta" class="note"></div><div id="srchOut"></div>`, {
-    res:(b)=>{ const i=+b.dataset.i, len=+b.dataset.l; closeSheet(); goTo(i,true).then(()=>flashFound(i,len)); }
+    res:(b)=>{ const i=+b.dataset.i, len=+b.dataset.l; const prev=R.pos; closeSheet(); goTo(i,true).then(()=>{ if(prev!==i) setBack(prev); return flashFound(i,len); }); }
   });
   sheetFocusBack=$('#rToc');
   const inp=$('#srchIn'); inp.value=R.lastSearch||''; let t=null;
@@ -1131,8 +1155,21 @@ function runSearch(){
 }
 function flashFound(i,len){
   if(R.mode==='speed') return;
-  const ws=[]; for(let k=i;k<i+len;k++){ const w=wordEl(k); if(w){ w.classList.add('found'); ws.push(w); } }
-  setTimeout(()=>ws.forEach(w=>w.classList.remove('found')),2600);
+  const apply=()=>{
+    const ws=[];
+    for(let k=i;k<i+len;k++){ const w=wordEl(k); if(w){ w.classList.add('found'); ws.push(w); } }
+    if(ws[0] && R.mode==='pages'){ const pg=pgPageOfEl(ws[0]); if(pg!==P.page) pgSet(pg,false); }
+    /* The bars overlay the page, so a match at the top or bottom would sit under them. Hide the bars so the highlight is visible. Insets stay fixed, so the page does not move. */
+    if(ws[0] && R.chrome && R.mode!=='speed'){
+      const wr=ws[0].getBoundingClientRect();
+      const top=$('#rTop')&&$('#rTop').getBoundingClientRect();
+      const foot=$('#rFoot')&&!$('#rFoot').hidden&&getComputedStyle($('#rFoot')).visibility!=='hidden' ? $('#rFoot').getBoundingClientRect() : null;
+      if((top && wr.top<top.bottom-2) || (foot && wr.bottom>foot.top+2)) setChrome(false);
+    }
+    updateChrome();
+    setTimeout(()=>ws.forEach(w=>w.classList.remove('found')), 2000);
+  };
+  requestAnimationFrame(()=>requestAnimationFrame(apply));
 }
 
 /* ---------- read aloud ---------- */
@@ -1390,9 +1427,11 @@ function fitAaSheetForWord(){
   }
   const word=$('#word'); if(!word) return;
   const wr=word.getBoundingClientRect();
-  const room=Math.round(window.innerHeight - wr.bottom - 16);
-  if(room>80) sh.style.maxHeight=room+'px';
-  else sh.style.maxHeight=Math.floor(window.innerHeight*0.45)+'px';
+  const below=Math.round(window.innerHeight - wr.bottom - 16);
+  const minH=Math.min(200, Math.round(window.innerHeight*0.4));
+  const maxH=Math.round(window.innerHeight*0.86);
+  const room=Math.max(minH, Math.min(maxH, below>0?below:minH));
+  sh.style.maxHeight=Math.max(room, minH)+'px';
 }
 /* re-draw whichever reading controls are on screen (the Aa menu, the Settings page section) */
 function refreshPanel(){
@@ -1432,7 +1471,7 @@ function afterSet(key){
   if((key==='font'||key==='speedFont') && R.mode==='speed'){ document.fonts&&document.fonts.ready.then(()=>{ if(R.mode==='speed'){ showChunk(R.pos); syncScroll(true); } }); }
   if(key==='context' && R.mode==='speed') renderContext();
   if(LAYOUT_KEYS.has(key) && R.mode!=='speed') relayoutSoon();
-  if(key==='focus' && R.mode!=='speed'){ $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode); relayoutSoon(); }
+  if(key==='focus' && R.mode!=='speed'){ $('#v-reader').classList.toggle('overlay', !!S.focus && !TTS.mode); }
   if(REPANEL_KEYS.has(key)) refreshPanel();
   if(key==='tapZones') refreshPanel();
   updateChrome();

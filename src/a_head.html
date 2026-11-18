@@ -181,9 +181,9 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #rMark.on svg path{fill:currentColor}
 #rMark.on{color:var(--page-link)}
 #rTts.on{color:var(--page-link)}
-.run{position:absolute;left:0;right:0;z-index:4;text-align:center;font-size:.72rem;color:var(--page-muted);opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 56px;font-variant-numeric:tabular-nums}
-#runHead{top:calc(16px + env(safe-area-inset-top,0px))}
-#runFoot{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+.run{position:absolute;left:0;right:0;z-index:4;text-align:center;font-size:.72rem;color:var(--page-muted);opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 56px;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+#runHead{top:env(safe-area-inset-top,0px);height:14px;line-height:14px}
+#runFoot{bottom:env(safe-area-inset-bottom,0px);height:16px;line-height:16px}
 #v-reader input[type=range]{accent-color:var(--page-link)}
 #v-reader.chrome-off .run{opacity:1}
 #v-reader[data-mode="speed"] .run{display:none}
@@ -263,32 +263,31 @@ w.hl1,w.hl2,w.hl3,w.hl4,.book w.tsel,wd.hl1,wd.hl2,wd.hl3,wd.hl4,.book wd.tsel{b
 w.hl1,w.hl2,w.hl3,w.hl4{color:var(--hl-ink,inherit);cursor:pointer}
 w.hn{text-decoration:underline dotted;text-decoration-thickness:2px;text-underline-offset:3px}
 w.tts{background:var(--tts);color:#1B1B1B;border-radius:3px}
-w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px}
+w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;animation:foundPulse 1.8s ease 1}
+@keyframes foundPulse{0%{background:var(--page-link);color:var(--page-bg)}40%{background:color-mix(in srgb,var(--page-link) 55%,var(--page-bg));color:inherit}100%{background:transparent;color:inherit}}
+@media (prefers-reduced-motion:reduce){w.found{animation:none}}
 
 /* Pages */
 #pagesView{position:absolute;top:0;bottom:0;overflow:hidden;touch-action:pan-y;-webkit-user-select:text;user-select:text}
-#pgClip{position:absolute;top:22px;bottom:22px;overflow:hidden}
+#pgClip{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));overflow:hidden}
 #pgFlow,#pgMeasure{position:absolute;top:0;left:0;bottom:0;column-fill:auto}
 #pgFlow{will-change:transform}
 #pgMeasure{visibility:hidden;pointer-events:none;-webkit-user-select:none;user-select:none}
 #pagesView,#scrollView{left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px)}
-/* focus mode: the bars float over the page, so hiding them gives the text the whole screen */
-#v-reader.overlay:not([data-mode="speed"]) .rchrome{position:absolute;left:0;right:0}
-#v-reader.overlay:not([data-mode="speed"]) #rTop{top:0}
-#v-reader.overlay:not([data-mode="speed"]) #rFoot{bottom:0}
-#v-reader.overlay #pgClip{top:calc(50px + env(safe-area-inset-top,0px));bottom:calc(46px + env(safe-area-inset-bottom,0px))}
-#v-reader.overlay #scrollView{top:calc(48px + env(safe-area-inset-top,0px));bottom:calc(46px + env(safe-area-inset-bottom,0px))}
-/* Hidden bars leave the page: only the status-bar / home-indicator insets remain. */
-#v-reader.chrome-off:not([data-mode="speed"]) #rTop,
-#v-reader.chrome-off:not([data-mode="speed"]) #rFoot{position:absolute;left:0;right:0}
-#v-reader.chrome-off:not([data-mode="speed"]) #rTop{top:0}
-#v-reader.chrome-off:not([data-mode="speed"]) #rFoot{bottom:0}
-#v-reader.chrome-off:not([data-mode="speed"]) #pgClip{top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px)}
-#v-reader.chrome-off:not([data-mode="speed"]) #scrollView{top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px)}
+/* Pages/Scroll: the bars are a pure overlay. Page insets stay fixed whether the bars are shown or hidden,
+   so toggling them never repaginates. Thin reserved strips hold the running title and page label. */
+#v-reader:not([data-mode="speed"]) .rchrome{position:absolute;left:0;right:0}
+#v-reader:not([data-mode="speed"]) #rTop{top:0}
+#v-reader:not([data-mode="speed"]) #rFoot{bottom:0}
+#scrollView{top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+#barHint{position:absolute;left:0;right:0;top:0;height:calc(14px + env(safe-area-inset-top,0px));z-index:6;pointer-events:none;background:linear-gradient(to bottom,color-mix(in srgb,var(--page-link) 40%,transparent),transparent);opacity:0}
+#barHint.on{animation:barHintPulse 1.4s ease 1}
+@keyframes barHintPulse{0%,100%{opacity:0}25%,55%{opacity:1}}
+@media (prefers-reduced-motion:reduce){#barHint.on{animation:none}}
 #pgFlow.anim-slide{transition:transform .28s cubic-bezier(.3,.6,.2,1)}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
 /* Scroll */
-#scrollView{position:absolute;top:0;bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#scrollView{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #scFlow{padding:18px var(--mx) 45vh}
 /* Scroll mode's "previously read" tear: the page torn across, with the gap showing what's behind it */
 #scFlow .tear{--gap:color-mix(in srgb,var(--page-bg) 84%,var(--page-ink));position:relative;margin:1.1em calc(-1 * var(--mx));background:linear-gradient(var(--page-bg) 0 8px,var(--gap) 8px calc(100% - 8px),var(--page-bg) calc(100% - 8px));text-indent:0;-webkit-user-select:none;user-select:none}
@@ -358,7 +357,8 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
   #speedView input[type=range]{height:24px}
 }
 /* Floating reader bits */
-#backPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);z-index:8;display:flex;align-items:center;background:var(--ink);color:var(--paper);border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:nowrap}
+#backPill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;background:var(--ink);color:var(--paper);border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:nowrap;pointer-events:auto}
+#v-reader:not(.chrome-off):not([data-mode="speed"]) #backPill{bottom:calc(8px + var(--rfoot-h,96px))}
 #backPill button{background:none;border:0;color:inherit;font-weight:700;font-size:.85rem;padding:9px 6px 9px 14px;cursor:pointer}
 #backPill button+button{padding:9px 12px 9px 6px;opacity:.7}
 #selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;align-items:center;gap:2px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:4px 6px;box-shadow:0 8px 28px rgba(0,0,0,.22);max-width:calc(100% - 16px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))}
