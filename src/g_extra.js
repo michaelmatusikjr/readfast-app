@@ -1,5 +1,5 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.17-reimagine';
+const APP_VERSION='2026.11.18.18';
 const WHATSNEW=[
   ['Definitions saved with words','Defining a word now fetches and saves its definition. Definitions are fetched when you define a word and shown in the lookup sheet.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
@@ -247,13 +247,15 @@ function yearHTML(st, met){
   b.addEventListener('pointerup', up);
   b.addEventListener('pointercancel', up);
 })();
+*/
 
 
-/* === REIMAGINE PROTOTYPE === */
+/* === REIMAGINE PROTOTYPE (disabled for now) === */
+/*
 (function(){
   const v = document.getElementById('v-reader');
   if(!v) return;
-  v.classList.add('reimagine');
+  // v.classList.add('reimagine'); // disabled
   let hideTimer = null;
   function showChrome(){
     v.classList.add('chrome-on');
