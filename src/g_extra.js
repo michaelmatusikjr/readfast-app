@@ -1,6 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.16.1';
+const APP_VERSION='2026.11.18.1';
 const WHATSNEW=[
+  ['Preview badge','A small version number now sits in the top-right corner so you can tell when the app has updated. Drag it out of the way; tap it to see what’s new (newest first).'],
   ['Where you left off, in Scroll','Whenever you leave a book in Scroll mode, even for a moment, the page shows a tear when you come back: what you’d read sits above it, marked Previously read, and the tear is in the middle of the screen so you can pick up right below it.'],
   ['One pause for an ellipsis','Three dots in a row (..., . . . or …) are read as a single pause instead of three.'],
   ['Delete bookmarks with a swipe','In Notes → Bookmarks, swipe a bookmark to the left and tap Delete. Undo brings it back.'],
@@ -203,3 +204,41 @@ function yearHTML(st, met){
       ${undated?`<p class="note">Not counted by year: ${undated} book${undated===1?'':'s'} marked finished before Tooz recorded finish dates.</p>`:''}
     </div>`;
 }
+
+/* floating version badge */
+(function(){
+  const b=$('#verBadge'); if(!b) return;
+  b.textContent='v'+APP_VERSION;
+  let x=parseFloat(LS.get('verX'))||null, y=parseFloat(LS.get('verY'))||null;
+  if(x!=null && y!=null){ b.style.left=x+'px'; b.style.top=y+'px'; b.style.right='auto'; }
+  let sx,sy,ox,oy,moved=false;
+  const down=e=>{
+    moved=false;
+    const t=e.touches?e.touches[0]:e;
+    sx=t.clientX; sy=t.clientY;
+    const r=b.getBoundingClientRect();
+    ox=t.clientX-r.left; oy=t.clientY-r.top;
+    b.style.cursor='grabbing';
+    e.preventDefault();
+  };
+  const move=e=>{
+    if(sx==null) return;
+    const t=e.touches?e.touches[0]:e;
+    if(Math.hypot(t.clientX-sx,t.clientY-sy)>6) moved=true;
+    let nx=t.clientX-ox, ny=t.clientY-oy;
+    nx=Math.max(0, Math.min(nx, innerWidth-b.offsetWidth));
+    ny=Math.max(0, Math.min(ny, innerHeight-b.offsetHeight));
+    b.style.left=nx+'px'; b.style.top=ny+'px'; b.style.right='auto';
+    e.preventDefault();
+  };
+  const up=e=>{
+    if(sx==null) return;
+    if(!moved) whatsNewSheet();
+    else { LS.set('verX', parseFloat(b.style.left)); LS.set('verY', parseFloat(b.style.top)); }
+    sx=null; b.style.cursor='grab';
+  };
+  b.addEventListener('pointerdown', down);
+  b.addEventListener('pointermove', move);
+  b.addEventListener('pointerup', up);
+  b.addEventListener('pointercancel', up);
+})();
