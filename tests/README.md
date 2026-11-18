@@ -30,6 +30,13 @@ Screenshots and other output go to `$TOOZ_SCRATCH` (default: `<system temp>/tooz
   - `cadence.js` and `offline.js` use a real Piper voice from Hugging Face (network needed).
   - `piper.js` and `audioctl.js` use the tiny fake voice in `feature/fake-piper/` instead.
   - `dbg*.js`, `shots*.js`, `nshot.js` and `ttsbarshot.js` are one-off debugging or screenshot scripts, not tests.
+- **Known out of date** (checked Nov 18, 2026; the app is fine, the test isn't): `batch10`, `bible`, `lib`, `shelf`
+  (they click the old library sort/status buttons or expect the tutorial to be removed, from before the Sort/Filter
+  and tutorial changes), `mar` (margins moved into the folded "More text options" in Aa), `notes` (all its checks
+  run, then it reads from a page it already closed), `fontchip` (its check passes; the screenshot step times out).
+  Update one of these when you next touch that area, or delete it.
+- Last full run (Nov 18, 2026): every other feature test ran clean, including `smoke`, `batch13`–`batch15`,
+  `piper`, `audioctl`, `cadence`, `offline`, `tear`, `bmswipe`, `range`, `refsplit`, `dashsplit`, `ellip`, `acro`.
 - `fixtures/make-fixtures.js` — makes the EPUBs and PDF the tests import (`epub_large.epub` is "Big Book", etc.).
 - `regression/` — the older, wider suite (`rt-v3`, `rt-modes`, `rt-v2`, `rt-data`, and the EPUB import harness).
   Its fixtures were made in a workspace that no longer exists; `npm run fixtures` re-creates the EPUB/PDF files
