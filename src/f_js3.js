@@ -1196,3 +1196,50 @@ boot();
 </script>
 </body>
 </html>
+
+/* definition saving override — runs after original defineWord exists */
+(function(){
+  if(typeof defineWord !== 'function') return;
+  const orig = defineWord;
+  window.defineWord = async function(w, k){
+    const sent = sentenceAt(k);
+    const dup = WORDS.find(x => x.word.toLowerCase() === w.toLowerCase() && x.docId === R.meta.id && x.pos === k);
+    let item;
+    if(!dup){
+      item = {id:uid(), word:w, sentence:sent.text, docId:R.meta.id, docTitle:R.meta.title, pos:k, at:Date.now(), def:''};
+      WORDS.unshift(item);
+      saveWords();
+      renderWords();
+      try{
+        const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w.toLowerCase()));
+        if(r.ok){
+          const data = await r.json();
+          const meaning = data[0] && data[0].meanings && data[0].meanings[0] && data[0].meanings[0].definitions && data[0].meanings[0].definitions[0] && data[0].meanings[0].definitions[0].definition;
+          if(meaning){
+            item.def = meaning;
+            saveWords();
+            renderWords();
+          }
+        }
+      }catch(e){}
+    } else {
+      item = dup;
+    }
+    lookupSheet(w, item.def ? 'Saved to Words with definition.' : 'Saved to Words.');
+  };
+
+  const origRender = renderWords;
+  window.renderWords = function(){
+    const el = $('#wordList');
+    if(!WORDS.length){
+      el.innerHTML = '<div class="empty">Words you look up while reading appear here, with the sentence you found them in.</div>';
+      return;
+    }
+    el.innerHTML = WORDS.map(function(x){
+      const re = new RegExp('(^|[^\\p{L}])(' + x.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?=[^\\p{L}]|$)', 'iu');
+      const s = esc(x.sentence).replace(re, '$1<b>$2</b>');
+      const def = x.def ? '<div class="def" style="margin-top:4px;font-size:.9rem;color:var(--ink);font-style:italic">' + esc(x.def) + '</div>' : '';
+      return '<div class="wcard" data-id="' + x.id + '"><span class="del-under">Remove</span><div class="winner"><div class="grow" data-look="' + x.id + '"><div class="w">' + esc(x.word) + '</div>' + def + '<div class="s">' + s + '</div><div class="src">' + esc(x.docTitle) + ' · ' + new Date(x.at).toLocaleDateString() + '</div></div><button class="icon-btn wdel" type="button" data-wdel="' + x.id + '" aria-label="Remove ' + esc(x.word) + '">' + ICON.trash + '</button></div></div>';
+    }).join('');
+  };
+})();

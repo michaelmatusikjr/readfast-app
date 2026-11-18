@@ -1,6 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.5';
+const APP_VERSION='2026.11.18.6';
 const WHATSNEW=[
+  ['Definitions in Words','When you define a word it now looks up and saves the definition with the word in your Notes → Words list.'],
   ['Finished books','Finished books now show a green “Finished” tag and sit a little quieter in the library.'],
   ['Clearer empty library','When filters or search leave nothing, the empty state is clearer and offers a one-tap Clear filters button.'],
   ['Quieter Speed mode','Speed mode hides extra hints and keeps the focus on the word.'],
