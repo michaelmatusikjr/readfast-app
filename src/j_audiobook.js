@@ -316,9 +316,14 @@ async function ttsDownloadNatural(){
   bar.addEventListener('pointerdown',e=>{
     if(e.button && e.button!==0) return;
     /* Do not capture yet: capturing on the bar retargets click away from Play / speed / close,
-       so a real mouse or trackpad click would do nothing. Capture only after a swipe starts. */
+       so a real mouse or trackpad click would do nothing. Capture only after a swipe starts.
+       Long-press opens Voice only from the pill body, not from Play, speed, or close: a hold
+       on those controls is a normal single tap (or nothing), never a double toggle. */
     tracking=true; sx=e.clientX; sy=e.clientY; t0=performance.now(); pid=e.pointerId; moved=false; longed=false; captured=false;
-    longT=setTimeout(()=>{ longed=true; TTS.pillLock=true; ttsHideNatChip(true); if(typeof ttsHideHoldHint==='function') ttsHideHoldHint(true); openVoiceSheet(); }, 520);
+    const onCtrl=!!(e.target.closest && e.target.closest('#ttsPlay, #ttsSpeed, #ttsClose, #ttsVoice, #ttsPrev, #ttsNext'));
+    if(!onCtrl){
+      longT=setTimeout(()=>{ longed=true; TTS.pillLock=true; ttsHideNatChip(true); if(typeof ttsHideHoldHint==='function') ttsHideHoldHint(true); openVoiceSheet(); }, 520);
+    }
   });
   bar.addEventListener('pointermove',e=>{
     if(!tracking || e.pointerId!==pid) return;

@@ -337,11 +337,13 @@ pgView.addEventListener('pointerup',e=>{
 /* ---------- Scroll mode (+ auto-scroll) ---------- */
 const SC={busy:false, auto:false, wasAuto:false, raf:0, last:0, acc:0, pxps:0, mT:0, pauseUntil:0, t0:0, passed:new WeakSet(), ticking:false, lastSave:0, lastClock:0};
 function scTopOf(w){ return w.getBoundingClientRect().top - scView.getBoundingClientRect().top + scView.scrollTop; }
+/* scShow places the anchor word this many px below the clip top; scPos samples at the same offset so open/close is a round trip. */
+const SC_ANCHOR_PAD=10;
 async function scShow(i, keepPos){
   SC.busy=true; SC.userScrolled=false; /* the place stays exactly on word i until the reader scrolls */
   try{
     scFlow.replaceChildren(); await renderSec(scFlow, secAt(i), 'append');
-    const w=wordEl(i); scView.scrollTop=w?Math.max(0, scTopOf(w)-10):0;
+    const w=wordEl(i); scView.scrollTop=w?Math.max(0, scTopOf(w)-SC_ANCHOR_PAD):0;
   } finally{ SC.busy=false; }
   await scEnsure();
   if(R.tearCenter){ R.tearCenter=false; tearCenterNow(); await scEnsure(); tearCenterNow(); }
@@ -395,7 +397,7 @@ function wordAtY(y){
   }
   const last=scFlow.lastElementChild; return last?Math.max(last._a,last._b-1):R.pos;
 }
-function scPos(){ return wordAtY(scView.getBoundingClientRect().top+6); }
+function scPos(){ return wordAtY(scView.getBoundingClientRect().top+SC_ANCHOR_PAD+1); }
 scView.addEventListener('scroll',()=>{
   if(SC.ticking || R.mode!=='scroll') return; SC.ticking=true;
   requestAnimationFrame(async()=>{
@@ -480,6 +482,7 @@ $('#asUp').onclick=()=>{ S.scrollWpm=clamp(S.scrollWpm+10,60,700); saveSettings(
 function hasSelection(){ if(TS.on) return true; const s=getSelection(); return !!(s && !s.isCollapsed && s.toString().trim()); }
 function readerTap(e){
   const t=e.target;
+  /* A middle tap never closes the read-aloud pill; it only picks a word or toggles the bars. */
   if(TTS.mode){ const w=t.closest&&t.closest('w'); const i=w?idxOf(w):null; if(i!=null && !(R.wf && (R.wf[i]&F_N))){ ttsPickWord(i); return; } }
   const fig=t.closest&&t.closest('figure');
   if(fig){
@@ -1517,13 +1520,17 @@ function ttsSentOf(i){
   let a=i, b=i;
   while(a>a0 && !ttsIsClauseEnd(a-1)) a--;
   while(b<b0 && !ttsIsClauseEnd(b)) b++;
-  const w=wordEl(i);
-  if(w){
-    const r=w.getBoundingClientRect(), lh=r.height||((S.size||18)*(S.lineH||1.4));
-    const lo=r.top-lh*1.1, hi=r.bottom+lh*1.1;
-    while(a<i){ const el=wordEl(a); if(!el) break; const rr=el.getBoundingClientRect(); if(rr.bottom<lo-1) a++; else break; }
-    while(b>i){ const el=wordEl(b); if(!el) break; const rr=el.getBoundingClientRect(); if(rr.top>hi+1) b--; else break; }
-  } else if(b-a>36){ a=Math.max(a, i-18); b=Math.min(b, i+18); }
+  /* Cap by word count, not viewport top: CSS columns put later-page words at the same top as the current word. */
+  const SPAN=25;
+  if(b-a+1>SPAN){
+    const back=Math.floor((SPAN-1)/2);
+    a=Math.max(a, i-back);
+    b=Math.min(b, a+SPAN-1);
+  }
+  if(R.mode==='pages' && P.topWord!=null && P.k>=0){
+    a=Math.max(a, P.topWord);
+    if(P.rangeEnd!=null) b=Math.min(b, Math.max(a, P.rangeEnd-1));
+  }
   return [a,b];
 }
 function ttsSentClear(){ if(TTS.sentA==null) return; for(let k=TTS.sentA;k<=TTS.sentB;k++){ const w=wordEl(k); if(w) w.classList.remove('ttssent'); } TTS.sentA=TTS.sentB=null; }
@@ -1545,7 +1552,7 @@ async function ttsMark(k){
   let w=wordEl(k);
   if(!w){ if(R.mode==='pages') await pgShow(k); else if(R.mode==='scroll') await scShow(k); w=wordEl(k); }
   if(!w) return; w.classList.add('tts'); ttsSentPaint(k);
-  if(R.mode==='pages'){ const pg=pgPageOfEl(w); if(pg!==P.page){ pgSet(pg,true); } }
+  if(R.mode==='pages'){ const pg=pgPageOfEl(w); if(pg!==P.page){ pgSet(pg,true); R.anchor=P.topWord; } }
   else if(R.mode==='scroll'){
     /* keep the spoken word no lower than the middle of the screen; only the end of the book lets it go further down */
     const r=w.getBoundingClientRect(), v=scView.getBoundingClientRect(), mid=v.top+v.height*0.5, wc=r.top+r.height/2;
@@ -1625,12 +1632,8 @@ function ttsMeasureReservePx(){
   const clip=R.mode==='pages'?$('#pgClip'): scView;
   if(!clip) return 0;
   const defaultBottom=clip.getBoundingClientRect().bottom + cur;
-  let top=b.getBoundingClientRect().top;
-  for(const id of ['ttsHint','ttsNatChip','ttsHoldHint']){
-    const el=$('#'+id); if(!el || el.hidden || el.classList.contains('fade')) continue;
-    const r=el.getBoundingClientRect();
-    if(r.height>2) top=Math.min(top, r.top);
-  }
+  /* Measure from the pill only. Hints and the voice chip render inside this reserved strip so they never change the page count. */
+  const top=b.getBoundingClientRect().top;
   const pad=ttsLinePad();
   /* Scroll gets one extra line so the last line can rest fully above the pill, not flush against its top. */
   const extra=(R.mode==='scroll')?pad:0;
@@ -1644,10 +1647,12 @@ function ttsReserveSync(){
   if(v && b && !b.hidden){ const lift=Math.ceil(b.getBoundingClientRect().height+8); if(lift>0) v.style.setProperty('--tts-chip-lift', lift+'px'); v.style.setProperty('--tts-line-pad', ttsLinePad()+'px'); }
   const next=on?ttsMeasureReservePx():0;
   if(next===ttsResPx) return;
-  const turningOff=ttsResPx>0 && next===0;
+  /* Always re-anchor on the current first visible word *before* the clip changes.
+     A stale R.anchor (set when the pill opened) would jump the view back after listening turned the page. */
+  if(R.mode==='pages' || R.mode==='scroll') holdPlace(true);
   ttsResPx=next;
   if(v) v.style.setProperty('--tts-reserve', next+'px');
-  if(R.mode==='pages' || R.mode==='scroll'){ if(!turningOff) holdPlace(true); else holdPlace(); relayoutSoon(); }
+  if(R.mode==='pages' || R.mode==='scroll') relayoutSoon();
 }
 function ttsModeOn(){
   if(R.mode==='speed') return;

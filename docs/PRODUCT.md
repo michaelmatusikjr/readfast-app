@@ -88,10 +88,13 @@ and move items out of **Pending changes** once they're built.
 
 - The speaker button opens a small floating pill with play/pause and a speed chip, **without playing**, instead of
   replacing the footer. Tap a word to choose where to start, then play; tap a word while playing to jump. Swipe the
-  pill to skip a sentence; touch and hold it (or use the Voice control) for voice choice and downloads. A second tap
-  on the speaker, or the close button on the pill, puts it away. The pill stays when switching between Pages and
-  Scroll, and stays on screen if the reader bars hide. In Pages and Scroll the text clip shrinks so the pill and the
-  “Back to where you were” chip do not cover the last lines; your place is kept when the pill opens or closes. In
+  pill to skip a sentence; touch and hold the body of the pill (not Play or the speed chip), or use the Voice
+  control, for voice choice and downloads. A second tap on the speaker, or the close button on the pill, puts it
+  away. The pill stays when switching between Pages and Scroll, and stays on screen if the reader bars hide. In
+  Pages and Scroll the text clip shrinks so the pill and the “Back to where you were” chip do not cover the last
+  lines; your place is kept when the pill opens or closes, including after listening has moved to a later page.
+  The first-time hint sits in that reserved strip and does not change the page count. The spoken sentence is softly
+  highlighted around the current word (about two dozen words, so a long sentence does not wash the whole page). In
   Scroll, the spoken word stays in the middle of the screen. If the natural voice is not downloaded yet, Tooz starts
   with the iPhone voice and offers the better one without blocking.
 - Two voice types: **Natural** (Piper, runs on the phone, each voice downloads once, about 60 MB; default Lessac)

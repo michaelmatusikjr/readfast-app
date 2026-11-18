@@ -1,7 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.32-read-aloud-pill-fixes';
+const APP_VERSION='2026.11.18.33-read-aloud-pill-2';
 const WHATSNEW=[
-  ['Read-aloud pill fixes','The read-aloud pill now keeps your place when it opens or closes, sits in a reserved strip so it doesn’t cover the last lines or the “Back to where you were” chip, and works with a mouse or trackpad as well as a finger. A close button is on the pill, and a second tap on the speaker still puts it away.']
+  ['Read-aloud stays with you','Closing the read-aloud pill leaves you on the page you were listening to, and opening or closing it no longer nudges the view in Scroll. Long sentences stay softly highlighted around the word being read, and the first-time hint no longer changes the page count.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
