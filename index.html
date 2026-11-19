@@ -75,7 +75,7 @@ h2{font-size:1.15rem;font-weight:600}
 .libbar{display:flex;gap:8px;align-items:center}
 #libFind{flex:1;min-width:0;box-sizing:border-box}
 .tbtn{flex:none;position:relative;width:46px;height:46px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
-.tbtn.on{border-color:var(--accent);color:var(--accent)}
+.tbtn.on{border-color:var(--accent);color:var(--sel-ink,var(--accent))}
 #libSug,#libPills{gap:6px}
 #libPills{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:2px}
 #libPills::-webkit-scrollbar{display:none}
@@ -94,7 +94,7 @@ button.hlrow.ftrow{width:100%;background:none;border:0;border-bottom:1px solid v
 .ftrow mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 .wn-i{padding:10px 0;border-bottom:1px solid var(--line)}.wn-i:last-child{border:0}.wn-i .small{margin-top:3px;line-height:1.45}
 .wn{margin-bottom:14px}
-.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;cursor:pointer}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent-text,var(--accent));text-decoration:underline;cursor:pointer}
 details.yr{margin-top:10px}
 .fsec{border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden}
 .fsec summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;font-weight:700}
@@ -111,7 +111,7 @@ details.yr{margin-top:10px}
 .fopt[aria-pressed=true] .bx{background:var(--c);border-color:var(--c)}
 .fopt .lb{flex:1;min-width:0}.fopt .ct{color:var(--muted);font-size:.8rem}
 .sortopt{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left}
-.sortopt[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}
+.sortopt[aria-pressed=true]{border-color:var(--accent);color:var(--sel-ink,var(--accent))}
 .grp{margin:10px 2px -2px;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:baseline}
 .grp span{font-weight:400;letter-spacing:0}
 .doc .a{grid-column:1;font-size:.9rem;color:var(--ink);opacity:.8;margin-top:-2px}
@@ -170,7 +170,8 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #tabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--surface);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);padding-bottom:max(6px,env(safe-area-inset-bottom,0px))}
 #tabs button{border:0;background:none;padding:10px 0 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;min-height:56px}
 #tabs button svg{width:22px;height:22px}
-#tabs button[aria-current="page"]{color:var(--accent)}
+#tabs button[aria-current="page"]{color:var(--sel-ink,var(--accent))}
+#tabs button[aria-current="page"] svg{color:var(--accent)}
 
 /* ---------- Reader frame ---------- */
 #v-reader{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;background:var(--page-bg);color:var(--page-ink)}
@@ -434,7 +435,7 @@ textarea.short{min-height:8em}
 .lookup{font-family:var(--rfont);font-size:2.6rem;text-align:center;padding:18px 8px;border:1px solid var(--line);border-radius:14px;background:var(--raise);-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;cursor:text;overflow-wrap:anywhere}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{border:1px solid var(--line);background:var(--raise);border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer;color:var(--ink)}
-.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--sel-ink,var(--accent))}
 .swatch{width:40px;height:40px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer}
 .swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
 .note{font-size:.88rem;color:var(--muted);line-height:1.5}
@@ -442,7 +443,7 @@ ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;
 code{font-family:var(--f-mono);font-size:.85em;background:var(--raise);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
 .quote{font-family:var(--bfont);font-size:1rem;line-height:1.5;border-left:3px solid var(--line);padding:2px 0 2px 12px;color:var(--ink);overflow-wrap:anywhere}
 .result{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:10px 2px;cursor:pointer;color:var(--ink);font-size:.92rem;line-height:1.45}
-.result mark{background:var(--accent-soft);color:var(--accent);font-weight:700;border-radius:3px;padding:0 1px}
+.result mark{background:var(--accent-soft);color:var(--sel-ink,var(--accent));font-weight:700;border-radius:3px;padding:0 1px}
 .result .where{display:block;font-size:.76rem;color:var(--muted);margin-top:2px}
 .nbook{border:1px solid var(--line);border-radius:14px;padding:10px 14px 4px;background:var(--surface);min-width:0;max-width:100%;box-sizing:border-box}
 .nbook .nt{background:var(--raise)}
@@ -458,7 +459,7 @@ code{font-family:var(--f-mono);font-size:.85em;background:var(--raise);padding:1
 .moment-more{flex:none}
 .hl-tools{display:flex;flex-direction:column;gap:8px;margin:0 0 10px}
 .hl-meta{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--muted);min-height:44px}
-.hl-meta .sort{margin-left:auto;background:none;border:0;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;min-height:44px;padding:0 6px}
+.hl-meta .sort{margin-left:auto;background:none;border:0;color:var(--accent-text,var(--accent));font:inherit;font-weight:700;cursor:pointer;min-height:44px;padding:0 6px}
 .nbook-toggle{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .nbook-toggle .chev{flex:none;color:var(--muted)}
 #notesHlTools{width:100%;min-width:0;margin:0 0 10px}
@@ -493,7 +494,7 @@ details.aadet[open]>summary::after{transform:rotate(-135deg)}
 .aalbl{font-weight:600}
 .fontrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .fontrow button{padding:10px 4px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:1rem;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.fontrow button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--accent)}
+.fontrow button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--sel-ink,var(--accent))}
 h3.subh{margin:16px 0 8px}
 #rAs.on{color:var(--page-link)}
 .panel-sec>h3{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:var(--f-ui);font-weight:700}
@@ -503,7 +504,7 @@ h3.subh{margin:16px 0 8px}
 .themes .lbl{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;font-size:.66rem;color:var(--muted);text-align:center;margin-top:-4px}
 .stepper{display:flex;align-items:center;gap:8px}
 .stepper button{width:48px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--raise);cursor:pointer;font-family:Georgia,serif;font-weight:700;color:var(--ink)}
-.stepper .v{flex:1;text-align:center;font-family:var(--f-mono);font-size:.9rem;color:var(--accent)}
+.stepper .v{flex:1;text-align:center;font-family:var(--f-mono);font-size:.9rem;color:var(--accent-text,var(--accent))}
 .fontgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
 .fontgrid .chip{text-align:center;padding:10px 6px;font-weight:600;font-size:1rem;min-width:0;overflow:hidden;overflow-wrap:anywhere;line-height:1.2}
 .fontgrid .chip.wide{font-size:.78rem;letter-spacing:-.01em}
@@ -550,7 +551,7 @@ body.tts-pill-on #toast{bottom:calc(168px + env(safe-area-inset-bottom,0px))}
 .set:last-child{border-bottom:0}
 .set .hd{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .set .hd label{font-weight:700}
-.set .val{font-family:var(--f-mono);font-size:.85rem;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+.set .val{font-family:var(--f-mono);font-size:.85rem;color:var(--accent-text,var(--accent));font-variant-numeric:tabular-nums;white-space:nowrap}
 .set .desc{font-size:.84rem;color:var(--muted)}
 .switch{appearance:none;-webkit-appearance:none;width:50px;height:30px;border-radius:15px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .15s;margin:0}
 .switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
@@ -618,7 +619,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 .moment-go .nt.nt-clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
 .moment-go .moment-snip{display:none;width:100%}
 .moment-row.open .moment-go .moment-snip{display:block}
-.nt-more{display:block;align-self:flex-start;margin:2px 0 0;padding:0;border:0;background:none;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;min-height:32px}
+.nt-more{display:block;align-self:flex-start;margin:2px 0 0;padding:0;border:0;background:none;color:var(--accent-text,var(--accent));font:inherit;font-weight:700;cursor:pointer;min-height:32px}
 .moment-word{font-weight:700}
 .moment-def{font-weight:500;color:var(--ink)}
 .moment-snip{display:none;margin-top:4px;font-size:.85rem;color:var(--muted);line-height:1.4}
@@ -630,6 +631,10 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourScrim{position:absolute;inset:0;background:rgba(10,12,16,.62);pointer-events:none}
 #tourHole{position:absolute;box-shadow:0 0 0 9999px rgba(10,12,16,.62);background:transparent;pointer-events:none;z-index:1;border-radius:16px}
 #tour.reduced #tourHole{box-shadow:0 0 0 9999px rgba(10,12,16,.7)}
+/* with a spotlight, the hole's own shadow is the scrim, so the spotlit control shows at full colour (same darkness around it as before) */
+#tour:has(#tourHole:not([hidden])) #tourScrim{background:transparent}
+#tour:has(#tourHole:not([hidden])) #tourHole{box-shadow:0 0 0 9999px rgba(10,12,16,.86)}
+#tour.reduced:has(#tourHole:not([hidden])) #tourHole{box-shadow:0 0 0 9999px rgba(10,12,16,.89)}
 #tourSkip{position:absolute;top:calc(6px + var(--sat));right:calc(8px + var(--sar));z-index:5;min-width:44px;min-height:44px;padding:0 12px;border:0;background:rgba(20,22,26,.62);color:#fff;font:700 16px/1 var(--f-ui);cursor:pointer;border-radius:12px}
 #tourCaption{position:absolute;left:calc(20px + var(--sal));right:calc(20px + var(--sar));z-index:5;color:#fff;font:700 1.15rem/1.35 var(--f-display);text-align:center;margin:0;padding:14px 16px;box-sizing:border-box;background:rgba(20,22,30,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.28)}
 #tourCaptionText{margin:0}
@@ -707,6 +712,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 [data-style="quiet"]{
   --paper:#E9EDF2; --surface:#FFFFFF; --raise:#F4F6F9; --ink:#15202D; --muted:#5A6779;
   --line:#D7DEE7; --accent:#2244B5; --accent-soft:#DCE4FA; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
+  --accent-text:var(--accent); --sel-ink:var(--accent); --solid-dur:var(--motion-dur);
   --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --head-font:"Literata","New York",ui-serif,Georgia,serif; --head-weight:600;
   --radius-card:10px; --radius-btn:10px; --radius-sheet:14px;
@@ -720,6 +726,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 [data-style="paper"]{
   --paper:#EFE8DB; --surface:#FBF8F1; --raise:#F4EEE2; --ink:#2A241D; --muted:#6C6357;
   --line:#E0D6C4; --accent:#8C5220; --accent-soft:#F1E1CC; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
+  --accent-text:var(--accent); --sel-ink:var(--accent); --solid-dur:160ms;
   --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --head-font:"Iowan Old Style","Palatino","Literata",Georgia,serif; --head-weight:700;
   --radius-card:14px; --radius-btn:12px; --radius-sheet:18px;
@@ -738,6 +745,10 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 [data-style="lively"]{
   --paper:#F2F2F2; --surface:#FFFFFF; --raise:#F5F5F5; --ink:#141414; --muted:#626262;
   --line:#E3E3E3; --accent:#FF5A4E; --accent-soft:#EDEDED; --accent-ink:#1B1B1B; --chip-ink:var(--ink); --fill-c:var(--ink);
+  /* one accent: coral #FF5A4E only fills, rings and icons; coral text is the darker #D63A2E (4.66:1 on white) and only sits on white
+     surfaces; selected labels (active tab, chips, segments) are ink with a coral ring or icon. Only the primary action is a coral fill. */
+  --accent-text:#D63A2E; --sel-ink:var(--ink); --solid-dur:120ms;
+  --add-bg:transparent; --add-ink:var(--ink); --add-line:var(--ink);
   --ui-font:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,system-ui,"Atkinson Hyperlegible",sans-serif;
   --head-font:"Bricolage Grotesque",ui-rounded,"Avenir Next",system-ui,sans-serif; --head-weight:800;
   --radius-card:20px; --radius-btn:999px; --radius-sheet:26px;
@@ -757,7 +768,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --grain:radial-gradient(rgba(255,240,215,.035) .6px,transparent .9px),radial-gradient(rgba(255,240,215,.025) .6px,transparent .9px)}
 :root[data-theme="dark"][data-style="lively"],:root[data-theme="dark"] [data-style="lively"]{
   --paper:#0F0F0F; --surface:#1B1B1B; --raise:#242424; --ink:#F2F2F2; --muted:#9A9A9A;
-  --line:#2E2E2E; --accent:#FF7A6E; --accent-soft:#2A2A2A; --accent-ink:#141414}
+  --line:#2E2E2E; --accent:#FF7A6E; --accent-soft:#2A2A2A; --accent-ink:#141414; --accent-text:#FF7A6E}
 /* every style collapses to a short fade when the phone asks for less motion */
 @media (prefers-reduced-motion: reduce){
   :root,[data-style]{--motion-dur:160ms !important; --motion-ease:ease-out !important; --sheet-y:0% !important; --pop-y:0px !important; --pop-scale:1 !important;
@@ -788,12 +799,22 @@ button:active:not(:disabled),.doc:active{scale:var(--press-scale);translate:0 va
 @keyframes st-sheet{from{opacity:0;translate:0 var(--sheet-y)}}
 @keyframes st-pop{from{opacity:0;translate:0 var(--pop-y);scale:var(--pop-scale)}}
 @keyframes st-fade{from{opacity:0}}
-@media (prefers-reduced-motion: reduce){ @keyframes st-sheet{from{opacity:0}} @keyframes st-pop{from{opacity:0}} @keyframes st-press{50%{opacity:var(--press-op)}} }
+@media (prefers-reduced-motion: reduce){ @keyframes st-sheet{from{opacity:0}} @keyframes st-pop{from{opacity:0}} @keyframes st-rise{from{opacity:1}} @keyframes st-press{50%{opacity:var(--press-op)}} }
 #sheet{animation:st-sheet var(--motion-dur) var(--motion-ease)}
 #sheet::after{content:"";position:absolute;left:0;right:0;top:100%;height:120px;background:var(--surface);pointer-events:none} /* covers the gap while a springy sheet overshoots */
 #backdrop{animation:st-fade var(--motion-dur) ease-out}
-#ttsBar,#selBar,#tourCaption.st-in{animation:st-pop var(--motion-dur) var(--motion-ease)}
+/* closing: the sheet is already hidden (state, focus and taps move on at once); it only fades out on screen for 120ms */
+#sheet[hidden].closing{display:flex!important}
+#backdrop[hidden].closing{display:block!important}
+#sheet.closing,#backdrop.closing{pointer-events:none;animation:st-close 120ms ease-in forwards}
+@keyframes st-close{from{opacity:1}to{opacity:0}}
+#ttsBar,#tourCaption.st-in{animation:st-pop var(--motion-dur) var(--motion-ease)}
+/* the selection bar springs like the pill but turns solid at once, so the page and info line never show through it */
+#selBar{animation:st-rise var(--motion-dur) var(--motion-ease),st-fade var(--solid-dur,var(--motion-dur)) ease-out}
+@keyframes st-rise{from{translate:0 var(--pop-y);scale:var(--pop-scale)}}
 #v-library .continue-hero{animation:st-fade var(--motion-dur) ease-out}
+/* with a Continue card on the shelf, Continue is the one primary action; Add to library follows the Style (Lively: ink outline) */
+#v-library:has(.continue-hero) #addBtn{background:var(--add-bg,var(--accent));color:var(--add-ink,var(--accent-ink));border-color:var(--add-line,var(--accent))}
 /* Pages-mode page turn: a soft shadow along the incoming edge (only where the style gives it a shade) */
 #pgClip::after{content:"";position:absolute;top:0;bottom:0;width:28px;right:0;pointer-events:none;opacity:0;z-index:2;
   background:linear-gradient(to left,rgba(40,25,5,var(--turn-shade,0)),transparent)}
@@ -821,8 +842,9 @@ button:active:not(:disabled),.doc:active{scale:var(--press-scale);translate:0 va
 .stile .cap{font-size:.78rem;color:var(--muted);text-align:center;line-height:1.25}
 .stile .nm{font-size:.86rem;font-weight:700}
 .stile[aria-checked="true"] .mini{box-shadow:var(--shadow),0 0 0 2.5px var(--accent)}
-.stile .tick{position:absolute;top:-6px;right:-6px;z-index:1;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 2px var(--surface);display:none;align-items:center;justify-content:center;font-size:.72rem;font-weight:800}
-.stile[aria-checked="true"] .tick{display:flex}
+.stile .scheck{position:absolute;top:-7px;right:-7px;left:auto;margin:0;z-index:1;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 2px var(--surface);display:none;align-items:center;justify-content:center;font-size:.72rem;font-weight:800}
+.stile[aria-checked="true"] .scheck{display:flex}
+.stile .mini b{padding-right:12px} /* the title stays clear of the check badge in the corner */
 
 </style>
 </head>
@@ -5137,7 +5159,7 @@ function yearHTML(st, met){
   const best=longestStreak(st, met);
   const years=[...byYear.keys()].sort((a,b)=>b-a);
   return `<div class="chart" id="yearBox">
-      <div class="topbar" style="padding:0"><h2>${yr} in books</h2><span class="val" style="font-family:var(--f-mono);color:var(--accent)">${thisYear}${goal?' / '+goal:''}</span></div>
+      <div class="topbar" style="padding:0"><h2>${yr} in books</h2><span class="val" style="font-family:var(--f-mono);color:var(--accent-text,var(--accent))">${thisYear}${goal?' / '+goal:''}</span></div>
       ${goal?`<p class="note" style="margin:6px 0 0">${thisYear} of ${goal} books finished${thisYear>=goal?' · goal reached':thisYear>=pace?' · on pace':' · '+Math.max(1,Math.ceil(pace-thisYear))+' behind pace'}</p><div class="goalbar"><i style="width:${Math.min(100,Math.round(100*thisYear/goal))}%"></i></div>`:'<p class="note" style="margin:6px 0 0">Set a goal for the number of books to finish this year.</p>'}
       <div class="chips" id="yearChips" style="margin-top:10px">${[0,6,12,24,36,52].map(v=>`<button class="chip" type="button" data-ygoal="${v}" aria-pressed="${goal===v}">${v?v+' books':'Off'}</button>`).join('')}</div>
       <div class="tiles" style="margin-top:12px"><div class="tile"><div class="v">${best}</div><div class="k">Longest streak (days)</div></div><div class="tile"><div class="v">${list.length}</div><div class="k">Books finished, all time</div></div></div>
@@ -5941,7 +5963,7 @@ function renderStats(){
   const pct=goal?Math.min(100,Math.round(100*today.ms/goal)):0;
   $('#statsBody').innerHTML=`
     <div class="chart">
-      <div class="topbar" style="padding:0"><h2>Daily reading goal</h2><span class="val" style="font-family:var(--f-mono);color:var(--accent)">${S.goalMins?S.goalMins+' min':'Off'}</span></div>
+      <div class="topbar" style="padding:0"><h2>Daily reading goal</h2><span class="val" style="font-family:var(--f-mono);color:var(--accent-text,var(--accent))">${S.goalMins?S.goalMins+' min':'Off'}</span></div>
       ${S.goalMins?`<p class="note" style="margin:6px 0 0">${todayMin} of ${S.goalMins} minutes today${pct>=100?' · goal reached':''}</p><div class="goalbar"><i style="width:${pct}%"></i></div>`:'<p class="note" style="margin:6px 0 0">Pick a daily target. Time counts in every reading mode.</p>'}
       <div class="chips" id="goalChips" style="margin-top:10px">${[0,10,15,20,30,45,60].map(v=>`<button class="chip" type="button" data-goal="${v}" aria-pressed="${(S.goalMins||0)===v}">${v?v+' min':'Off'}</button>`).join('')}</div>
     </div>
@@ -6083,7 +6105,7 @@ function styleRowHTML(){
   return `<div class="group"><div class="set"><div class="hd"><b id="styleHd">Style</b></div>
     <div class="stylepick" id="stylePick" role="radiogroup" aria-labelledby="styleHd">${Object.keys(STYLES).map(k=>{ const st=STYLES[k], T=THEMES[st.theme];
       return `<button type="button" class="stile" role="radio" aria-checked="${styleKey()===k}" data-style-pick="${k}" aria-label="${st.label}: ${esc(st.cap)}">
-        <span class="mini" data-style="${k}" style="--tile-bg:${T.bg};--tile-ink:${T.ink}" aria-hidden="true"><b>${st.label}</b><i></i><i></i><i class="s"></i><span class="mbtn"></span><span class="msheet"></span></span><span class="tick" aria-hidden="true">✓</span>
+        <span class="mini" data-style="${k}" style="--tile-bg:${T.bg};--tile-ink:${T.ink}" aria-hidden="true"><b>${st.label}</b><i></i><i></i><i class="s"></i><span class="mbtn"></span><span class="msheet"></span></span><span class="scheck" aria-hidden="true">✓</span>
         <span class="cap" aria-hidden="true">${esc(st.cap)}</span></button>`; }).join('')}</div></div></div>`;
 }
 /* apply a Style at once with a short crossfade, set its suggested page colour, and play its motion on the tile */
@@ -7169,13 +7191,25 @@ let sheetActs={}, sheetAt=0;
 const ghost=()=>performance.now()-sheetAt<420;
 let sheetFocusBack=null;
 function openSheet(title, body, acts, cls){
-  sheetActs=acts||{}; sheetFocusBack=null; selHide(); sheetAt=performance.now();
+  sheetActs=acts||{}; sheetFocusBack=null; selHide(); sheetAt=performance.now(); sheetFadeEnd();
   const sh=$('#sheet'); sh.className=cls||''; sh.style.maxHeight='';
   sh.innerHTML=`<div class="grab"></div><div class="sheet-head"><h2>${esc(title)}</h2><button class="icon-btn" type="button" data-act="__close" aria-label="Close">${ICON.close}</button></div><div class="sheet-body">${body}</div>`;
   sh.hidden=false; const bd=$('#backdrop'); bd.className=cls&&cls.includes('short')?'light':''; bd.hidden=false;
 }
+/* A closed sheet is hidden at once (state, focus, taps); on screen it fades out for 120ms (.closing, inert, no pointer events). */
+function sheetFadeEnd(){
+  clearTimeout(sheetFadeEnd.t); sheetFadeEnd.t=0;
+  const sh=$('#sheet'), bd=$('#backdrop');
+  if(sh.classList.contains('closing')){ sh.classList.remove('closing'); sh.inert=false; if(sh.hidden) sh.style.maxHeight=''; }
+  bd.classList.remove('closing');
+}
 function closeSheet(){
-  const sh=$('#sheet'); sh.hidden=true; sh.style.maxHeight=''; $('#backdrop').hidden=true; sheetActs={};
+  const sh=$('#sheet'), bd=$('#backdrop'), wasOpen=!sh.hidden;
+  sheetFadeEnd();
+  sh.hidden=true; bd.hidden=true; sheetActs={};
+  if(wasOpen){ const ae=document.activeElement; if(ae && ae!==document.body && sh.contains(ae)) try{ ae.blur(); }catch(e){}
+    sh.inert=true; sh.classList.add('closing'); bd.classList.add('closing'); sheetFadeEnd.t=setTimeout(sheetFadeEnd, 140); }
+  else sh.style.maxHeight='';
   const back=sheetFocusBack; sheetFocusBack=null;
   if(back && typeof back.focus==='function' && document.contains(back) && !back.hasAttribute('inert') && !back.disabled){
     try{ back.focus(); }catch(e){}

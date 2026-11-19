@@ -36,7 +36,7 @@ function renderStats(){
   const pct=goal?Math.min(100,Math.round(100*today.ms/goal)):0;
   $('#statsBody').innerHTML=`
     <div class="chart">
-      <div class="topbar" style="padding:0"><h2>Daily reading goal</h2><span class="val" style="font-family:var(--f-mono);color:var(--accent)">${S.goalMins?S.goalMins+' min':'Off'}</span></div>
+      <div class="topbar" style="padding:0"><h2>Daily reading goal</h2><span class="val" style="font-family:var(--f-mono);color:var(--accent-text,var(--accent))">${S.goalMins?S.goalMins+' min':'Off'}</span></div>
       ${S.goalMins?`<p class="note" style="margin:6px 0 0">${todayMin} of ${S.goalMins} minutes today${pct>=100?' · goal reached':''}</p><div class="goalbar"><i style="width:${pct}%"></i></div>`:'<p class="note" style="margin:6px 0 0">Pick a daily target. Time counts in every reading mode.</p>'}
       <div class="chips" id="goalChips" style="margin-top:10px">${[0,10,15,20,30,45,60].map(v=>`<button class="chip" type="button" data-goal="${v}" aria-pressed="${(S.goalMins||0)===v}">${v?v+' min':'Off'}</button>`).join('')}</div>
     </div>
@@ -178,7 +178,7 @@ function styleRowHTML(){
   return `<div class="group"><div class="set"><div class="hd"><b id="styleHd">Style</b></div>
     <div class="stylepick" id="stylePick" role="radiogroup" aria-labelledby="styleHd">${Object.keys(STYLES).map(k=>{ const st=STYLES[k], T=THEMES[st.theme];
       return `<button type="button" class="stile" role="radio" aria-checked="${styleKey()===k}" data-style-pick="${k}" aria-label="${st.label}: ${esc(st.cap)}">
-        <span class="mini" data-style="${k}" style="--tile-bg:${T.bg};--tile-ink:${T.ink}" aria-hidden="true"><b>${st.label}</b><i></i><i></i><i class="s"></i><span class="mbtn"></span><span class="msheet"></span></span><span class="tick" aria-hidden="true">✓</span>
+        <span class="mini" data-style="${k}" style="--tile-bg:${T.bg};--tile-ink:${T.ink}" aria-hidden="true"><b>${st.label}</b><i></i><i></i><i class="s"></i><span class="mbtn"></span><span class="msheet"></span></span><span class="scheck" aria-hidden="true">✓</span>
         <span class="cap" aria-hidden="true">${esc(st.cap)}</span></button>`; }).join('')}</div></div></div>`;
 }
 /* apply a Style at once with a short crossfade, set its suggested page colour, and play its motion on the tile */
@@ -1264,13 +1264,25 @@ let sheetActs={}, sheetAt=0;
 const ghost=()=>performance.now()-sheetAt<420;
 let sheetFocusBack=null;
 function openSheet(title, body, acts, cls){
-  sheetActs=acts||{}; sheetFocusBack=null; selHide(); sheetAt=performance.now();
+  sheetActs=acts||{}; sheetFocusBack=null; selHide(); sheetAt=performance.now(); sheetFadeEnd();
   const sh=$('#sheet'); sh.className=cls||''; sh.style.maxHeight='';
   sh.innerHTML=`<div class="grab"></div><div class="sheet-head"><h2>${esc(title)}</h2><button class="icon-btn" type="button" data-act="__close" aria-label="Close">${ICON.close}</button></div><div class="sheet-body">${body}</div>`;
   sh.hidden=false; const bd=$('#backdrop'); bd.className=cls&&cls.includes('short')?'light':''; bd.hidden=false;
 }
+/* A closed sheet is hidden at once (state, focus, taps); on screen it fades out for 120ms (.closing, inert, no pointer events). */
+function sheetFadeEnd(){
+  clearTimeout(sheetFadeEnd.t); sheetFadeEnd.t=0;
+  const sh=$('#sheet'), bd=$('#backdrop');
+  if(sh.classList.contains('closing')){ sh.classList.remove('closing'); sh.inert=false; if(sh.hidden) sh.style.maxHeight=''; }
+  bd.classList.remove('closing');
+}
 function closeSheet(){
-  const sh=$('#sheet'); sh.hidden=true; sh.style.maxHeight=''; $('#backdrop').hidden=true; sheetActs={};
+  const sh=$('#sheet'), bd=$('#backdrop'), wasOpen=!sh.hidden;
+  sheetFadeEnd();
+  sh.hidden=true; bd.hidden=true; sheetActs={};
+  if(wasOpen){ const ae=document.activeElement; if(ae && ae!==document.body && sh.contains(ae)) try{ ae.blur(); }catch(e){}
+    sh.inert=true; sh.classList.add('closing'); bd.classList.add('closing'); sheetFadeEnd.t=setTimeout(sheetFadeEnd, 140); }
+  else sh.style.maxHeight='';
   const back=sheetFocusBack; sheetFocusBack=null;
   if(back && typeof back.focus==='function' && document.contains(back) && !back.hasAttribute('inert') && !back.disabled){
     try{ back.focus(); }catch(e){}

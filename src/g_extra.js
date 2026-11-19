@@ -184,7 +184,7 @@ function yearHTML(st, met){
   const best=longestStreak(st, met);
   const years=[...byYear.keys()].sort((a,b)=>b-a);
   return `<div class="chart" id="yearBox">
-      <div class="topbar" style="padding:0"><h2>${yr} in books</h2><span class="val" style="font-family:var(--f-mono);color:var(--accent)">${thisYear}${goal?' / '+goal:''}</span></div>
+      <div class="topbar" style="padding:0"><h2>${yr} in books</h2><span class="val" style="font-family:var(--f-mono);color:var(--accent-text,var(--accent))">${thisYear}${goal?' / '+goal:''}</span></div>
       ${goal?`<p class="note" style="margin:6px 0 0">${thisYear} of ${goal} books finished${thisYear>=goal?' · goal reached':thisYear>=pace?' · on pace':' · '+Math.max(1,Math.ceil(pace-thisYear))+' behind pace'}</p><div class="goalbar"><i style="width:${Math.min(100,Math.round(100*thisYear/goal))}%"></i></div>`:'<p class="note" style="margin:6px 0 0">Set a goal for the number of books to finish this year.</p>'}
       <div class="chips" id="yearChips" style="margin-top:10px">${[0,6,12,24,36,52].map(v=>`<button class="chip" type="button" data-ygoal="${v}" aria-pressed="${goal===v}">${v?v+' books':'Off'}</button>`).join('')}</div>
       <div class="tiles" style="margin-top:12px"><div class="tile"><div class="v">${best}</div><div class="k">Longest streak (days)</div></div><div class="tile"><div class="v">${list.length}</div><div class="k">Books finished, all time</div></div></div>

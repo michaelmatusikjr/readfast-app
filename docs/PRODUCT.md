@@ -60,6 +60,12 @@ and move items out of **Pending changes** once they're built.
   - **Lively**: big rounded corners (cards about 20 px, pill buttons), a rounded sans-serif interface, black/white/grey
     with one coral accent (#FF5A4E, #FF7A6E on dark pages) for the active or primary thing only. Taps squish and spring
     back; sheets, the pill, the selection bar and tour cards spring in (about 380 ms). Suggests White.
+    Coral #FF5A4E is only for fills, rings and icons. Coral text is #D63A2E on light pages (only on white surfaces, so it
+    stays at 4.5:1 or better) and #FF7A6E on dark pages; selected labels (active tab, chips, toggles) are ink with a
+    coral icon or ring. On the shelf only Continue is a coral fill; Add to library is an ink outline. The selection bar
+    is solid from the first moment of its spring.
+- Every Style: a closing sheet is closed at once (focus and taps move on) and only fades out on screen for about
+  120 ms. A tour spotlight shows the spotlit control at full colour.
 - Picker: Settings → Style, three live preview tiles (Quiet "Calm & still", Paper "Tactile & warm", Lively "Bouncy &
   bright"). A tap applies the Style at once with a short crossfade, sets its suggested page colour (still changeable in
   Aa afterwards), plays the Style's motion on the tile and marks it selected. "Reset reading options" keeps the Style.
