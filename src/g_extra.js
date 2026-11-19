@@ -1,7 +1,7 @@
 /* ---------- version and what's new ---------- */
 const APP_VERSION='2026.11.19.39-guide';
 const WHATSNEW=[
-  ['Meet the Guide','Your Style’s accent colour is now one small living blob that always sits where you’d look or tap next. On the shelf it is the Continue button. Tap Continue and it gathers up, follows you into the book and settles as the progress mark at the bottom (or the Play button when read aloud is open); it never sits on the words and stays still while you read. Go back and it flies home to Continue. The first-run tour uses it too. Quiet glides, Paper drags a little, Lively bounces; with Reduce Motion it simply fades. Your pages and place are unchanged.']
+  ['Meet the Guide','Your Style’s accent colour is now a small soft character that sits where you’d look or tap next. On the shelf it is the Continue button. Tap Continue and it squashes, peels off with a little sticky strand, hops into the book and lands with a jiggle as the faint progress mark at the bottom (or the Play button when read aloud is open). It never sits on the words, never wanders while you read, and only nudges once if you seem stuck on a screen. Go back and it hops home to Continue. In the first-run tour it splits into droplets to point at a few things, then merges again. Quiet is shy, Paper is heavy, Lively is bouncy; with Reduce Motion it simply fades. Your pages and place are unchanged.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

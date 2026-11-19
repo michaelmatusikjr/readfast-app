@@ -413,7 +413,6 @@ async function tourRunStep(n){
   const root=tourRoot();
   if(root) root.setAttribute('data-step', String(n));
   const finger=$('#tourFinger'); if(finger){ finger.hidden=true; finger.classList.remove('tap'); }
-  document.querySelectorAll('#tour .tour-pulse, #tour .tour-pulse-once, #tourTocIcon, #tourSel .tour-more').forEach(el=>el.classList.remove('tour-pulse','tour-pulse-once'));
   const demo=tourDemo(); if(demo) demo.hidden=true;
   tourShowChrome('Next', false);
   $('#v-library') && $('#v-library').classList.remove('tour-grid-dim');
@@ -430,10 +429,8 @@ async function tourRunStep(n){
     typeof guideTour==='function' && guideTour([{el:hero&&hero.querySelector('.hero-go'), kind:'fill'}]); /* the Guide rests as Continue's fill */
     if(hero && document.querySelector('#docList .doc:not(.continue-hero)'))
       $('#v-library').classList.add('tour-grid-dim');
-    if(!TOUR.reduced && hero) hero.classList.add('tour-pulse');
+    /* no pulse: the Guide marks each step now (v39) */
   } else {
-    const hero=document.querySelector('#v-library .continue-hero');
-    if(hero) hero.classList.remove('tour-pulse');
     $('#v-library') && $('#v-library').classList.remove('tour-grid-dim');
   }
 
@@ -465,7 +462,6 @@ async function tourRunStep(n){
     const mid=$('#tourMid');
     tourSpot(mid, 8);
     typeof guideTour==='function' && guideTour([{el:mid, kind:'mark'}]);
-    if(!TOUR.reduced && mid) mid.classList.add('tour-pulse-once');
     const top=$('#tourDemoTop');
     if(top) top.classList.remove('away');
   }
@@ -474,7 +470,6 @@ async function tourRunStep(n){
     tourDemoPages(true);
     const top=$('#tourDemoTop'); if(top) top.classList.remove('away');
     const ico=$('#tourTocIcon');
-    if(!TOUR.reduced && ico) ico.classList.add('tour-pulse');
     const peek=$('#tourPeek');
     if(peek){ peek.hidden=false; peek.classList.toggle('static', TOUR.reduced); }
     await tourAfter(TOUR.reduced?40:60);
@@ -504,7 +499,6 @@ async function tourRunStep(n){
           if(!ok || tok!==TOUR.token) return;
           dots[i].classList.add('pop');
         }
-        if(more) more.classList.add('tour-pulse');
         await tourAfter(TOUR_ANIM_MS);
         if(tok!==TOUR.token) return;
       }else{
@@ -543,7 +537,6 @@ async function tourRunStep(n){
   if(n===5){
     /* Speed has no pill: leave the Speed demo and show a Pages spread before the pill appears. */
     tourDemoPages(true);
-    document.querySelectorAll('#tourDemo .tour-pulse, #tourTocIcon.tour-pulse').forEach(el=>el.classList.remove('tour-pulse'));
     const d=tourDemo();
     if(d){ d.setAttribute('data-mode','pages'); d.classList.remove('speed-on','chrome-off'); }
     const word=$('#tourSpeedWord'); if(word){ word.hidden=true; word.classList.remove('flash'); }
@@ -616,8 +609,6 @@ function tourEnd(skipped){
   tourClearTimers();
   TOUR.token++;
   tourDoneSet();
-  const hero=document.querySelector('#v-library .continue-hero');
-  if(hero) hero.classList.remove('tour-pulse');
   $('#v-library') && $('#v-library').classList.remove('tour-grid-dim');
   tourClearTmpHero();
   const root=tourRoot();

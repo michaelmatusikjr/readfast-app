@@ -695,11 +695,6 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourFinger.tap{animation:tourTap .8s ease-out}
 @keyframes tourTap{0%{transform:scale(1);opacity:1}40%{transform:scale(.72);opacity:1}100%{transform:scale(1);opacity:.4}}
 
-.tour-pulse{animation:tourPulse .8s ease-out infinite}
-.tour-pulse-once{animation:tourPulse .8s ease-out 1}
-@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(var(--pulse-rgb,80,120,255),.0)}50%{box-shadow:0 0 0 10px rgba(var(--pulse-rgb,80,120,255),.35)}}
-#v-library .continue-hero.tour-pulse{animation:tourHeroPulse .8s ease-out infinite}
-@keyframes tourHeroPulse{0%,100%{box-shadow:0 0 0 0 rgba(var(--pulse-rgb,80,120,255),0)}50%{box-shadow:0 0 0 10px rgba(var(--pulse-rgb,80,120,255),.4)}}
 #v-library.tour-grid-dim #docList .doc:not(.continue-hero){opacity:.45}
 #docList [data-tour-hide]{display:none}
 
@@ -849,24 +844,37 @@ button:active:not(:disabled),.doc:active,.switch:active:not(:disabled){scale:var
 /* applying a style: a short crossfade (used when the browser has no view transitions) */
 :root.style-xfade *{transition:background-color 250ms ease,color 250ms ease,border-color 250ms ease,box-shadow 250ms ease,border-radius 250ms ease !important}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:250ms;animation-timing-function:ease}
-/* ---------- the Guide (v39): one accent blob where you look or tap next ----------
-   Motion per Style lives here only; l_guide.js reads these variables and has no per-Style code. */
-[data-style="quiet"]{--guide-dur:350ms; --guide-ease:cubic-bezier(.4,0,.2,1); --guide-stretch:.08; --guide-squish:0; --guide-tail:.03}
-[data-style="paper"]{--guide-dur:440ms; --guide-ease:cubic-bezier(.2,.7,.2,1); --guide-stretch:.2; --guide-squish:0; --guide-tail:.07}
-[data-style="lively"]{--guide-dur:520ms; --guide-ease:cubic-bezier(.34,1.56,.64,1); --guide-stretch:.55; --guide-squish:.2; --guide-tail:.1;
+/* ---------- the Guide (v39): one soft-body accent character where you look or tap next ----------
+   Its temperament per Style lives here only; l_guide.js reads these once per flight and has no per-Style code.
+   anticip/travel: wind-up and flight times (anticipation + flight + landing stays under ~550ms); stiffness/damping: the
+   outline springs (low damping = more jiggle); wobble: membrane; squash: wind-up and impact; jiggles: landing wobbles;
+   stretch: with speed; arc: path bow; overshoot: past the target before settling. */
+[data-style="quiet"]{--guide-anticip:70ms; --guide-travel:215ms; --guide-settle:110ms; --guide-stiffness:700; --guide-damping:.55; --guide-wobble:.03; --guide-squash:.14; --guide-jiggles:1; --guide-stretch:.25; --guide-arc:.12; --guide-overshoot:.6}
+[data-style="paper"]{--guide-anticip:100ms; --guide-travel:225ms; --guide-settle:110ms; --guide-stiffness:480; --guide-damping:.8; --guide-wobble:.008; --guide-squash:.26; --guide-jiggles:1; --guide-stretch:.16; --guide-arc:.08; --guide-overshoot:.12}
+[data-style="lively"]{--guide-anticip:90ms; --guide-travel:205ms; --guide-settle:150ms; --guide-stiffness:1300; --guide-damping:.17; --guide-wobble:.09; --guide-squash:.42; --guide-jiggles:3; --guide-stretch:.6; --guide-arc:.2; --guide-overshoot:1.5;
   --guide-mark:var(--chrome-on,var(--accent))} /* the resting mark on a light page keeps 3:1 like the other coral controls */
-:root{--guide-size:26px; --guide-fly:1; --guide-fade:160ms}
+:root{--guide-size:26px; --guide-fly:1; --guide-fade:160ms; --guide-strip-op:.42; --guide-thumb:16px}
+@supports (-webkit-touch-callout:none){ :root{--guide-thumb:28px} } /* iOS draws a bigger range thumb */
 @media (prefers-reduced-motion: reduce){ :root,[data-style]{--guide-fly:0 !important} }
 #guide{position:fixed;inset:0;z-index:20001;pointer-events:none;overflow:hidden;contain:strict;transition:opacity 160ms ease-out}
 #guide .gpos{position:absolute;left:0;top:0;width:26px;height:26px;will-change:transform;pointer-events:none}
-#guide .gbody{position:absolute;inset:0;display:block;border-radius:50%;background:var(--accent);opacity:0;will-change:transform,opacity;transform-origin:50% 50%}
+#guide .gbody{position:absolute;inset:0;display:block;border-radius:50%;background:var(--accent);opacity:0;transform-origin:50% 50%}
 #guide .gshape .gbody{background:var(--guide-mark,var(--accent))}
-#guide .gsplit .gbody{background:var(--guide-mark,var(--accent))}
-/* while the blob is on its way, the button it left or is heading for shows no fill of its own (one accent blob only) */
-.guide-off{background-color:transparent !important;border-color:color-mix(in srgb,currentColor 22%,transparent) !important;box-shadow:none !important;color:var(--muted) !important}
-#v-reader .guide-off,#tour .guide-off{color:var(--page-muted,var(--muted)) !important}
-/* it steps aside under anything that sits on top of the screen */
-body:has(#sheet:not([hidden])) #guide,body:has(#selBar:not([hidden])) #guide,body:has(#imgOverlay) #guide{opacity:0}
+#guide .gring .gbody{background:transparent;box-shadow:0 0 0 2px var(--accent)}
+#guide .gdefs{position:absolute;width:0;height:0}
+/* the character: an SVG outline in a wrapper that only ever moves by transform and opacity */
+#guide .gbod{position:absolute;left:0;top:0;width:1px;height:1px;will-change:transform,opacity;pointer-events:none;opacity:0}
+#guide .gsvg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+#guide .gblob,#guide .gstrand{fill:var(--guide-mark,var(--accent))}
+/* the progress mark you read beside stays faint: low contrast, but there */
+#guide[data-at="strip"] .gshape{opacity:var(--guide-strip-op)}
+/* while the blob is on its way, the button it left or is heading for shows no fill of its own (one accent blob only);
+   its label keeps full ink */
+.guide-off{background-color:transparent !important;border-color:color-mix(in srgb,currentColor 22%,transparent) !important;box-shadow:none !important;color:var(--ink) !important}
+#v-reader .guide-off,#tour .guide-off{color:var(--page-ink,var(--ink)) !important}
+#v-reader .guide-off svg,#tour .guide-off svg,.guide-off svg{color:inherit}
+/* it steps aside under anything that sits on top of the screen (class set by l_guide.js) */
+html.guide-under #guide{opacity:0}
 /* Settings: the Style picker */
 .stylepick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:2px 0 4px}
 .stile{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none;cursor:pointer;color:var(--ink);font:inherit;min-width:0}

@@ -86,25 +86,42 @@ and move items out of **Pending changes** once they're built.
 
 ## The Guide
 
-- **The Guide** (built Nov 18, prototype; Mick's idea): the Style's accent colour is one persistent living blob that
-  always sits where he should look or tap next, and is never absent. One fixed overlay above every view
-  (`#guide`, aria-hidden, pointer-events none): purely visual, it never takes a tap, focus or VoiceOver.
-  - Library: it rests as the fill of **Continue** on the most recent book (no Continue card: Add to library; other
-    tabs: a small mark under the active tab).
-  - Tap Continue: the fill gathers into a blob, the reader opens, and it flies (stretching along its path, a tail
-    catching up) to its spot, grows into that spot's exact shape and hands off to the real fill. While it flies, the
-    buttons it left or is heading for show no fill of their own, so there is only ever one accent blob.
-  - Reader: with read aloud open it is the pill's **Play** fill; with the bars showing it is the progress mark on the
-    scrubber; while reading (bars hidden) it is a short progress mark in the bottom reserved strip. It never covers
-    the text and never moves while he reads (page turns don't move it; the bars hiding or showing only cross-fades it).
-  - Back: it flies back to Continue. First-run tour: it moves to each step's target; where a step has several
-    (Contents icon and its two rows; the word, a colour and More) it goes to the main one first, splits into at most
-    three blobs, and merges back into one before moving on.
-  - Motion is per Style, from CSS variables only (`--guide-dur`, `--guide-ease`, `--guide-stretch`,
-    `--guide-squish`, `--guide-tail`): Quiet a calm glide with little stretch (about 350 ms); Paper weighted, with drag
-    and no overshoot; Lively springy, full stretch and a squish on arrival. Reduce Motion: it fades out at the old
-    spot and in at the new one. Taps during a flight work; it retargets mid-flight. Resize and rotation re-snap it.
-  - Firm rules: it never repaginates or moves his place, and it is drawn with transform and opacity only.
+- **The Guide** (built Nov 18, prototype; Mick's idea; reworked Nov 19 into a soft-body character): the Style's accent
+  colour is one small soft character that always sits where he should look or tap next, and is never absent. One fixed
+  overlay above every view (`#guide`, aria-hidden, pointer-events none): purely visual, it never takes a tap, focus or
+  VoiceOver.
+  - Library: it rests as the fill of **Continue** on the most recent book (no Continue card: the **Add to library**
+    fill; other tabs: a small mark fully below the active tab's label). At rest it is completely still.
+  - Tap Continue: it wakes (about 100 ms: squash, gather out of the button, lean toward the reader, peel off with a
+    sticky strand that snaps), the reader opens under it, and it comes in already moving on an arc, its outline
+    wobbling like a jelly membrane, lands with overshoot, a squash and 1-3 damped jiggles, fills its target's exact
+    shape like a mould and hands off to the real fill or mark. Whole move under 550 ms. While it flies, the button it
+    is heading for shows no fill of its own (labels keep their ink), so there is only one accent.
+  - Reader: with read aloud open it is the pill's **Play** fill (Play's own fill is off from the pill's first frame
+    until it lands); with the bars showing it is the dot on the scrubber's thumb (`--guide-thumb`: 16px, 28px on iOS);
+    while reading it is a faint 14×3 progress mark (opacity .42, about 2:1) in the bottom strip, below the "Page N of
+    M" text when there is room, otherwise beside it, never on it. It never covers or hovers over the text, not even
+    during book-open. Page turns put the mark at the new place instantly with no motion; the bars hiding take the
+    mark with them at once; it never travels while he reads, and it never nudges in the reader.
+  - Back: it hops back to Continue. A tap on the button it rests on gives a small squish (passive). One idle nudge
+    (a little hop) after about 6 s on the same screen, once per screen, outside the reader only, never with Reduce
+    Motion, cancelled by any touch.
+  - First-run tour: it moves to each step's target; where a step has several it goes to the main one, then splits
+    (mitosis, at most three) with staggered droplets on strands that snap, and the droplets are drawn back and merge
+    with a ripple before it moves on.
+  - Built as an SVG path of 12 points (Catmull-Rom) driven by damped springs at a fixed 240 Hz step. Each move is
+    simulated once at launch; the position and opacity become one Web Animation on the wrapper (compositor, survives
+    a busy main thread) and the outline is drawn from the precomputed frames. No rAF at rest. Arcs and overshoot are
+    clamped inside the viewport.
+  - Temperament per Style, from CSS variables only (`--guide-anticip`, `--guide-travel`, `--guide-settle`,
+    `--guide-stiffness`, `--guide-damping`, `--guide-wobble`, `--guide-squash`, `--guide-jiggles`, `--guide-stretch`,
+    `--guide-arc`, `--guide-overshoot`): Quiet shy (small squash, one soft settle); Paper heavy (deep squash, no
+    bounce); Lively bouncy (big squash and stretch, three jiggles). Reduce Motion: it fades out at the old spot and in
+    at the new one (opacity only, no rAF).
+  - It steps aside (opacity 0, class `html.guide-under`) under sheets, the selection bar, the image viewer, the "Back
+    to where you were" chip and toasts. A Style switch or a library re-render snaps it (the real fill shows at once).
+    Taps during a move work; it retargets mid-flight. Resize and rotation re-snap it.
+  - Firm rules: it never repaginates or moves his place, and it moves by transform and opacity only.
   - For later screens: `guideTo(targets, {main})` (up to three targets: an element or `{el, kind}`, kind `fill`,
     `mark`, `thumb` or `strip`); `guideScreen()` picks the current screen's targets; `guideTour()` for tour steps.
 
