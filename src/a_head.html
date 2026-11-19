@@ -186,14 +186,10 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 #v-reader[data-mode="speed"] #rFoot{display:none}
 .rfoot-row{display:flex;align-items:center;gap:4px}
 .rfoot-row .info{flex:1;min-width:0;border:0;background:none;color:var(--page-muted);font-size:.8rem;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;padding:6px 2px}
-#rScrub{accent-color:var(--page-link)}
 #rMark.on svg path{fill:currentColor}
-#rMark.on{color:var(--page-link)}
-#rTts.on{color:var(--page-link)}
 .run{position:absolute;left:0;right:0;z-index:4;text-align:center;font-size:.72rem;color:var(--page-muted);opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 56px;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
 #runHead{top:env(safe-area-inset-top,0px);height:14px;line-height:14px}
 #runFoot{bottom:env(safe-area-inset-bottom,0px);height:16px;line-height:16px}
-#v-reader input[type=range]{accent-color:var(--page-link)}
 #v-reader.chrome-off .run{opacity:1}
 #v-reader[data-mode="speed"] .run{display:none}
 
@@ -258,7 +254,7 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 .book w.ttssent{background:color-mix(in srgb,var(--tts) 34%,transparent);border-radius:3px;transition:background-color .25s ease}
 .book w.ttssent.tts,w.tts{background:var(--tts);color:#1B1B1B;border-radius:3px;transition:background-color .25s ease,color .25s ease}
 #asBar .icon-btn{width:40px;height:40px}
-#asPlay{background:var(--page-link);color:var(--page-bg);border-radius:50%}
+#asPlay{background:var(--chrome-on,var(--page-link));color:var(--chrome-ink,var(--page-bg));border-radius:50%}
 #asLabel{font-family:var(--f-mono);font-size:.82rem;min-width:5.4em;text-align:right;color:var(--page-ink);font-variant-numeric:tabular-nums}
 #asLabel small{color:var(--page-muted);font-weight:500}
 
@@ -291,8 +287,9 @@ w.hl1,w.hl2,w.hl3,w.hl4,.book w.tsel,wd.hl1,wd.hl2,wd.hl3,wd.hl4,.book wd.tsel{b
 w.hl1,w.hl2,w.hl3,w.hl4{color:var(--hl-ink,inherit);cursor:pointer}
 w.hn{text-decoration:underline dotted;text-decoration-thickness:2px;text-underline-offset:3px}
 w.tts{background:var(--tts);color:#1B1B1B;border-radius:3px}
-w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;animation:foundPulse 1.8s ease 1}
-@keyframes foundPulse{0%{background:var(--page-link);color:var(--page-bg)}40%{background:color-mix(in srgb,var(--page-link) 55%,var(--page-bg));color:inherit}100%{background:transparent;color:inherit}}
+/* the found word takes the Style's accent fill (Quiet: the page link colour) with its paired ink, 4.5:1 or more on every page */
+w.found{background:var(--chrome-on,var(--page-link));color:var(--chrome-ink,var(--page-bg));border-radius:3px;animation:foundPulse 1.8s ease 1}
+@keyframes foundPulse{0%{background:var(--chrome-on,var(--page-link));color:var(--chrome-ink,var(--page-bg))}40%{background:color-mix(in srgb,var(--chrome-on,var(--page-link)) 55%,var(--page-bg));color:inherit}100%{background:transparent;color:inherit}}
 @media (prefers-reduced-motion:reduce){w.found{animation:none}}
 
 /* Pages */
@@ -309,7 +306,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;anima
 #v-reader:not([data-mode="speed"]) #rTop{top:0}
 #v-reader:not([data-mode="speed"]) #rFoot{bottom:0}
 #scrollView{top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px))}
-#barHint{position:absolute;left:0;right:0;top:0;height:calc(14px + env(safe-area-inset-top,0px));z-index:6;pointer-events:none;background:linear-gradient(to bottom,color-mix(in srgb,var(--page-link) 40%,transparent),transparent);opacity:0}
+#barHint{position:absolute;left:0;right:0;top:0;height:calc(14px + env(safe-area-inset-top,0px));z-index:6;pointer-events:none;background:linear-gradient(to bottom,color-mix(in srgb,var(--chrome-on,var(--page-link)) 40%,transparent),transparent);opacity:0}
 #barHint.on{animation:barHintPulse 1.4s ease 1}
 @keyframes barHintPulse{0%,100%{opacity:0}25%,55%{opacity:1}}
 @media (prefers-reduced-motion:reduce){#barHint.on{animation:none}}
@@ -342,7 +339,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;anima
 #scrollText .cur{color:var(--page-ink)} /* full strength, not bold: bold changed where lines wrap */
 #scrollText figure.scroll-img{margin:12px 0;text-align:center}
 #scrollText figure.scroll-img img{opacity:.4;max-width:100%;height:auto;border-radius:8px;background:var(--img-bg)}
-#scrollLine{position:absolute;left:4px;right:4px;height:calc(1.05rem * 1.55);border-radius:6px;background:var(--page-link);opacity:.13;z-index:1;pointer-events:none} /* one text line tall */
+#scrollLine{position:absolute;left:4px;right:4px;height:calc(1.05rem * 1.55);border-radius:6px;background:var(--chrome-on,var(--page-link));opacity:.13;z-index:1;pointer-events:none} /* one text line tall */
 #stage .reticle{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;background:var(--page-bg);border-radius:12px;padding:18px 8px;box-shadow:0 -4px 16px rgba(0,0,0,.12)}
 .reticle{position:relative;margin:0;padding:18px 8px;background:var(--surface);border-radius:12px}
 .reticle::before,.reticle::after{content:"";position:absolute;left:0;right:0;height:1px;background:var(--page-line)}
@@ -367,7 +364,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
 .controls .icon-btn svg{width:26px;height:26px}
 .ctl-label{display:block;font-size:.62rem;font-weight:700;letter-spacing:.04em;color:var(--page-muted);margin-top:-2px}
 .ctl{display:flex;flex-direction:column;align-items:center}
-#playBtn{width:68px;height:68px;border-radius:50%;background:var(--page-link);color:var(--page-bg)}
+#playBtn{width:68px;height:68px;border-radius:50%;background:var(--chrome-on,var(--page-link));color:var(--chrome-ink,var(--page-bg))}
 #playBtn svg{width:30px;height:30px}
 .speed{display:flex;align-items:center;gap:6px;padding:0 4px}
 .speed .icon-btn{width:40px;height:40px}
@@ -496,10 +493,14 @@ details.aadet[open]>summary::after{transform:rotate(-135deg)}
 .fontrow button{padding:10px 4px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:1rem;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .fontrow button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--sel-ink,var(--accent))}
 h3.subh{margin:16px 0 8px}
-#rAs.on{color:var(--page-link)}
+#rAs.on{color:var(--chrome-on,var(--page-link))}
 .panel-sec>h3{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:var(--f-ui);font-weight:700}
 .themes{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .themes button{aspect-ratio:1;max-width:100%;border-radius:12px;border:1px solid var(--line);cursor:pointer;font-family:Georgia,serif;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;padding:0}
+/* Match phone: the Aa is two-tone like the swatch (day ink on the day half, Dark's ink on the dark half), so each half reads 4.5:1+ */
+.themes button{position:relative}
+.themes .aa2{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:inherit}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){.themes .aa2{-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}}
 .themes button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--accent);border-color:transparent}
 .themes .lbl{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;font-size:.66rem;color:var(--muted);text-align:center;margin-top:-4px}
 .stepper{display:flex;align-items:center;gap:8px}
@@ -748,7 +749,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --turn-dur:320ms; --turn-ease:cubic-bezier(.2,.7,.2,1); --turn-shade:.16;
   --press-scale:1; --press-y:1px; --press-op:1; --press-dur:120ms; --press-ease:ease-out;
   /* the reader's active controls (scrubber, speaker, bookmark) and the tour pulse take Paper's brown instead of link blue */
-  --chrome-on:var(--accent); --pulse-rgb:140,82,32;
+  --chrome-on:var(--accent); --chrome-ink:var(--accent-ink); --pulse-rgb:140,82,32;
 }
 [data-style="lively"]{
   --paper:#F2F2F2; --surface:#FFFFFF; --raise:#F5F5F5; --ink:#141414; --muted:#626262;
@@ -768,7 +769,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --turn-dur:260ms; --turn-ease:cubic-bezier(.2,.9,.3,1); --turn-shade:0;
   /* coral controls on the page (scrubber, active speaker/bookmark, the pill's Play fill) use the deeper #D63A2E on light pages:
      #FF5A4E is under 3:1 on Paper (2.83) and Sepia (2.44); #D63A2E is 3.7 / 4.28, and white Play glyph on it 4.66 */
-  --chrome-on:#D63A2E; --play-bg:#D63A2E; --play-ink:#FFFFFF; --pulse-rgb:255,90,78;
+  --chrome-on:#D63A2E; --chrome-ink:#FFFFFF; --play-bg:#D63A2E; --play-ink:#FFFFFF; --pulse-rgb:255,90,78;
   --press-scale:.96; --press-y:0px; --press-op:1; --press-dur:260ms; --press-ease:cubic-bezier(.34,1.56,.64,1);
 }
 :root[data-theme="dark"][data-style="quiet"],:root[data-theme="dark"] [data-style="quiet"]{
@@ -780,7 +781,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --grain:radial-gradient(rgba(255,240,215,.035) .6px,transparent .9px),radial-gradient(rgba(255,240,215,.025) .6px,transparent .9px)}
 :root[data-theme="dark"][data-style="lively"],:root[data-theme="dark"] [data-style="lively"]{
   --paper:#0F0F0F; --surface:#1B1B1B; --raise:#242424; --ink:#F2F2F2; --muted:#9A9A9A;
-  --line:#2E2E2E; --accent:#FF7A6E; --accent-soft:#2A2A2A; --accent-ink:#141414; --accent-text:#FF7A6E; --accent-text-card:#FF7A6E; --accent-text-raise:#FF7A6E; --chrome-on:var(--accent); --play-bg:var(--accent); --play-ink:var(--accent-ink); --pulse-rgb:255,122,110}
+  --line:#2E2E2E; --accent:#FF7A6E; --accent-soft:#2A2A2A; --accent-ink:#141414; --accent-text:#FF7A6E; --accent-text-card:#FF7A6E; --accent-text-raise:#FF7A6E; --chrome-on:var(--accent); --chrome-ink:var(--accent-ink); --play-bg:var(--accent); --play-ink:var(--accent-ink); --pulse-rgb:255,122,110}
 /* every style collapses to a short fade when the phone asks for less motion */
 @media (prefers-reduced-motion: reduce){
   :root,[data-style]{--motion-dur:160ms !important; --motion-ease:ease-out !important; --sheet-y:0% !important; --pop-y:0px !important; --pop-scale:1 !important;
@@ -805,7 +806,9 @@ body,#sheet,.group{background-image:var(--grain,none);background-size:3px 3px,5p
 #selBar{border-radius:var(--radius-card,14px);box-shadow:var(--float-shadow,0 8px 28px rgba(0,0,0,.22))}
 #selMenu{box-shadow:var(--float-shadow,0 8px 28px rgba(0,0,0,.22))}
 .tag,.doc .tg span{color:var(--chip-ink)}
-/* the reader's active controls (scrubber, bookmark, speaker) use the page's link colour, or Lively's one accent */
+/* the reader's active controls (scrubber, bookmark, speaker, auto-scroll, play buttons, scroll line, bar hint, found word) use
+   --chrome-on: Paper's brown or Lively's coral; Quiet leaves it unset and keeps the page's link colour. --chrome-ink is the glyph/text on a
+   --chrome-on fill (Quiet: the page colour). */
 #rScrub,#v-reader input[type=range]{accent-color:var(--chrome-on,var(--page-link))}
 #rMark.on,#rTts.on{color:var(--chrome-on,var(--page-link))}
 /* touch feedback: Quiet dims, Paper sinks 1px and loses its shadow, Lively squishes and springs back */

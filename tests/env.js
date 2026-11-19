@@ -7,4 +7,6 @@ const FIX = path.join(__dirname, 'fixtures') + '/';                // generated 
 const FEAT = path.join(__dirname, 'feature') + '/';                // small committed fixtures (rich.epub, fake-piper/)
 const SCRATCH = (process.env.TOOZ_SCRATCH || path.join(os.tmpdir(), 'tooz-tests')) + '/';   // screenshots, downloads, profiles
 fs.mkdirSync(SCRATCH, { recursive: true });
-module.exports = { ROOT, NM, FIX, FEAT, SCRATCH };
+// The build under test: TOOZ_URL=http://127.0.0.1:8762/ (full URL) or PORT=8762 (localhost); default http://localhost:8750/.
+const URL = process.env.TOOZ_URL || `http://localhost:${process.env.PORT || 8750}/`;
+module.exports = { ROOT, NM, FIX, FEAT, SCRATCH, URL };

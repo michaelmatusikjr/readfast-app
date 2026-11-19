@@ -16,6 +16,7 @@ npm run fixtures                  # makes the test books in tests/fixtures/ (not
 ```
 npm run build                     # rebuild index.html from src/
 npm run serve                     # serves the repo root on http://localhost:8750 (leave it running)
+                                  # point tests at another server with TOOZ_URL=http://127.0.0.1:8762/ or PORT=8762 (tear.js reads it via env.js)
 node tests/feature/tear.js        # any test
 ```
 

@@ -1913,13 +1913,15 @@ function quickFonts(key){
 function panelHTML(){
   const m=S.mode;
   const themeKeys=['auto',...Object.keys(THEMES)];
-  const swatch=(k)=>{ const T=THEMES[k]; return T?`background:${T.bg};color:${T.ink}`:`background:linear-gradient(135deg,${THEMES[autoDay()].bg} 50%,#16181C 50%);color:#888`; };
+  const swatch=(k)=>{ const T=THEMES[k]; return T?`background:${T.bg};color:${T.ink}`:`background:linear-gradient(135deg,${THEMES[autoDay()].bg} 50%,${THEMES.dark.bg} 50%);color:${THEMES[autoDay()].ink}`; };
+  /* Match phone's Aa is painted in two inks along the same diagonal (day ink | Dark's ink), so it reads on both halves */
+  const aa=(k)=>THEMES[k]?'Aa':`<span class="aa2" style="background-image:linear-gradient(135deg,${THEMES[autoDay()].ink} 50%,${THEMES.dark.ink} 50%)">Aa</span>`;
   const sizeKey=m==='speed'?'speedSize':'size';
   const sizeRow=`<div class="aarow"><span class="aalbl">${m==='speed'?'Word size':'Text size'}</span><div class="stepper"><button type="button" data-step="${sizeKey}" data-d="${m==='speed'?-2:-1}" data-min="${m==='speed'?24:12}" data-max="${m==='speed'?72:40}" aria-label="Smaller" style="font-size:.85rem">A</button><span class="v" data-val="${sizeKey}">${S[sizeKey]} px</span><button type="button" data-step="${sizeKey}" data-d="${m==='speed'?2:1}" data-min="${m==='speed'?24:12}" data-max="${m==='speed'?72:40}" aria-label="Larger" style="font-size:1.25rem">A</button></div></div>`;
   let h=`<div class="panel-sec">${pSeg('mode',[['pages','Pages'],['scroll','Scroll'],['speed','Speed']])}</div>
   <div class="panel-sec aaquick">
     ${sizeRow}
-    <div class="themes" data-set="theme" data-type="seg">${themeKeys.map(k=>`<button type="button" data-v="${k}" aria-pressed="${S.theme===k}" style="${swatch(k)}" aria-label="${k==='auto'?'Match phone':THEMES[k].label}">Aa</button>`).join('')}
+    <div class="themes" data-set="theme" data-type="seg">${themeKeys.map(k=>`<button type="button" data-v="${k}" aria-pressed="${S.theme===k}" style="${swatch(k)}" aria-label="${k==='auto'?'Match phone':THEMES[k].label}">${aa(k)}</button>`).join('')}
       <div class="lbl">${themeKeys.map(k=>`<span>${k==='auto'?'Phone':THEMES[k].label}</span>`).join('')}</div></div>
     ${quickFonts(m==='speed'?'speedFont':'font')}
   </div>`;
