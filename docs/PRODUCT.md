@@ -84,6 +84,30 @@ and move items out of **Pending changes** once they're built.
   option (Slide / Fade / None) still decides how pages turn; the Style only sets the slide's timing and shadow. With
   Reduce Motion on, every Style uses short fades only, and a sliding page turn becomes a fade.
 
+## The Guide
+
+- **The Guide** (built Nov 18, prototype; Mick's idea): the Style's accent colour is one persistent living blob that
+  always sits where he should look or tap next, and is never absent. One fixed overlay above every view
+  (`#guide`, aria-hidden, pointer-events none): purely visual, it never takes a tap, focus or VoiceOver.
+  - Library: it rests as the fill of **Continue** on the most recent book (no Continue card: Add to library; other
+    tabs: a small mark under the active tab).
+  - Tap Continue: the fill gathers into a blob, the reader opens, and it flies (stretching along its path, a tail
+    catching up) to its spot, grows into that spot's exact shape and hands off to the real fill. While it flies, the
+    buttons it left or is heading for show no fill of their own, so there is only ever one accent blob.
+  - Reader: with read aloud open it is the pill's **Play** fill; with the bars showing it is the progress mark on the
+    scrubber; while reading (bars hidden) it is a short progress mark in the bottom reserved strip. It never covers
+    the text and never moves while he reads (page turns don't move it; the bars hiding or showing only cross-fades it).
+  - Back: it flies back to Continue. First-run tour: it moves to each step's target; where a step has several
+    (Contents icon and its two rows; the word, a colour and More) it goes to the main one first, splits into at most
+    three blobs, and merges back into one before moving on.
+  - Motion is per Style, from CSS variables only (`--guide-dur`, `--guide-ease`, `--guide-stretch`,
+    `--guide-squish`, `--guide-tail`): Quiet a calm glide with little stretch (about 350 ms); Paper weighted, with drag
+    and no overshoot; Lively springy, full stretch and a squish on arrival. Reduce Motion: it fades out at the old
+    spot and in at the new one. Taps during a flight work; it retargets mid-flight. Resize and rotation re-snap it.
+  - Firm rules: it never repaginates or moves his place, and it is drawn with transform and opacity only.
+  - For later screens: `guideTo(targets, {main})` (up to three targets: an element or `{el, kind}`, kind `fill`,
+    `mark`, `thumb` or `strip`); `guideScreen()` picks the current screen's targets; `guideTour()` for tour steps.
+
 ## Library
 
 - One "Add to library" button. Input: paste text, open files (EPUB and PDF), iPhone share sheet. The file picker

@@ -427,6 +427,7 @@ async function tourRunStep(n){
     await tourAfter(40);
     if(tok!==TOUR.token) return;
     tourSpot(hero, 10);
+    typeof guideTour==='function' && guideTour([{el:hero&&hero.querySelector('.hero-go'), kind:'fill'}]); /* the Guide rests as Continue's fill */
     if(hero && document.querySelector('#docList .doc:not(.continue-hero)'))
       $('#v-library').classList.add('tour-grid-dim');
     if(!TOUR.reduced && hero) hero.classList.add('tour-pulse');
@@ -442,6 +443,7 @@ async function tourRunStep(n){
     const edge=$('#tourEdgeR')||$('#tourPageA');
     const r=(edge||tourDemo()).getBoundingClientRect();
     tourSpot(edge, 6);
+    typeof guideTour==='function' && guideTour([{el:edge, kind:'mark'}]);
     if(!TOUR.reduced){
       tourFingerAt(r.left+r.width*0.5, r.top+r.height*0.55, true);
       const f=$('#tourFinger'); if(f) f.classList.add('tap');
@@ -462,6 +464,7 @@ async function tourRunStep(n){
     tourSay('Tap the middle for controls.');
     const mid=$('#tourMid');
     tourSpot(mid, 8);
+    typeof guideTour==='function' && guideTour([{el:mid, kind:'mark'}]);
     if(!TOUR.reduced && mid) mid.classList.add('tour-pulse-once');
     const top=$('#tourDemoTop');
     if(top) top.classList.remove('away');
@@ -478,6 +481,8 @@ async function tourRunStep(n){
     if(tok!==TOUR.token) return;
     tourSay('Search and notes live here.');
     tourSpot(ico, 10);
+    /* two places at once: the Guide goes to the icon, then splits to the two rows it opens */
+    typeof guideTour==='function' && guideTour([{el:ico, kind:'mark'}, ...[...document.querySelectorAll('#tourPeek .tour-peek-row')].map(el=>({el, kind:'mark'}))]);
   }
 
   if(n===3){
@@ -485,6 +490,7 @@ async function tourRunStep(n){
     tourSay('Hold a word to highlight.');
     const w=$('#tourHoldWord');
     tourSpot(w, 8);
+    typeof guideTour==='function' && guideTour([{el:w, kind:'mark'}]);
     if(w) w.classList.add('sel');
     const sel=$('#tourSel');
     if(sel){
@@ -510,6 +516,8 @@ async function tourRunStep(n){
     await tourAfter(TOUR.reduced?40:40);
     if(tok!==TOUR.token) return;
     tourSpot(w, 8);
+    /* the word, then a colour and More on the bar: one blob splits into three */
+    typeof guideTour==='function' && guideTour([{el:w, kind:'mark'}, {el:document.querySelector('#tourSel .dot'), kind:'mark'}, {el:document.querySelector('#tourSel .tour-more'), kind:'mark'}]);
   }
 
   if(n===4){
@@ -519,6 +527,7 @@ async function tourRunStep(n){
     const chrome=$('#tourDemoTop');
     tourSay('Speed fades everything but the word.');
     tourSpot(word, 16);
+    typeof guideTour==='function' && guideTour([{el:word, kind:'mark'}]);
     if(!TOUR.reduced && word) word.classList.add('flash');
     await tourAfter(TOUR.reduced?200:TOUR_ANIM_MS);
     if(tok!==TOUR.token) return;
@@ -558,6 +567,7 @@ async function tourRunStep(n){
       await tourAfter(TOUR.reduced?40:30);
       if(tok!==TOUR.token) return;
       tourSpot(pill, 14);
+      typeof guideTour==='function' && guideTour([{el:pill.querySelector('.tour-pill-play'), kind:'fill'}]);
       if(!TOUR.reduced) pill.classList.add('glide','breathe');
       else pill.classList.add('static');
     }
@@ -573,6 +583,7 @@ async function tourRunStep(n){
     /* six dots for the six steps; the closing card is not a step, so the dots step aside */
     $('#tourDots') && ($('#tourDots').hidden=true);
     tourSpot(null);
+    typeof guideTour==='function' && guideTour([{el:$('#tourStart'), kind:'mark'}]);
     tourFocusSkip();
     return;
   }else{
@@ -601,6 +612,7 @@ function tourAdvance(){
 function tourEnd(skipped){
   if(!TOUR.on) return;
   TOUR.on=false;
+  if(typeof GUIDE!=='undefined') GUIDE.tour=null;
   tourClearTimers();
   TOUR.token++;
   tourDoneSet();

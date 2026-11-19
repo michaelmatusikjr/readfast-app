@@ -912,6 +912,7 @@ async function openDoc(id){
   catch(e){ console.error(e); toast('Something went wrong opening this book.', null, 6000); }
   finally{ if(big && $('#toastMsg').textContent.startsWith('Opening')) $('#toast').hidden=true; }
   resetClock(); updateChrome();
+  if(typeof guideScreen==='function') requestAnimationFrame(()=>guideScreen()); /* the Guide flies to its spot in the reader */
   return true;
 }
 /* the page you were on when you closed the book: count it, up to the time it usually takes you */

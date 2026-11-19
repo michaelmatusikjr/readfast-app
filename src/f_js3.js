@@ -1354,6 +1354,7 @@ function showView(v){
   positionSwUpdate();
   document.querySelectorAll('#tabs button').forEach(b=>{ if(b.dataset.tab===v) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   if(v==='stats') renderStats(); if(v==='settings') renderSettings(); if(v==='words') renderNotes(); if(v==='library'){ renderLibrary(); setTimeout(nearFinishCheck, 600); }
+  if(v!=='reader' && typeof guideScreen==='function' && !(typeof TOUR!=='undefined' && TOUR.on)) guideScreen(); /* the reader calls it once its page is laid out */
 }
 const TABS={library:['book','Library'], words:['note','Notes'], stats:['stats','Stats'], settings:['gear','Settings']};
 document.querySelectorAll('#tabs button').forEach(b=>{ const [ic,l]=TABS[b.dataset.tab]; b.innerHTML=ICON[ic]+l; b.onclick=()=>showView(b.dataset.tab); });

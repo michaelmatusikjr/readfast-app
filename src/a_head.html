@@ -849,6 +849,24 @@ button:active:not(:disabled),.doc:active,.switch:active:not(:disabled){scale:var
 /* applying a style: a short crossfade (used when the browser has no view transitions) */
 :root.style-xfade *{transition:background-color 250ms ease,color 250ms ease,border-color 250ms ease,box-shadow 250ms ease,border-radius 250ms ease !important}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:250ms;animation-timing-function:ease}
+/* ---------- the Guide (v39): one accent blob where you look or tap next ----------
+   Motion per Style lives here only; l_guide.js reads these variables and has no per-Style code. */
+[data-style="quiet"]{--guide-dur:350ms; --guide-ease:cubic-bezier(.4,0,.2,1); --guide-stretch:.08; --guide-squish:0; --guide-tail:.03}
+[data-style="paper"]{--guide-dur:440ms; --guide-ease:cubic-bezier(.2,.7,.2,1); --guide-stretch:.2; --guide-squish:0; --guide-tail:.07}
+[data-style="lively"]{--guide-dur:520ms; --guide-ease:cubic-bezier(.34,1.56,.64,1); --guide-stretch:.55; --guide-squish:.2; --guide-tail:.1;
+  --guide-mark:var(--chrome-on,var(--accent))} /* the resting mark on a light page keeps 3:1 like the other coral controls */
+:root{--guide-size:26px; --guide-fly:1; --guide-fade:160ms}
+@media (prefers-reduced-motion: reduce){ :root,[data-style]{--guide-fly:0 !important} }
+#guide{position:fixed;inset:0;z-index:20001;pointer-events:none;overflow:hidden;contain:strict;transition:opacity 160ms ease-out}
+#guide .gpos{position:absolute;left:0;top:0;width:26px;height:26px;will-change:transform;pointer-events:none}
+#guide .gbody{position:absolute;inset:0;display:block;border-radius:50%;background:var(--accent);opacity:0;will-change:transform,opacity;transform-origin:50% 50%}
+#guide .gshape .gbody{background:var(--guide-mark,var(--accent))}
+#guide .gsplit .gbody{background:var(--guide-mark,var(--accent))}
+/* while the blob is on its way, the button it left or is heading for shows no fill of its own (one accent blob only) */
+.guide-off{background-color:transparent !important;border-color:color-mix(in srgb,currentColor 22%,transparent) !important;box-shadow:none !important;color:var(--muted) !important}
+#v-reader .guide-off,#tour .guide-off{color:var(--page-muted,var(--muted)) !important}
+/* it steps aside under anything that sits on top of the screen */
+body:has(#sheet:not([hidden])) #guide,body:has(#selBar:not([hidden])) #guide,body:has(#imgOverlay) #guide{opacity:0}
 /* Settings: the Style picker */
 .stylepick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:2px 0 4px}
 .stile{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none;cursor:pointer;color:var(--ink);font:inherit;min-width:0}

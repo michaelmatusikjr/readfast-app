@@ -1,7 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.19.38-polish';
+const APP_VERSION='2026.11.19.39-guide';
 const WHATSNEW=[
-  ['Controls in your Style','In Paper and Lively, the play buttons, auto-scroll, the word you jumped to from search and the line guide now take the Style’s colour instead of blue. Quiet looks the same. The “Phone” page-colour button in Aa is easier to read.']
+  ['Meet the Guide','Your Style’s accent colour is now one small living blob that always sits where you’d look or tap next. On the shelf it is the Continue button. Tap Continue and it gathers up, follows you into the book and settles as the progress mark at the bottom (or the Play button when read aloud is open); it never sits on the words and stays still while you read. Go back and it flies home to Continue. The first-run tour uses it too. Quiet glides, Paper drags a little, Lively bounces; with Reduce Motion it simply fades. Your pages and place are unchanged.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
