@@ -1,6 +1,7 @@
 /* ---------- first-run tour (demo layer; never writes library, notes, words or settings) ---------- */
 const TOUR_DOTS=6;
-const TOUR_AUTO_MS=4000;
+const TOUR_AUTO_MS=6000;
+const TOUR_CAP_MAX=420; /* the caption card never stretches wider than this; on a wide screen it sits centred */
 const TOUR_ANIM_MS=800;
 let TOUR={on:false, step:0, replay:false, token:0, reduced:false, timers:[], lastFocus:null, tmpHero:null, swiping:null};
 
@@ -26,8 +27,9 @@ function tourAfter(ms){
 function tourMeasureRfoot(){
   const vr=$('#v-reader'), foot=$('#rFoot');
   if(!foot) return 96;
-  let h=vr?parseFloat(getComputedStyle(vr).getPropertyValue('--rfoot-h')):0;
-  if(h) return Math.round(h);
+  /* Always measure the footer at the current size: --rfoot-h on the reader is only refreshed while a book is open,
+     so after a rotation it can still hold the old orientation's height and the demo pill would sit off the live one. */
+  let h=0;
   const wasHidden=vr && vr.hidden;
   const css=vr?vr.style.cssText:'';
   if(vr && wasHidden){
@@ -75,8 +77,9 @@ function tourPlaceCaption(hole){
   const safeR=parseFloat(root.getPropertyValue('--sar'))||0;
   const foot=(!start||start.hidden)?next:start;
   const vw=innerWidth, vh=innerHeight, margin=12;
-  const left=safeL+20;
-  const width=Math.max(80, vw-safeL-safeR-40);
+  const band=Math.max(80, vw-safeL-safeR-40);
+  const width=Math.min(band, TOUR_CAP_MAX);
+  const left=safeL+20+(band-width)/2;
   cap.style.left=left+'px';
   cap.style.width=width+'px';
   cap.style.right='auto';
@@ -121,8 +124,9 @@ function tourPlaceCaption(hole){
     const leftW=Math.max(120, holeBox.left-safeL-32);
     const rightX=holeBox.right+12, rightW=Math.max(120, vw-safeR-16-rightX);
     const midY=Math.max(minTop, Math.min(maxTop, (holeBox.top+holeBox.bottom-capH)/2));
-    if(holeBox.left>vw*0.4) push(midY, safeL+16, leftW, 2);
-    if(holeBox.right<vw*0.6) push(midY, rightX, rightW, 2);
+    const side=(x,w,pri)=>{ const cw=Math.min(w, TOUR_CAP_MAX); push(midY, x+(w-cw)/2, cw, pri); };
+    if(holeBox.left>vw*0.4) side(safeL+16, leftW, 2);
+    if(holeBox.right<vw*0.6) side(rightX, rightW, 2);
     push(maxTop, left, width, 3);
     push(minTop, left, width, 4);
   }else{
@@ -548,6 +552,7 @@ async function tourRunStep(n){
       const root=$('#tour');
       if(root) root.style.setProperty('--rfoot-h', h+'px');
       pill.style.bottom='calc(12px + '+h+'px)';
+      TOUR.pillAt=h;
       const dots=$('#tourDots');
       if(dots) dots.style.bottom='';
       await tourAfter(TOUR.reduced?40:30);
@@ -644,6 +649,14 @@ function maybeStartTour(){
     const root=tourRoot(); if(!root || root._bound) return;
     root._bound=1;
     tourBindSwipe(root);
+    /* the demo pill follows the live pill when the phone turns: re-measure the footer and move it (and its spotlight) */
+    window.addEventListener('resize',()=>{
+      if(!TOUR.on || TOUR.step!==5) return;
+      const pill=$('#tourPill'); if(!pill || pill.hidden) return;
+      const h=tourMeasureRfoot(); if(h===TOUR.pillAt) return;
+      TOUR.pillAt=h; root.style.setProperty('--rfoot-h', h+'px'); pill.style.bottom='calc(12px + '+h+'px)';
+      tourSpot(pill, 14);
+    });
     root.addEventListener('pointerover',e=>{ if(tourChromeHover(e.target)) tourAutoPause(); });
     root.addEventListener('pointerout',e=>{ if(tourChromeHover(e.target) && !tourChromeHover(e.relatedTarget)) tourAutoResume(); });
     root.addEventListener('focusin',e=>{ if(e.target && e.target.closest && e.target.closest('#tourNext,#tourStart,#tourCaption')) tourAutoPause(); });
@@ -657,11 +670,7 @@ function maybeStartTour(){
       if(e.target.closest('#tourSkip')){ e.preventDefault(); tourEnd(true); return; }
       if(e.target.closest('#tourStart')){ e.preventDefault(); tourEnd(false); return; }
       if(e.target.closest('#tourNext')){ e.preventDefault(); if(!dragged) tourAdvance(); return; }
-      /* a drag never advances; only Next (or a tap on the scrim) does */
-      if(dragged) return;
-      if(e.target.closest('#tourSkip,#tourNext,#tourStart,#tourCaption,#tourDots')) return;
-      if(TOUR.step>=6) return;
-      tourAdvance();
+      /* only Next advances: a tap or a drag anywhere else (the scrim, the card, the demo) does nothing */
     });
   };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ready);

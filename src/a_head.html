@@ -642,6 +642,8 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourDots{position:absolute;left:50%;right:auto;transform:translateX(-50%);bottom:calc(76px + var(--sab));z-index:5;display:flex;justify-content:center;align-items:center;gap:7px;pointer-events:none;padding:8px 12px;background:rgba(20,22,30,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:999px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
 .tour-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.7);box-shadow:0 0 0 1.5px rgba(0,0,0,.65)}
 .tour-dot.on,.tour-dot.done,#tourDots.all-on .tour-dot{background:#fff}
+/* the current step: a longer dot in the app's accent, lifted toward white so it reads on the dark card in every Style and theme */
+#tourDots .tour-dot.on{width:18px;border-radius:4px;background:color-mix(in srgb,var(--accent) 55%,#fff)}
 .tour-pill-btn{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--sab));z-index:5;min-height:44px;min-width:120px;padding:0 22px;border:0;border-radius:22px;background:#fff;color:#111;font:700 16px/1 var(--f-ui);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .tour-pill-btn.primary{background:var(--accent);color:var(--accent-ink,#fff)}
 #tourStart.primary{background:#fff;color:#111}
