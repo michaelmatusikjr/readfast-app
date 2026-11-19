@@ -1205,11 +1205,12 @@ const THEMES = {
   black:{label:'Black', bg:'#000000', ink:'#C8C8C8', muted:'#7D7D7D', line:'#1E1E1E', link:'#7C97F2', dark:true}
 };
 /* app-wide Styles: look, touch feedback and motion on top of the page colour (CSS in a_head.html, [data-style]).
-   Picking one also picks its suggested page colour; the page colour can still be changed afterwards. */
+   Picking one also picks its suggested page colour; the page colour can still be changed afterwards.
+   day: the light page "Match phone" (theme auto) shows by day in that Style; at night auto still goes Dark. Quiet keeps v36's White. */
 const STYLES = {
-  quiet:{label:'Quiet', cap:'Calm & still', theme:'paper'},
-  paper:{label:'Paper', cap:'Tactile & warm', theme:'sepia'},
-  lively:{label:'Lively', cap:'Bouncy & bright', theme:'white'}
+  quiet:{label:'Quiet', cap:'Calm & still', theme:'paper', day:'white'},
+  paper:{label:'Paper', cap:'Tactile & warm', theme:'sepia', day:'sepia'},
+  lively:{label:'Lively', cap:'Bouncy & bright', theme:'white', day:'white'}
 };
 const styleKey=()=>STYLES[S.style]?S.style:'quiet';
 const reducedMotion=()=>{ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } };
@@ -1231,9 +1232,11 @@ function isNightNow(){
   const d=new Date(), c=d.getHours()*60+d.getMinutes(), a=m(S.nightFrom), b=m(S.nightTo);
   return a===b ? false : a<b ? (c>=a && c<b) : (c>=a || c<b);
 }
+/* the light page that theme auto shows by day: the Style's day colour (Quiet: White, as in v36) */
+const autoDay=()=>STYLES[styleKey()].day||'white';
 function effectiveTheme(){
   let t=S.theme; if(S.nightAuto && isNightNow()) t=S.nightTheme;
-  if(t==='auto'){ let dark=false; try{ dark=matchMedia('(prefers-color-scheme: dark)').matches; }catch(e){} t=dark?'dark':'white'; }
+  if(t==='auto'){ let dark=false; try{ dark=matchMedia('(prefers-color-scheme: dark)').matches; }catch(e){} t=dark?'dark':autoDay(); }
   return THEMES[t]?t:'white';
 }
 function fontCSS(){
@@ -4017,7 +4020,7 @@ function quickFonts(key){
 function panelHTML(){
   const m=S.mode;
   const themeKeys=['auto',...Object.keys(THEMES)];
-  const swatch=(k)=>{ const T=THEMES[k]; return T?`background:${T.bg};color:${T.ink}`:'background:linear-gradient(135deg,#fff 50%,#16181C 50%);color:#888'; };
+  const swatch=(k)=>{ const T=THEMES[k]; return T?`background:${T.bg};color:${T.ink}`:`background:linear-gradient(135deg,${THEMES[autoDay()].bg} 50%,#16181C 50%);color:#888`; };
   const sizeKey=m==='speed'?'speedSize':'size';
   const sizeRow=`<div class="aarow"><span class="aalbl">${m==='speed'?'Word size':'Text size'}</span><div class="stepper"><button type="button" data-step="${sizeKey}" data-d="${m==='speed'?-2:-1}" data-min="${m==='speed'?24:12}" data-max="${m==='speed'?72:40}" aria-label="Smaller" style="font-size:.85rem">A</button><span class="v" data-val="${sizeKey}">${S[sizeKey]} px</span><button type="button" data-step="${sizeKey}" data-d="${m==='speed'?2:1}" data-min="${m==='speed'?24:12}" data-max="${m==='speed'?72:40}" aria-label="Larger" style="font-size:1.25rem">A</button></div></div>`;
   let h=`<div class="panel-sec">${pSeg('mode',[['pages','Pages'],['scroll','Scroll'],['speed','Speed']])}</div>
@@ -6147,7 +6150,8 @@ function styleRowHTML(){
 }
 /* apply a Style at once with a short crossfade and play its motion on the tile. Its suggested page colour is set only
    when the Style actually changes, and only for a reader on a light page colour (White, Paper, Sepia) without night-auto; anyone else keeps their page colour,
-   and the Style shows its dark variant through the page colour's data-theme. */
+   and the Style shows its dark variant through the page colour's data-theme.
+   Match phone (theme auto) stays auto: by day it shows the Style's own day colour (STYLES[k].day), at night Dark. */
 const styleSetsPage=()=>!S.nightAuto && ['white','paper','sepia'].includes(S.theme);
 function pickStyle(k, tile){
   /* re-tapping the Style already in use changes nothing: the reader's own page colour stays */

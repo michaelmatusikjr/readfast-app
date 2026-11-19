@@ -187,7 +187,8 @@ function styleRowHTML(){
 }
 /* apply a Style at once with a short crossfade and play its motion on the tile. Its suggested page colour is set only
    when the Style actually changes, and only for a reader on a light page colour (White, Paper, Sepia) without night-auto; anyone else keeps their page colour,
-   and the Style shows its dark variant through the page colour's data-theme. */
+   and the Style shows its dark variant through the page colour's data-theme.
+   Match phone (theme auto) stays auto: by day it shows the Style's own day colour (STYLES[k].day), at night Dark. */
 const styleSetsPage=()=>!S.nightAuto && ['white','paper','sepia'].includes(S.theme);
 function pickStyle(k, tile){
   /* re-tapping the Style already in use changes nothing: the reader's own page colour stays */

@@ -73,9 +73,11 @@ and move items out of **Pending changes** once they're built.
   120 ms. A tour spotlight shows the spotlit control at full colour.
 - Picker: Settings → Style, three live preview tiles (Quiet "Calm & still", Paper "Tactile & warm", Lively "Bouncy &
   bright"). A tap applies the Style at once with a short crossfade, plays the Style's motion on the tile and marks it selected.
-  It sets the Style's suggested page colour only when the reader is on White, Paper or Sepia and night-auto is off;
-  on Gray, Dark, Black, the system "Auto" colour or with night-auto on, the page colour stays and the Style shows its
-  dark variant on dark pages. The tiles always preview each Style's suggested colour. The tiles are a radio group:
+  When the Style actually changes, it sets the Style's suggested page colour only if the reader is on White, Paper or
+  Sepia and night-auto is off; re-tapping the Style already in use changes nothing. On Gray, Dark, Black, the system
+  "Auto" colour or with night-auto on, the page colour stays and the Style shows its dark variant on dark pages.
+  "Auto" (Match phone) stays Auto but shows the Style's day page by day (STYLES[k].day: Paper → Sepia, Lively and
+  Quiet → White, as in v36) and Dark at night; the Phone swatch previews it. The tiles always preview each Style's suggested colour. The tiles are a radio group:
   one tab stop, and Left/Up and Right/Down move to, select and focus the previous/next Style, wrapping. "Reset reading options" keeps the Style.
 - Firm rules: a Style never changes the reading text's font, size or layout, the reader bars or the pill's size, so
   switching never repaginates or moves your place. It never changes what a gesture does. The **Page turn** reading

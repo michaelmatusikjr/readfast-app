@@ -68,11 +68,12 @@ const THEMES = {
   black:{label:'Black', bg:'#000000', ink:'#C8C8C8', muted:'#7D7D7D', line:'#1E1E1E', link:'#7C97F2', dark:true}
 };
 /* app-wide Styles: look, touch feedback and motion on top of the page colour (CSS in a_head.html, [data-style]).
-   Picking one also picks its suggested page colour; the page colour can still be changed afterwards. */
+   Picking one also picks its suggested page colour; the page colour can still be changed afterwards.
+   day: the light page "Match phone" (theme auto) shows by day in that Style; at night auto still goes Dark. Quiet keeps v36's White. */
 const STYLES = {
-  quiet:{label:'Quiet', cap:'Calm & still', theme:'paper'},
-  paper:{label:'Paper', cap:'Tactile & warm', theme:'sepia'},
-  lively:{label:'Lively', cap:'Bouncy & bright', theme:'white'}
+  quiet:{label:'Quiet', cap:'Calm & still', theme:'paper', day:'white'},
+  paper:{label:'Paper', cap:'Tactile & warm', theme:'sepia', day:'sepia'},
+  lively:{label:'Lively', cap:'Bouncy & bright', theme:'white', day:'white'}
 };
 const styleKey=()=>STYLES[S.style]?S.style:'quiet';
 const reducedMotion=()=>{ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } };
@@ -94,9 +95,11 @@ function isNightNow(){
   const d=new Date(), c=d.getHours()*60+d.getMinutes(), a=m(S.nightFrom), b=m(S.nightTo);
   return a===b ? false : a<b ? (c>=a && c<b) : (c>=a || c<b);
 }
+/* the light page that theme auto shows by day: the Style's day colour (Quiet: White, as in v36) */
+const autoDay=()=>STYLES[styleKey()].day||'white';
 function effectiveTheme(){
   let t=S.theme; if(S.nightAuto && isNightNow()) t=S.nightTheme;
-  if(t==='auto'){ let dark=false; try{ dark=matchMedia('(prefers-color-scheme: dark)').matches; }catch(e){} t=dark?'dark':'white'; }
+  if(t==='auto'){ let dark=false; try{ dark=matchMedia('(prefers-color-scheme: dark)').matches; }catch(e){} t=dark?'dark':autoDay(); }
   return THEMES[t]?t:'white';
 }
 function fontCSS(){
