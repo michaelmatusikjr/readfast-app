@@ -713,13 +713,14 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
    the reading text, the reader bars and the read-aloud pill keep their sizes, so pages never change. */
 [data-style="quiet"]{
   --paper:#E9EDF2; --surface:#FFFFFF; --raise:#F4F6F9; --ink:#15202D; --muted:#5A6779;
-  --line:#D7DEE7; --accent:#2244B5; --accent-soft:#DCE4FA; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
+  --line:#CED6E0; --accent:#2244B5; --accent-soft:#DCE4FA; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
   --accent-text:var(--accent); --accent-text-card:var(--accent); --sel-ink:var(--accent); --solid-dur:var(--motion-dur);
   --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
-  --head-font:"Literata","New York",ui-serif,Georgia,serif; --head-weight:600;
-  --radius-card:10px; --radius-btn:10px; --radius-sheet:14px;
-  --shadow:none; --btn-shadow:none; --float-shadow:0 2px 14px rgba(0,0,0,.12); --sheet-shadow:0 -1px 0 var(--line);
-  --grain:none; --gap:18px;
+  /* Quiet is v36's look exactly: v36 headings and spacing, and "initial" shapes so every rule below falls back to v36's own radius and shadow */
+  --head-font:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif; --head-weight:800; --h2-weight:600;
+  --radius-card:initial; --radius-btn:initial; --radius-sheet:initial;
+  --shadow:initial; --btn-shadow:initial; --float-shadow:initial; --sheet-shadow:initial;
+  --grain:none; --gap:14px;
   --motion-dur:200ms; --motion-ease:cubic-bezier(0,0,.2,1);
   --sheet-y:0%; --pop-y:0px; --pop-scale:1;
   --turn-dur:280ms; --turn-ease:cubic-bezier(.3,.6,.2,1); --turn-shade:0;
@@ -764,7 +765,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 }
 :root[data-theme="dark"][data-style="quiet"],:root[data-theme="dark"] [data-style="quiet"]{
   --paper:#0E1217; --surface:#171C23; --raise:#1E242C; --ink:#E4E9F0; --muted:#8D99A8;
-  --line:#262D36; --accent:#8AA4FF; --accent-soft:#232E4D; --accent-ink:#0E1217}
+  --line:#2B333D; --accent:#8AA4FF; --accent-soft:#232E4D; --accent-ink:#0E1217}
 :root[data-theme="dark"][data-style="paper"],:root[data-theme="dark"] [data-style="paper"]{
   --paper:#15120E; --surface:#1F1B16; --raise:#28231D; --ink:#EDE5D8; --muted:#A79C8C;
   --line:#3A3229; --accent:#E2A76B; --accent-soft:#3A2C1D; --accent-ink:#15120E;
@@ -778,18 +779,23 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
     --press-scale:1 !important; --press-y:0px !important; --press-op:.6 !important; --turn-shade:0 !important}
 }
 :root{--f-ui:var(--ui-font); --f-display:var(--head-font); --fill:color-mix(in srgb,var(--fill-c,var(--accent)) 16%,var(--surface))}
-h1,h2{font-weight:var(--head-weight,700)}
+h1{font-weight:var(--head-weight,800)}
+h2{font-weight:var(--h2-weight,var(--head-weight,600))}
 body,#sheet,.group{background-image:var(--grain,none);background-size:3px 3px,5px 5px;background-position:0 0,1px 2px}
 .wrap{gap:var(--gap,14px)}
-/* shapes */
-.btn,.tbtn,.seg,.toc-tool,.chip:not(.tagchips .chip),.input,textarea.input,select.input,.fopt{border-radius:var(--radius-btn)}
-.doc,.group,.fsec,.addopt,.sortopt,.empty,#selMenu,#toast,.wn{border-radius:var(--radius-card)}
-#v-library .continue-hero{border-radius:calc(var(--radius-card) + 2px);box-shadow:var(--shadow)}
-.doc,.group,.addopt{box-shadow:var(--shadow)}
-.btn,.tbtn,.addopt,.sortopt,.toc-tool{box-shadow:var(--btn-shadow)}
-#sheet{border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;box-shadow:var(--sheet-shadow)}
-#selBar{border-radius:var(--radius-card);box-shadow:var(--float-shadow)}
-#selMenu{box-shadow:var(--float-shadow)}
+/* shapes: each fallback is v36's value, which Quiet keeps by setting the shape variables to initial */
+.btn,.tbtn,.toc-tool{border-radius:var(--radius-btn,12px)}
+.seg,.chip:not(.tagchips .chip),.input,textarea.input,select.input{border-radius:var(--radius-btn,10px)}
+.fopt{border-radius:var(--radius-btn,8px)}
+.doc,.group,.fsec,.addopt,.empty{border-radius:var(--radius-card,14px)}
+.sortopt,#selMenu,#toast{border-radius:var(--radius-card,12px)}
+.wn{border-radius:var(--radius-card,0)}
+#v-library .continue-hero{border-radius:calc(var(--radius-card,14px) + 2px);box-shadow:var(--shadow,0 2px 10px rgba(0,0,0,.06))}
+.doc,.group,.addopt{box-shadow:var(--shadow,none)}
+.btn,.tbtn,.addopt,.sortopt,.toc-tool{box-shadow:var(--btn-shadow,none)}
+#sheet{border-radius:var(--radius-sheet,18px) var(--radius-sheet,18px) 0 0;box-shadow:var(--sheet-shadow,0 -8px 30px rgba(0,0,0,.18))}
+#selBar{border-radius:var(--radius-card,14px);box-shadow:var(--float-shadow,0 8px 28px rgba(0,0,0,.22))}
+#selMenu{box-shadow:var(--float-shadow,0 8px 28px rgba(0,0,0,.22))}
 .tag,.doc .tg span{color:var(--chip-ink)}
 /* the reader's active controls (scrubber, bookmark, speaker) use the page's link colour, or Lively's one accent */
 #rScrub,#v-reader input[type=range]{accent-color:var(--chrome-on,var(--page-link))}
@@ -831,20 +837,20 @@ button:active:not(:disabled),.doc:active{scale:var(--press-scale);translate:0 va
 .stylepick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:2px 0 4px}
 .stile{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none;cursor:pointer;color:var(--ink);font:inherit;min-width:0}
 .stile .mini{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden;background:var(--tile-bg);color:var(--tile-ink);
-  border-radius:var(--radius-card);box-shadow:var(--shadow),0 0 0 1px var(--line);background-image:var(--grain,none);background-size:3px 3px,5px 5px;
+  border-radius:var(--radius-card,14px);box-shadow:var(--shadow,0 0 #0000),0 0 0 1px var(--line);background-image:var(--grain,none);background-size:3px 3px,5px 5px;
   display:flex;flex-direction:column;gap:5px;padding:10px 9px;text-align:left;font-family:var(--ui-font)}
 .stile .mini b{font-family:var(--head-font);font-weight:var(--head-weight);font-size:1rem;line-height:1.1;letter-spacing:-.01em}
 .stile .mini i{display:block;height:3px;border-radius:2px;background:currentColor;opacity:.18}
 .stile .mini i.s{width:62%}
-.stile .mini .mbtn{align-self:flex-start;margin-top:3px;height:12px;width:38%;border-radius:var(--radius-btn);background:var(--accent);box-shadow:var(--btn-shadow)}
-.stile .mini .msheet{position:absolute;left:5px;right:5px;bottom:0;height:24%;background:color-mix(in srgb,var(--tile-bg) 55%,#fff);border-radius:calc(var(--radius-card)*.6) calc(var(--radius-card)*.6) 0 0;box-shadow:var(--sheet-shadow),0 0 0 1px color-mix(in srgb,var(--tile-ink) 10%,transparent)}
+.stile .mini .mbtn{align-self:flex-start;margin-top:3px;height:12px;width:38%;border-radius:var(--radius-btn,12px);background:var(--accent);box-shadow:var(--btn-shadow,none)}
+.stile .mini .msheet{position:absolute;left:5px;right:5px;bottom:0;height:24%;background:color-mix(in srgb,var(--tile-bg) 55%,#fff);border-radius:calc(var(--radius-card,14px)*.6) calc(var(--radius-card,14px)*.6) 0 0;box-shadow:var(--sheet-shadow,0 -3px 10px rgba(0,0,0,.12)),0 0 0 1px color-mix(in srgb,var(--tile-ink) 10%,transparent)}
 .stile .mini .msheet::before{content:"";display:block;width:22%;height:3px;border-radius:2px;background:color-mix(in srgb,var(--tile-ink) 25%,transparent);margin:5px auto 0}
 .stile.play .mini .msheet{animation:st-sheet var(--motion-dur) var(--motion-ease)}
 .stile.play .mini .mbtn{animation:st-press calc(var(--press-dur) * 2) var(--press-ease)}
 @keyframes st-press{50%{scale:var(--press-scale);translate:0 var(--press-y);opacity:var(--press-op);box-shadow:none}}
 .stile .cap{font-size:.78rem;color:var(--muted);text-align:center;line-height:1.25}
 .stile .nm{font-size:.86rem;font-weight:700}
-.stile[aria-checked="true"] .mini{box-shadow:var(--shadow),0 0 0 2.5px var(--accent)}
+.stile[aria-checked="true"] .mini{box-shadow:var(--shadow,0 0 #0000),0 0 0 2.5px var(--accent)}
 .stile .scheck{position:absolute;top:-7px;right:-7px;left:auto;margin:0;z-index:1;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 2px var(--surface);display:none;align-items:center;justify-content:center;font-size:.72rem;font-weight:800}
 .stile[aria-checked="true"] .scheck{display:flex}
 .stile .mini b{padding-right:12px} /* the title stays clear of the check badge in the corner */
@@ -4979,7 +4985,7 @@ $('#ttsNatChip')&&$('#ttsNatChip').addEventListener('click',()=>{ ttsHideNatChip
 /* ---------- version and what's new ---------- */
 const APP_VERSION='2026.11.18.37-styles';
 const WHATSNEW=[
-  ['Pick a Style','Settings now starts with three Styles. Quiet (calm and still, the one you have now), Paper (tactile and warm) and Lively (bouncy and bright) each change how Tooz looks, how buttons feel and how sheets and controls move. Picking one also picks a page colour to suit it; you can still change the page colour in Aa. Your pages, text and place in the book stay exactly the same.']
+  ['Pick a Style','Settings now starts with three Styles. Quiet (calm and still, the one you have now), Paper (tactile and warm) and Lively (bouncy and bright) each change how Tooz looks, how buttons feel and how sheets and controls move. On a White, Paper or Sepia page, picking one also picks a page colour to suit it; on a darker page, or with the night switch on, your page colour stays. You can always change the page colour in Aa. Your pages, text and place in the book stay exactly the same.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -6111,21 +6117,28 @@ function renderSettings(){
   $('#infoSeg').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.info=+b.dataset.v; saveSettings(); $('#infoSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); if(R.meta) updateChrome(); };
   if($('#backToBook')) $('#backToBook').onclick=backToBook;
   $('#stylePick').onclick=e=>{ const b=e.target.closest('[data-style-pick]'); if(b) pickStyle(b.dataset.stylePick, b); };
+  /* radiogroup keys: Left/Up previous, Right/Down next, wrapping; the arrow selects and focuses */
+  $('#stylePick').onkeydown=e=>{ const d={ArrowLeft:-1,ArrowUp:-1,ArrowRight:1,ArrowDown:1}[e.key]; if(!d) return;
+    const tiles=[...document.querySelectorAll('#stylePick .stile')], i=tiles.indexOf(e.target.closest('.stile')); if(i<0) return;
+    e.preventDefault(); const t=tiles[(i+d+tiles.length)%tiles.length]; t.focus(); pickStyle(t.dataset.stylePick, t); };
 }
 /* Settings → Style: three live preview tiles, each a mini page drawn in that Style */
 function styleRowHTML(){
   return `<div class="group"><div class="set"><div class="hd"><b id="styleHd">Style</b></div>
     <div class="stylepick" id="stylePick" role="radiogroup" aria-labelledby="styleHd">${Object.keys(STYLES).map(k=>{ const st=STYLES[k], T=THEMES[st.theme];
-      return `<button type="button" class="stile" role="radio" aria-checked="${styleKey()===k}" data-style-pick="${k}" aria-label="${st.label}: ${esc(st.cap)}">
+      return `<button type="button" class="stile" role="radio" aria-checked="${styleKey()===k}" tabindex="${styleKey()===k?0:-1}" data-style-pick="${k}" aria-label="${st.label}: ${esc(st.cap)}">
         <span class="mini" data-style="${k}" style="--tile-bg:${T.bg};--tile-ink:${T.ink}" aria-hidden="true"><b>${st.label}</b><i></i><i></i><i class="s"></i><span class="mbtn"></span><span class="msheet"></span></span><span class="scheck" aria-hidden="true">✓</span>
         <span class="cap" aria-hidden="true">${esc(st.cap)}</span></button>`; }).join('')}</div></div></div>`;
 }
-/* apply a Style at once with a short crossfade, set its suggested page colour, and play its motion on the tile */
+/* apply a Style at once with a short crossfade and play its motion on the tile. Its suggested page colour is set only
+   for a reader on a light page colour (White, Paper, Sepia) without night-auto; anyone else keeps their page colour,
+   and the Style shows its dark variant through the page colour's data-theme. */
+const styleSetsPage=()=>!S.nightAuto && ['white','paper','sepia'].includes(S.theme);
 function pickStyle(k, tile){
   if(!STYLES[k]) return;
   const apply=()=>{
-    S.style=k; S.theme=STYLES[k].theme; saveSettings(); applyLook();
-    document.querySelectorAll('#stylePick .stile').forEach(b=>b.setAttribute('aria-checked', b.dataset.stylePick===k));
+    S.style=k; if(styleSetsPage()) S.theme=STYLES[k].theme; saveSettings(); applyLook();
+    document.querySelectorAll('#stylePick .stile').forEach(b=>{ const on=b.dataset.stylePick===k; b.setAttribute('aria-checked', on); b.tabIndex=on?0:-1; });
   };
   const root=document.documentElement;
   if(typeof document.startViewTransition==='function'){ try{ document.startViewTransition(apply); }catch(e){ apply(); } }

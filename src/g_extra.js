@@ -1,7 +1,7 @@
 /* ---------- version and what's new ---------- */
 const APP_VERSION='2026.11.18.37-styles';
 const WHATSNEW=[
-  ['Pick a Style','Settings now starts with three Styles. Quiet (calm and still, the one you have now), Paper (tactile and warm) and Lively (bouncy and bright) each change how Tooz looks, how buttons feel and how sheets and controls move. Picking one also picks a page colour to suit it; you can still change the page colour in Aa. Your pages, text and place in the book stay exactly the same.']
+  ['Pick a Style','Settings now starts with three Styles. Quiet (calm and still, the one you have now), Paper (tactile and warm) and Lively (bouncy and bright) each change how Tooz looks, how buttons feel and how sheets and controls move. On a White, Paper or Sepia page, picking one also picks a page colour to suit it; on a darker page, or with the night switch on, your page colour stays. You can always change the page colour in Aa. Your pages, text and place in the book stay exactly the same.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>

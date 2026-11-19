@@ -51,8 +51,9 @@ and move items out of **Pending changes** once they're built.
 
 - Three app-wide **Styles** (built Nov 18) sit on top of the page colours, which are unchanged. Each sets the look, the
   touch feedback and the motion of the app's chrome:
-  - **Quiet** (default; existing installs land here): serif headings, hairline dividers, generous spacing, almost no
-    chrome. Sheets, the read-aloud pill, the selection bar and tour cards fade in (about 200 ms, no movement); a
+  - **Quiet** (default; existing installs land here): looks exactly like v36 (Bricolage Grotesque 800 headings, 14 px
+    spacing, v36 hairlines, corners and shadows; Quiet sets its shape variables to `initial` so every rule falls back to
+    v36's value). Sheets, the read-aloud pill, the selection bar and tour cards fade in (about 200 ms, no movement); a
     pressed button dims. Suggests the Paper page colour.
   - **Paper**: warm off-white surfaces with a faint CSS paper grain, soft shadows on cards and sheets. Sheets settle in
     from the bottom (about 320 ms, a slight drag); sliding page turns get a soft edge shadow; pressed buttons sink 1 px
@@ -60,15 +61,19 @@ and move items out of **Pending changes** once they're built.
   - **Lively**: big rounded corners (cards about 20 px, pill buttons), a rounded sans-serif interface, black/white/grey
     with one coral accent (#FF5A4E, #FF7A6E on dark pages) for the active or primary thing only. Taps squish and spring
     back; sheets, the pill, the selection bar and tour cards spring in (about 380 ms). Suggests White.
-    Coral #FF5A4E is only for fills, rings and icons. Coral text is #D63A2E on light pages (only on white surfaces, so it
-    stays at 4.5:1 or better) and #FF7A6E on dark pages; selected labels (active tab, chips, toggles) are ink with a
+    Coral #FF5A4E is only for fills, rings and icons. Coral text is #D63A2E on light pages only on white cards
+    (`--accent-text-card`, 4.5:1 or better); on the grey page and in sheets accent text is ink; #FF7A6E on dark pages.
+    Active reader icons (speaker, bookmark) use #D63A2E on light pages so they keep 3:1 on Sepia; selected labels (active tab, chips, toggles) are ink with a
     coral icon or ring. On the shelf only Continue is a coral fill; Add to library is an ink outline. The selection bar
     is solid from the first moment of its spring.
 - Every Style: a closing sheet is closed at once (focus and taps move on) and only fades out on screen for about
   120 ms. A tour spotlight shows the spotlit control at full colour.
 - Picker: Settings → Style, three live preview tiles (Quiet "Calm & still", Paper "Tactile & warm", Lively "Bouncy &
-  bright"). A tap applies the Style at once with a short crossfade, sets its suggested page colour (still changeable in
-  Aa afterwards), plays the Style's motion on the tile and marks it selected. "Reset reading options" keeps the Style.
+  bright"). A tap applies the Style at once with a short crossfade, plays the Style's motion on the tile and marks it selected.
+  It sets the Style's suggested page colour only when the reader is on White, Paper or Sepia and night-auto is off;
+  on Gray, Dark, Black, the system "Auto" colour or with night-auto on, the page colour stays and the Style shows its
+  dark variant on dark pages. The tiles always preview each Style's suggested colour. The tiles are a radio group:
+  one tab stop, and Left/Up and Right/Down move to, select and focus the previous/next Style, wrapping. "Reset reading options" keeps the Style.
 - Firm rules: a Style never changes the reading text's font, size or layout, the reader bars or the pill's size, so
   switching never repaginates or moves your place. It never changes what a gesture does. The **Page turn** reading
   option (Slide / Fade / None) still decides how pages turn; the Style only sets the slide's timing and shadow. With

@@ -172,21 +172,28 @@ function renderSettings(){
   $('#infoSeg').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.info=+b.dataset.v; saveSettings(); $('#infoSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); if(R.meta) updateChrome(); };
   if($('#backToBook')) $('#backToBook').onclick=backToBook;
   $('#stylePick').onclick=e=>{ const b=e.target.closest('[data-style-pick]'); if(b) pickStyle(b.dataset.stylePick, b); };
+  /* radiogroup keys: Left/Up previous, Right/Down next, wrapping; the arrow selects and focuses */
+  $('#stylePick').onkeydown=e=>{ const d={ArrowLeft:-1,ArrowUp:-1,ArrowRight:1,ArrowDown:1}[e.key]; if(!d) return;
+    const tiles=[...document.querySelectorAll('#stylePick .stile')], i=tiles.indexOf(e.target.closest('.stile')); if(i<0) return;
+    e.preventDefault(); const t=tiles[(i+d+tiles.length)%tiles.length]; t.focus(); pickStyle(t.dataset.stylePick, t); };
 }
 /* Settings → Style: three live preview tiles, each a mini page drawn in that Style */
 function styleRowHTML(){
   return `<div class="group"><div class="set"><div class="hd"><b id="styleHd">Style</b></div>
     <div class="stylepick" id="stylePick" role="radiogroup" aria-labelledby="styleHd">${Object.keys(STYLES).map(k=>{ const st=STYLES[k], T=THEMES[st.theme];
-      return `<button type="button" class="stile" role="radio" aria-checked="${styleKey()===k}" data-style-pick="${k}" aria-label="${st.label}: ${esc(st.cap)}">
+      return `<button type="button" class="stile" role="radio" aria-checked="${styleKey()===k}" tabindex="${styleKey()===k?0:-1}" data-style-pick="${k}" aria-label="${st.label}: ${esc(st.cap)}">
         <span class="mini" data-style="${k}" style="--tile-bg:${T.bg};--tile-ink:${T.ink}" aria-hidden="true"><b>${st.label}</b><i></i><i></i><i class="s"></i><span class="mbtn"></span><span class="msheet"></span></span><span class="scheck" aria-hidden="true">✓</span>
         <span class="cap" aria-hidden="true">${esc(st.cap)}</span></button>`; }).join('')}</div></div></div>`;
 }
-/* apply a Style at once with a short crossfade, set its suggested page colour, and play its motion on the tile */
+/* apply a Style at once with a short crossfade and play its motion on the tile. Its suggested page colour is set only
+   for a reader on a light page colour (White, Paper, Sepia) without night-auto; anyone else keeps their page colour,
+   and the Style shows its dark variant through the page colour's data-theme. */
+const styleSetsPage=()=>!S.nightAuto && ['white','paper','sepia'].includes(S.theme);
 function pickStyle(k, tile){
   if(!STYLES[k]) return;
   const apply=()=>{
-    S.style=k; S.theme=STYLES[k].theme; saveSettings(); applyLook();
-    document.querySelectorAll('#stylePick .stile').forEach(b=>b.setAttribute('aria-checked', b.dataset.stylePick===k));
+    S.style=k; if(styleSetsPage()) S.theme=STYLES[k].theme; saveSettings(); applyLook();
+    document.querySelectorAll('#stylePick .stile').forEach(b=>{ const on=b.dataset.stylePick===k; b.setAttribute('aria-checked', on); b.tabIndex=on?0:-1; });
   };
   const root=document.documentElement;
   if(typeof document.startViewTransition==='function'){ try{ document.startViewTransition(apply); }catch(e){ apply(); } }
