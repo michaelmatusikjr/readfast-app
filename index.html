@@ -545,7 +545,7 @@ body.tts-pill-on #toast{bottom:calc(168px + env(safe-area-inset-bottom,0px))}
 .bars-x{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:6px;text-align:center;font-size:.72rem;color:var(--muted)}
 
 /* Settings rows */
-.group{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px}
+.group{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px;--accent-text:var(--accent-text-card,var(--accent))}
 #sheet .group{background:var(--raise)}
 .set{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--line)}
 .set:last-child{border-bottom:0}
@@ -714,7 +714,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 [data-style="quiet"]{
   --paper:#E9EDF2; --surface:#FFFFFF; --raise:#F4F6F9; --ink:#15202D; --muted:#5A6779;
   --line:#D7DEE7; --accent:#2244B5; --accent-soft:#DCE4FA; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
-  --accent-text:var(--accent); --sel-ink:var(--accent); --solid-dur:var(--motion-dur);
+  --accent-text:var(--accent); --accent-text-card:var(--accent); --sel-ink:var(--accent); --solid-dur:var(--motion-dur);
   --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --head-font:"Literata","New York",ui-serif,Georgia,serif; --head-weight:600;
   --radius-card:10px; --radius-btn:10px; --radius-sheet:14px;
@@ -728,7 +728,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 [data-style="paper"]{
   --paper:#EFE8DB; --surface:#FBF8F1; --raise:#F4EEE2; --ink:#2A241D; --muted:#6C6357;
   --line:#E0D6C4; --accent:#8C5220; --accent-soft:#F1E1CC; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
-  --accent-text:var(--accent); --sel-ink:var(--accent); --solid-dur:160ms;
+  --accent-text:var(--accent); --accent-text-card:var(--accent); --sel-ink:var(--accent); --solid-dur:160ms;
   --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --head-font:"Iowan Old Style","Palatino","Literata",Georgia,serif; --head-weight:700;
   --radius-card:14px; --radius-btn:12px; --radius-sheet:18px;
@@ -749,7 +749,8 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --line:#E3E3E3; --accent:#FF5A4E; --accent-soft:#EDEDED; --accent-ink:#1B1B1B; --chip-ink:var(--ink); --fill-c:var(--ink);
   /* one accent: coral #FF5A4E only fills, rings and icons; coral text is the darker #D63A2E (4.66:1 on white) and only sits on white
      surfaces; selected labels (active tab, chips, segments) are ink with a coral ring or icon. Only the primary action is a coral fill. */
-  --accent-text:#D63A2E; --sel-ink:var(--ink); --solid-dur:120ms;
+  /* coral text (#D63A2E) reaches 4.5:1 only on white, so it is used on white cards (--accent-text-card) and ink elsewhere */
+  --accent-text:var(--ink); --accent-text-card:#D63A2E; --sel-ink:var(--ink); --solid-dur:120ms;
   --add-bg:transparent; --add-ink:var(--ink); --add-line:var(--ink);
   --ui-font:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,system-ui,"Atkinson Hyperlegible",sans-serif;
   --head-font:"Bricolage Grotesque",ui-rounded,"Avenir Next",system-ui,sans-serif; --head-weight:800;
@@ -758,7 +759,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --grain:none; --gap:14px;
   --motion-dur:380ms; --motion-ease:cubic-bezier(.34,1.56,.64,1);
   --sheet-y:40%; --pop-y:12px; --pop-scale:.9;
-  --turn-dur:260ms; --turn-ease:cubic-bezier(.2,.9,.3,1); --turn-shade:0; --chrome-on:var(--accent);
+  --turn-dur:260ms; --turn-ease:cubic-bezier(.2,.9,.3,1); --turn-shade:0; --chrome-on:#D63A2E; /* active reader icons: the deeper coral keeps 3:1 on White, Paper and Sepia pages */
   --press-scale:.96; --press-y:0px; --press-op:1; --press-dur:260ms; --press-ease:cubic-bezier(.34,1.56,.64,1);
 }
 :root[data-theme="dark"][data-style="quiet"],:root[data-theme="dark"] [data-style="quiet"]{
@@ -770,7 +771,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --grain:radial-gradient(rgba(255,240,215,.035) .6px,transparent .9px),radial-gradient(rgba(255,240,215,.025) .6px,transparent .9px)}
 :root[data-theme="dark"][data-style="lively"],:root[data-theme="dark"] [data-style="lively"]{
   --paper:#0F0F0F; --surface:#1B1B1B; --raise:#242424; --ink:#F2F2F2; --muted:#9A9A9A;
-  --line:#2E2E2E; --accent:#FF7A6E; --accent-soft:#2A2A2A; --accent-ink:#141414; --accent-text:#FF7A6E}
+  --line:#2E2E2E; --accent:#FF7A6E; --accent-soft:#2A2A2A; --accent-ink:#141414; --accent-text:#FF7A6E; --accent-text-card:#FF7A6E; --chrome-on:var(--accent)}
 /* every style collapses to a short fade when the phone asks for less motion */
 @media (prefers-reduced-motion: reduce){
   :root,[data-style]{--motion-dur:160ms !important; --motion-ease:ease-out !important; --sheet-y:0% !important; --pop-y:0px !important; --pop-scale:1 !important;
