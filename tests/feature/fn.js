@@ -3,11 +3,11 @@ const { chromium } = require('playwright'); const fs=require('fs');
 const EP=(__E.SCRATCH+'redteam-epub/');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:true, isMobile:true}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
   await ctx.route(/cdnjs/,r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',contentType:'application/javascript'}));
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await sleep(1200);
+  await pg.goto(__E.URL); await sleep(1200);
   await pg.evaluate(async(b64)=>{ const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const d=await parseFile(new File([bin],'fn.epub')); const m=await addDoc(d); S.mode='pages'; saveSettings(); await openDoc(m.id); }, fs.readFileSync(__E.FEAT+'fn.epub').toString('base64'));
   await sleep(800);
   console.log('maps', await pg.evaluate(()=>[[...R.notes].map(([a,t])=>`${a}:${R.words[a]}->${t}:${R.words[t]}`), [...R.backTo], [...R.back]]));

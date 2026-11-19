@@ -4,12 +4,12 @@ const EP=(__E.SCRATCH+'redteam-epub/');
 const LIB={'jszip.min.js':__E.NM+'jszip/dist/jszip.min.js','pdf.min.js':__E.NM+'pdfjs-dist/build/pdf.min.js','pdf.worker.min.js':__E.NM+'pdfjs-dist/build/pdf.worker.min.js'};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const ctx=await b.newContext({viewport:{width:390,height:844}, serviceWorkers:'block', hasTouch:false}); await ctx.addInitScript(()=>{window.__toozKeepSample=true; try{ localStorage.setItem('rf.tourDone','1'); }catch(e){}});
   await ctx.route(/cdnjs/,r=>{ const k=Object.keys(LIB).find(k=>r.request().url().endsWith('/'+k)); return k?r.fulfill({path:LIB[k],contentType:'application/javascript'}):r.abort(); });
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push('PAGEERR '+e.message)); pg.on('console',m=>{ if(m.type()==='error') errs.push('console '+m.text()); });
-  await pg.goto('http://localhost:8750/'); await sleep(800);
+  await pg.goto(__E.URL); await sleep(800);
   const log=(...a)=>console.log(...a);
   log('library:', await pg.evaluate(()=>LIB.map(m=>m.title)));
   // open sample in pages mode

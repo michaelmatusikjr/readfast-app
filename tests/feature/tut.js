@@ -3,12 +3,12 @@ const { chromium } = require('playwright');
 const EP=(__E.SCRATCH+'redteam-epub/');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:true, isMobile:true});
   await ctx.route(/cdnjs/,r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',contentType:'application/javascript'}));
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await sleep(1800);
+  await pg.goto(__E.URL); await sleep(1800);
   console.log('first run shows tour', await pg.evaluate(()=>[!$('#tour').hidden, ($('#tourCaption')||{}).textContent, LS.get('tourDone')]));
   await pg.evaluate(()=>{ if(typeof tourEnd==='function') tourEnd(true); }); await sleep(400);
   console.log('after skip', await pg.evaluate(()=>[($('#tour')||{hidden:true}).hidden, LS.get('tourDone'), $('#v-library').hidden]));

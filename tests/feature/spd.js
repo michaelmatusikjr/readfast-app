@@ -1,12 +1,13 @@
+const __E=require('../env');
 const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   for(const touch of [false,true]){
     const ctx=await b.newContext({viewport:touch?{width:390,height:780}:{width:1100,height:800}, deviceScaleFactor:touch?2:1, serviceWorkers:'block', hasTouch:touch, isMobile:touch}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
     await ctx.route(/fonts\.|cdnjs/,r=>r.abort());
     const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-    await pg.goto('http://localhost:8750/'); await sleep(500);
+    await pg.goto(__E.URL); await sleep(500);
     await pg.evaluate(()=>{ S.mode='speed'; saveSettings(); }); await pg.evaluate(()=>openDoc(LIB[0].id)); await sleep(900);
     await pg.evaluate(()=>goTo(120)); await sleep(700);
     const geo=()=>pg.evaluate(()=>{ const l=$('#scrollLine').getBoundingClientRect(), c=document.querySelector('#scrollText .cur').getBoundingClientRect(); const cs=getComputedStyle(document.querySelector('#scrollText .cur')); return {bar:[Math.round(l.top),Math.round(l.bottom)], cur:[Math.round(c.top),Math.round(c.bottom)], weight:cs.fontWeight, color:cs.color, base:getComputedStyle($('#scrollText')).color, barOp:getComputedStyle($('#scrollLine')).opacity}; });

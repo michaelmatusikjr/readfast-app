@@ -4,7 +4,7 @@ const S=__E.SCRATCH;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 (async()=>{
-  const b=await chromium.launch();
+  const b=await chromium.launch(__E.launch());
   const ctx=await b.newContext({viewport:{width:393,height:852},deviceScaleFactor:2,serviceWorkers:'block',hasTouch:true,isMobile:true});
   await ctx.route(/fonts\.(googleapis|gstatic)/, r=>r.abort());
   await ctx.addInitScript(()=>{ window.__toozKeepSample=true; try{ localStorage.setItem('rf.tourDone','1'); }catch(e){}; });

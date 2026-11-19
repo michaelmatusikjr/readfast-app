@@ -6,7 +6,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 const fs=require('fs');
 (async()=>{
-  const b=await chromium.launch({args:['--autoplay-policy=no-user-gesture-required']});
+  const b=await chromium.launch(__E.launch({args:['--autoplay-policy=no-user-gesture-required']}));
   const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', hasTouch:true, isMobile:true});
   await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
   const hf=[]; const cors={'access-control-allow-origin':'*'};
@@ -16,7 +16,7 @@ const fs=require('fs');
     r.fulfill({body, headers:Object.assign({'content-length':String(body.length)},cors)}); });
   await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/jszip/, r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',headers:cors}));
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); pg.on('console',m=>{ if(m.type()==='error' && !/ERR_TUNNEL|ERR_FAILED|ERR_CONNECTION/.test(m.text())) errs.push('console '+m.text()); });
-  await pg.goto('http://localhost:8750/'); await sleep(1500);
+  await pg.goto(__E.URL); await sleep(1500);
   await pg.evaluate(async()=>{ closeSheet(); S.mode='pages'; saveSettings(); await openDoc(LIB.find(x=>x.kind==='sample').id); }); await sleep(800);
   ok('default natural (piper) + lessac', await pg.evaluate(()=>S.ttsEngine==='natural' && pipVoice()==='en_US-lessac-medium'));
   await pg.evaluate(()=>openVoiceSheet()); await sleep(900);

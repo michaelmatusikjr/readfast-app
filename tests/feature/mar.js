@@ -1,12 +1,13 @@
+const __E=require('../env');
 const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   for(const [w,h,touch] of [[390,780,true],[1280,800,false],[820,1180,true]]){
     const ctx=await b.newContext({viewport:{width:w,height:h}, serviceWorkers:'block', hasTouch:touch, isMobile:touch}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
     await ctx.route(/fonts\.|cdnjs/,r=>r.abort());
     const pg=await ctx.newPage(); pg.on('pageerror',e=>console.log('ERR',e.message));
-    await pg.goto('http://localhost:8750/'); await sleep(500);
+    await pg.goto(__E.URL); await sleep(500);
     for(const mode of ['pages','scroll']){
       await pg.evaluate((m)=>{ S.mode=m; S.margin='normal'; saveSettings(); }, mode); await pg.evaluate(()=>openDoc(LIB[0].id)); await sleep(900);
       const out=[];

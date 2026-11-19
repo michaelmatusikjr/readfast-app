@@ -4,9 +4,9 @@ const S=__E.SCRATCH;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', hasTouch:true, isMobile:true, colorScheme:'dark'}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
-  const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); await pg.goto('http://localhost:8750/'); await sleep(1500);
+  const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); await pg.goto(__E.URL); await sleep(1500);
   for(const mode of ['scroll','pages']){
   await pg.evaluate(async m=>{ closeSheet(); S.mode=m; S.font='opendyslexic'; S.lineH=1.5; S.size=20; saveSettings(); applyLook(); if($('#v-reader').hidden) await openDoc(LIB.find(x=>x.kind==='sample').id); else switchMode(m); setChrome(false); }, mode); await sleep(1200);
   // find a paragraph on screen whose last line is short

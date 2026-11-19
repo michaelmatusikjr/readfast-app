@@ -4,12 +4,12 @@ const EP=(__E.SCRATCH+'redteam-epub/');
 const B=(__E.ROOT+'/books/');
 const fs=require('fs');
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block'}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
   await ctx.route(/cdnjs/,r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',contentType:'application/javascript'}));
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await pg.waitForTimeout(800);
+  await pg.goto(__E.URL); await pg.waitForTimeout(800);
   for(const f of fs.readdirSync(B).sort()){
     const t0=Date.now();
     const r=await pg.evaluate(async([name,b64])=>{ try{ const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const d=await parseFile(new File([bin],name)); return [d.title,d.author,d.category,d.words.length,d.chapters.length,d.chapters.slice(0,4).map(c=>c.t).join(' / '),d.images?d.images.at.length:0, d.imagesMissing||0]; }catch(e){ return 'ERR '+e.message; } },[f, fs.readFileSync(B+f).toString('base64')]);
