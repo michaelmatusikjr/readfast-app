@@ -1325,7 +1325,7 @@ function placeToastClearOfHero(){
   const place=()=>{
     if(t.hidden || !hero.isConnected) return;
     t.style.bottom='';
-    const tr=t.getBoundingClientRect(), hr=hero.getBoundingClientRect();
+    const tr=stillRect(t), hr=hero.getBoundingClientRect();
     if(!overlap(tr,hr)) return;
     const tabs=$('#tabs');
     const floor=(tabs && !tabs.hidden)?tabs.getBoundingClientRect().top-8:innerHeight-8;
@@ -1336,7 +1336,7 @@ function placeToastClearOfHero(){
     }
     if(hr.top>tr.height+16){
       t.style.bottom=(innerHeight-hr.top+12)+'px';
-      const tr2=t.getBoundingClientRect();
+      const tr2=stillRect(t);
       if(!overlap(tr2,hr)) return;
     }
     t.hidden=true; t.style.bottom='';

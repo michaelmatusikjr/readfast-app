@@ -233,7 +233,7 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 /* Floating read-aloud pill (play/pause + speed chip). Voice is a long-press; skip is a swipe. */
 #ttsBar{position:absolute;left:50%;transform:translateX(-50%);z-index:13;display:flex;align-items:center;gap:2px;width:max-content;max-width:calc(100% - 24px);padding:4px 4px 8px 4px;border-radius:32px;background:color-mix(in srgb,var(--page-bg) 94%,var(--page-ink));color:var(--page-ink);border:1px solid var(--page-line);box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);touch-action:none;pointer-events:auto;bottom:calc(12px + var(--rfoot-h,96px))}
 #v-reader[data-mode="speed"] #ttsBar{bottom:calc(16px + env(safe-area-inset-bottom,0px))}
-#ttsBar .icon-btn.play{width:48px;height:48px;flex:none;border-radius:50%;background:var(--accent);color:var(--accent-ink,#fff)}
+#ttsBar .icon-btn.play{width:48px;height:48px;flex:none;border-radius:50%;background:var(--play-bg,var(--accent));color:var(--play-ink,var(--accent-ink,#fff))}
 #ttsSpeed{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 12px;border-radius:22px;font:600 15px/1.15 system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums;color:var(--page-ink);cursor:pointer}
 #ttsLabel{font:inherit;color:inherit}
 #ttsTrack{position:absolute;left:14px;right:14px;bottom:4px;height:2px;border-radius:1px;background:color-mix(in srgb,var(--page-ink) 16%,transparent);overflow:hidden;pointer-events:none}
@@ -546,7 +546,7 @@ body.tts-pill-on #toast{bottom:calc(168px + env(safe-area-inset-bottom,0px))}
 
 /* Settings rows */
 .group{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px;--accent-text:var(--accent-text-card,var(--accent))}
-#sheet .group{background:var(--raise)}
+#sheet .group{background:var(--raise);--accent-text:var(--accent-text-raise,var(--accent-text-card,var(--accent)))}
 .set{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--line)}
 .set:last-child{border-bottom:0}
 .set .hd{display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -603,13 +603,13 @@ input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;bord
 body:has(#v-reader:not([hidden])) #verBadge{display:none}
 
 /* Update bar sits above the tab bar, below sheets, and hides while a sheet is open */
-#swUpdate{position:fixed;left:max(12px, calc(8px + env(safe-area-inset-left,0px)));right:max(12px, calc(8px + env(safe-area-inset-right,0px)));bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:15;background:#1d4ed8;color:#fff;padding:12px 16px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 15px/1.3 system-ui,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+#swUpdate{position:fixed;left:max(12px, calc(8px + env(safe-area-inset-left,0px)));right:max(12px, calc(8px + env(safe-area-inset-right,0px)));bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--banner-bg,var(--accent));color:var(--banner-ink,var(--accent-ink,#fff));padding:12px 16px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 15px/1.3 system-ui,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.25)}
 body:not(:has(#tabs[hidden])) #swUpdate{bottom:calc(56px + max(6px, env(safe-area-inset-bottom, 0px)) + 8px)}
 body:has(#sheet:not([hidden])) #swUpdate{display:none}
 body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #swUpdate .sw-actions{display:flex;align-items:center;gap:8px;flex:none}
-#swUpdate .sw-reload{background:#fff;color:#1d4ed8;border:0;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;min-height:44px}
-#swUpdate .sw-dismiss{background:transparent;color:#fff;border:0;width:44px;height:44px;padding:0;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+#swUpdate .sw-reload{background:var(--banner-ink,var(--accent-ink,#fff));color:var(--banner-bg,var(--accent));border:0;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;min-height:44px}
+#swUpdate .sw-dismiss{background:transparent;color:var(--banner-ink,var(--accent-ink,#fff));border:0;width:44px;height:44px;padding:0;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 #swUpdate .sw-dismiss svg{width:20px;height:20px}
 
 
@@ -641,7 +641,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourSub{position:static;left:auto;right:auto;bottom:auto;z-index:auto;color:rgba(255,255,255,.9);font:500 .95rem/1.4 var(--f-ui);text-align:center;margin:8px 0 0;text-shadow:none}
 #tourDots{position:absolute;left:50%;right:auto;transform:translateX(-50%);bottom:calc(76px + var(--sab));z-index:5;display:flex;justify-content:center;align-items:center;gap:7px;pointer-events:none;padding:8px 12px;background:rgba(20,22,30,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:999px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
 .tour-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.7);box-shadow:0 0 0 1.5px rgba(0,0,0,.65)}
-.tour-dot.on,.tour-dot.done,#tourDots.all-on .tour-dot{background:#fff}
+.tour-dot.on,.tour-dot.done{background:#fff}
 /* the current step: a longer dot in the app's accent, lifted toward white so it reads on the dark card in every Style and theme */
 #tourDots .tour-dot.on{width:18px;border-radius:4px;background:color-mix(in srgb,var(--accent) 55%,#fff)}
 .tour-pill-btn{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--sab));z-index:5;min-height:44px;min-width:120px;padding:0 22px;border:0;border-radius:22px;background:#fff;color:#111;font:700 16px/1 var(--f-ui);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3)}
@@ -695,9 +695,9 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 
 .tour-pulse{animation:tourPulse .8s ease-out infinite}
 .tour-pulse-once{animation:tourPulse .8s ease-out 1}
-@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(80,120,255,.0)}50%{box-shadow:0 0 0 10px rgba(80,120,255,.35)}}
+@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(var(--pulse-rgb,80,120,255),.0)}50%{box-shadow:0 0 0 10px rgba(var(--pulse-rgb,80,120,255),.35)}}
 #v-library .continue-hero.tour-pulse{animation:tourHeroPulse .8s ease-out infinite}
-@keyframes tourHeroPulse{0%,100%{box-shadow:0 0 0 0 rgba(80,120,255,0)}50%{box-shadow:0 0 0 10px rgba(80,120,255,.4)}}
+@keyframes tourHeroPulse{0%,100%{box-shadow:0 0 0 0 rgba(var(--pulse-rgb,80,120,255),0)}50%{box-shadow:0 0 0 10px rgba(var(--pulse-rgb,80,120,255),.4)}}
 #v-library.tour-grid-dim #docList .doc:not(.continue-hero){opacity:.45}
 #docList [data-tour-hide]{display:none}
 
@@ -715,6 +715,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --paper:#E9EDF2; --surface:#FFFFFF; --raise:#F4F6F9; --ink:#15202D; --muted:#5A6779;
   --line:#CED6E0; --accent:#2244B5; --accent-soft:#DCE4FA; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
   --accent-text:var(--accent); --accent-text-card:var(--accent); --sel-ink:var(--accent); --solid-dur:var(--motion-dur);
+  --banner-bg:#1d4ed8; --banner-ink:#fff; /* v36's update banner */
   --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   /* Quiet is v36's look exactly: v36 headings and spacing, and "initial" shapes so every rule below falls back to v36's own radius and shadow */
   --head-font:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif; --head-weight:800; --h2-weight:600;
@@ -728,7 +729,8 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 }
 [data-style="paper"]{
   --paper:#EFE8DB; --surface:#FBF8F1; --raise:#F4EEE2; --ink:#2A241D; --muted:#6C6357;
-  --line:#E0D6C4; --accent:#8C5220; --accent-soft:#F1E1CC; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
+  /* tag text sits on the tan --accent-soft inside a faded card, so it takes a deeper brown (#633813, 4.9:1) to stay above 4.5:1 */
+  --line:#E0D6C4; --accent:#8C5220; --accent-soft:#F1E1CC; --accent-ink:#FFFFFF; --chip-ink:#633813; --fill-c:var(--accent);
   --accent-text:var(--accent); --accent-text-card:var(--accent); --sel-ink:var(--accent); --solid-dur:160ms;
   --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --head-font:"Iowan Old Style","Palatino","Literata",Georgia,serif; --head-weight:700;
@@ -750,17 +752,20 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --line:#E3E3E3; --accent:#FF5A4E; --accent-soft:#EDEDED; --accent-ink:#1B1B1B; --chip-ink:var(--ink); --fill-c:var(--ink);
   /* one accent: coral #FF5A4E only fills, rings and icons; coral text is the darker #D63A2E (4.66:1 on white) and only sits on white
      surfaces; selected labels (active tab, chips, segments) are ink with a coral ring or icon. Only the primary action is a coral fill. */
-  /* coral text (#D63A2E) reaches 4.5:1 only on white, so it is used on white cards (--accent-text-card) and ink elsewhere */
-  --accent-text:var(--ink); --accent-text-card:#D63A2E; --sel-ink:var(--ink); --solid-dur:120ms;
+  /* coral text (#D63A2E) reaches 4.5:1 only on white, so it is used on white cards (--accent-text-card) and ink elsewhere, incl. the grey groups inside sheets (--accent-text-raise) */
+  --accent-text:var(--ink); --accent-text-card:#D63A2E; --accent-text-raise:var(--ink); --sel-ink:var(--ink); --solid-dur:120ms;
   --add-bg:transparent; --add-ink:var(--ink); --add-line:var(--ink);
   --ui-font:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,system-ui,"Atkinson Hyperlegible",sans-serif;
   --head-font:"Bricolage Grotesque",ui-rounded,"Avenir Next",system-ui,sans-serif; --head-weight:800;
   --radius-card:20px; --radius-btn:999px; --radius-sheet:26px;
   --shadow:0 2px 10px rgba(0,0,0,.06); --btn-shadow:none; --float-shadow:0 10px 30px rgba(0,0,0,.18); --sheet-shadow:0 -8px 30px rgba(0,0,0,.16);
   --grain:none; --gap:14px;
-  --motion-dur:380ms; --motion-ease:cubic-bezier(.34,1.56,.64,1);
+  --motion-dur:300ms; --motion-ease:cubic-bezier(.34,1.56,.64,1);
   --sheet-y:40%; --pop-y:12px; --pop-scale:.9;
-  --turn-dur:260ms; --turn-ease:cubic-bezier(.2,.9,.3,1); --turn-shade:0; --chrome-on:#D63A2E; /* active reader icons: the deeper coral keeps 3:1 on White, Paper and Sepia pages */
+  --turn-dur:260ms; --turn-ease:cubic-bezier(.2,.9,.3,1); --turn-shade:0;
+  /* coral controls on the page (scrubber, active speaker/bookmark, the pill's Play fill) use the deeper #D63A2E on light pages:
+     #FF5A4E is under 3:1 on Paper (2.83) and Sepia (2.44); #D63A2E is 3.7 / 4.28, and white Play glyph on it 4.66 */
+  --chrome-on:#D63A2E; --play-bg:#D63A2E; --play-ink:#FFFFFF; --pulse-rgb:255,90,78;
   --press-scale:.96; --press-y:0px; --press-op:1; --press-dur:260ms; --press-ease:cubic-bezier(.34,1.56,.64,1);
 }
 :root[data-theme="dark"][data-style="quiet"],:root[data-theme="dark"] [data-style="quiet"]{
@@ -768,11 +773,11 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --line:#2B333D; --accent:#8AA4FF; --accent-soft:#232E4D; --accent-ink:#0E1217}
 :root[data-theme="dark"][data-style="paper"],:root[data-theme="dark"] [data-style="paper"]{
   --paper:#15120E; --surface:#1F1B16; --raise:#28231D; --ink:#EDE5D8; --muted:#A79C8C;
-  --line:#3A3229; --accent:#E2A76B; --accent-soft:#3A2C1D; --accent-ink:#15120E;
+  --line:#3A3229; --accent:#E2A76B; --accent-soft:#3A2C1D; --accent-ink:#15120E; --chip-ink:var(--accent);
   --grain:radial-gradient(rgba(255,240,215,.035) .6px,transparent .9px),radial-gradient(rgba(255,240,215,.025) .6px,transparent .9px)}
 :root[data-theme="dark"][data-style="lively"],:root[data-theme="dark"] [data-style="lively"]{
   --paper:#0F0F0F; --surface:#1B1B1B; --raise:#242424; --ink:#F2F2F2; --muted:#9A9A9A;
-  --line:#2E2E2E; --accent:#FF7A6E; --accent-soft:#2A2A2A; --accent-ink:#141414; --accent-text:#FF7A6E; --accent-text-card:#FF7A6E; --chrome-on:var(--accent)}
+  --line:#2E2E2E; --accent:#FF7A6E; --accent-soft:#2A2A2A; --accent-ink:#141414; --accent-text:#FF7A6E; --accent-text-card:#FF7A6E; --accent-text-raise:#FF7A6E; --chrome-on:var(--accent); --play-bg:var(--accent); --play-ink:var(--accent-ink); --pulse-rgb:255,122,110}
 /* every style collapses to a short fade when the phone asks for less motion */
 @media (prefers-reduced-motion: reduce){
   :root,[data-style]{--motion-dur:160ms !important; --motion-ease:ease-out !important; --sheet-y:0% !important; --pop-y:0px !important; --pop-scale:1 !important;
@@ -808,7 +813,6 @@ button:active:not(:disabled),.doc:active{scale:var(--press-scale);translate:0 va
 @keyframes st-sheet{from{opacity:0;translate:0 var(--sheet-y)}}
 @keyframes st-pop{from{opacity:0;translate:0 var(--pop-y);scale:var(--pop-scale)}}
 @keyframes st-fade{from{opacity:0}}
-@media (prefers-reduced-motion: reduce){ @keyframes st-sheet{from{opacity:0}} @keyframes st-pop{from{opacity:0}} @keyframes st-rise{from{opacity:1}} @keyframes st-press{50%{opacity:var(--press-op)}} }
 #sheet{animation:st-sheet var(--motion-dur) var(--motion-ease)}
 #sheet::after{content:"";position:absolute;left:0;right:0;top:100%;height:120px;background:var(--surface);pointer-events:none} /* covers the gap while a springy sheet overshoots */
 #backdrop{animation:st-fade var(--motion-dur) ease-out}
@@ -818,6 +822,10 @@ button:active:not(:disabled),.doc:active{scale:var(--press-scale);translate:0 va
 #sheet.closing,#backdrop.closing{pointer-events:none;animation:st-close 120ms ease-in forwards}
 @keyframes st-close{from{opacity:1}to{opacity:0}}
 #ttsBar,#tourCaption.st-in{animation:st-pop var(--motion-dur) var(--motion-ease)}
+/* the toast, back-to-place pill, selection More menu and update banner enter in the Style too (placement uses stillRect / offset sizes) */
+#toast,#backPill,#selMenu,#swUpdate{animation:st-pop var(--motion-dur) var(--motion-ease)}
+/* Lively's one accent also tints the native word-selection highlight */
+[data-style="lively"] ::selection{background:color-mix(in srgb,var(--accent) 32%,transparent)}
 /* the selection bar springs like the pill but turns solid at once, so the page and info line never show through it */
 #selBar{animation:st-rise var(--motion-dur) var(--motion-ease),st-fade var(--solid-dur,var(--motion-dur)) ease-out}
 @keyframes st-rise{from{translate:0 var(--pop-y);scale:var(--pop-scale)}}
@@ -848,7 +856,9 @@ button:active:not(:disabled),.doc:active{scale:var(--press-scale);translate:0 va
 .stile.play .mini .msheet{animation:st-sheet var(--motion-dur) var(--motion-ease)}
 .stile.play .mini .mbtn{animation:st-press calc(var(--press-dur) * 2) var(--press-ease)}
 @keyframes st-press{50%{scale:var(--press-scale);translate:0 var(--press-y);opacity:var(--press-op);box-shadow:none}}
-.stile .cap{font-size:.78rem;color:var(--muted);text-align:center;line-height:1.25}
+/* reduced motion: these come after every main definition so they win */
+@media (prefers-reduced-motion: reduce){ @keyframes st-sheet{from{opacity:0}} @keyframes st-pop{from{opacity:0}} @keyframes st-rise{from{opacity:1}} @keyframes st-press{50%{opacity:var(--press-op)}} }
+.stile .cap{font-size:min(.78rem,3.1vw);color:var(--muted);text-align:center;line-height:1.25;white-space:nowrap}
 .stile .nm{font-size:.86rem;font-weight:700}
 .stile[aria-checked="true"] .mini{box-shadow:var(--shadow,0 0 #0000),0 0 0 2.5px var(--accent)}
 .stile .scheck{position:absolute;top:-7px;right:-7px;left:auto;margin:0;z-index:1;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 2px var(--surface);display:none;align-items:center;justify-content:center;font-size:.72rem;font-weight:800}

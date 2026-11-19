@@ -413,7 +413,7 @@ async function tourRunStep(n){
   const root=tourRoot();
   if(root) root.setAttribute('data-step', String(n));
   const finger=$('#tourFinger'); if(finger){ finger.hidden=true; finger.classList.remove('tap'); }
-  document.querySelectorAll('#tour .tour-pulse, #tourTocIcon, #tourSel .tour-more').forEach(el=>el.classList.remove('tour-pulse','tour-pulse-once'));
+  document.querySelectorAll('#tour .tour-pulse, #tour .tour-pulse-once, #tourTocIcon, #tourSel .tour-more').forEach(el=>el.classList.remove('tour-pulse','tour-pulse-once'));
   const demo=tourDemo(); if(demo) demo.hidden=true;
   tourShowChrome('Next', false);
   $('#v-library') && $('#v-library').classList.remove('tour-grid-dim');
@@ -570,14 +570,14 @@ async function tourRunStep(n){
     tourSay('That’s it.');
     const sub=$('#tourSub'); if(sub){ sub.hidden=false; sub.textContent='Replay anytime: Settings → Help.'; }
     tourShowChrome('', true);
-    tourSetDots(TOUR_DOTS-1);
-    $('#tourDots') && $('#tourDots').classList.add('all-on');
+    /* six dots for the six steps; the closing card is not a step, so the dots step aside */
+    $('#tourDots') && ($('#tourDots').hidden=true);
     tourSpot(null);
     tourFocusSkip();
     return;
   }else{
     const sub=$('#tourSub'); if(sub) sub.hidden=true;
-    $('#tourDots') && $('#tourDots').classList.remove('all-on');
+    $('#tourDots') && ($('#tourDots').hidden=false);
   }
 
   tourFocusSkip();

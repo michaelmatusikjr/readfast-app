@@ -57,15 +57,18 @@ and move items out of **Pending changes** once they're built.
     pressed button dims. Suggests the Paper page colour.
   - **Paper**: warm off-white surfaces with a faint CSS paper grain, soft shadows on cards and sheets. Sheets settle in
     from the bottom (about 320 ms, a slight drag); sliding page turns get a soft edge shadow; pressed buttons sink 1 px
-    and lose their shadow. Suggests Sepia.
+    and lose their shadow. Tag text is a deeper brown (#633813) so it keeps 4.5:1 on its tan chip. Suggests Sepia.
   - **Lively**: big rounded corners (cards about 20 px, pill buttons), a rounded sans-serif interface, black/white/grey
     with one coral accent (#FF5A4E, #FF7A6E on dark pages) for the active or primary thing only. Taps squish and spring
-    back; sheets, the pill, the selection bar and tour cards spring in (about 380 ms). Suggests White.
+    back; sheets, the pill, the selection bar and tour cards spring in (about 300 ms). Suggests White.
     Coral #FF5A4E is only for fills, rings and icons. Coral text is #D63A2E on light pages only on white cards
     (`--accent-text-card`, 4.5:1 or better); on the grey page and in sheets accent text is ink; #FF7A6E on dark pages.
-    Active reader icons (speaker, bookmark) use #D63A2E on light pages so they keep 3:1 on Sepia; selected labels (active tab, chips, toggles) are ink with a
+    Coral controls on the page (scrubber, active speaker and bookmark, the pill's Play fill with a white glyph) use
+    #D63A2E on light pages so they keep 3:1 on Paper and Sepia; the word-selection highlight and tour pulse ring are coral too; selected labels (active tab, chips, toggles) are ink with a
     coral icon or ring. On the shelf only Continue is a coral fill; Add to library is an ink outline. The selection bar
     is solid from the first moment of its spring.
+- Every Style: the toast, the back-to-place pill, the selection More menu and the update banner enter with the Style's
+  pop (opacity only under Reduce Motion). The update banner is the Style's accent (Quiet keeps v36's blue).
 - Every Style: a closing sheet is closed at once (focus and taps move on) and only fades out on screen for about
   120 ms. A tour spotlight shows the spotlit control at full colour.
 - Picker: Settings → Style, three live preview tiles (Quiet "Calm & still", Paper "Tactile & warm", Lively "Bouncy &
