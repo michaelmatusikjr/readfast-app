@@ -300,9 +300,10 @@ function pgPinWord(i){
   pgSet(p, false);
 }
 function pgSet(page, anim){
-  P.page=clamp(page,0,P.pages-1);
-  const slide = anim && S.turn==='slide';
+  P.page0=P.page; P.page=clamp(page,0,P.pages-1);
+  const slide = anim && S.turn==='slide', from=P.page0;
   pgFlow.classList.toggle('anim-slide', slide);
+  if(slide && from!=null && from!==P.page) pgEdge(P.page>from);
   pgFlow.style.transform=`translateX(${-P.page*P.g.stride+pgShift()}px)`;
   P.topWord = P.page>0 ? pgFirstWord(P.page) : (pgFlow.firstElementChild ? pgFlow.firstElementChild._a : R.pos);
   P.rangeEnd = P.page<P.pages-1 ? pgFirstWord(P.page+1) : (pgFlow.firstElementChild?pgFlow.firstElementChild._b:R.n);
@@ -315,6 +316,15 @@ async function pgShow(i, keepPos){
   pgSet(p, false);
   if(!keepPos) R.pos=i; updateChrome();
 }
+/* the Style's soft edge shadow during a sliding page turn (CSS only shows it where the Style gives it a shade) */
+let pgEdgeT=0;
+function pgEdge(fwd){
+  const c=$('#pgClip'); if(!c) return;
+  c.classList.remove('turning'); c.classList.toggle('turn-back', !fwd); void c.offsetWidth; c.classList.add('turning');
+  clearTimeout(pgEdgeT); pgEdgeT=setTimeout(()=>c.classList.remove('turning','turn-back'), 700);
+}
+/* with reduced motion a sliding page turn becomes a short fade */
+const turnFades=()=>S.turn==='fade' || (S.turn==='slide' && reducedMotion());
 async function pgFade(fn){
   if(S.turn==='none'){ await fn(); return; }
   pgFlow.classList.add('fade'); await sleep(130); await fn(); pgFlow.classList.remove('fade');
@@ -323,11 +333,11 @@ async function pgTurn(d){
   if(P.busy || R.mode!=='pages') return; pgClearPin(); R.anchor=null;
   if(!TS.edge) selClear();
   if(d>0){
-    if(P.page<P.pages-1){ if(S.turn==='fade') await pgFade(()=>pgSet(P.page+1,false)); else pgSet(P.page+1,true); }
+    if(P.page<P.pages-1){ if(turnFades()) await pgFade(()=>pgSet(P.page+1,false)); else pgSet(P.page+1,true); }
     else if(P.k<R.SEC.length-1){ P.busy=true; try{ await pgFade(async()=>{ await pgLoad(P.k+1); pgSet(0,false); }); } finally{ P.busy=false; } }
     else { R.meta.finished=true; saveProgress(true); toast('You’ve reached the end of “'+R.meta.title+'”'); return; }
   } else {
-    if(P.page>0){ if(S.turn==='fade') await pgFade(()=>pgSet(P.page-1,false)); else pgSet(P.page-1,true); }
+    if(P.page>0){ if(turnFades()) await pgFade(()=>pgSet(P.page-1,false)); else pgSet(P.page-1,true); }
     else if(P.k>0){ P.busy=true; try{ await pgFade(async()=>{ await pgLoad(P.k-1); pgSet(P.pages-1,false); }); } finally{ P.busy=false; } }
     else return;
   }
@@ -1069,7 +1079,7 @@ function placeSelBar(){
   bar.style.right='auto';
   if(!menuOpen) return;
   const br={left:barLeft, top:barTop, right:barLeft+barW, bottom:barTop+barH};
-  const more=($('#selMore')||bar).getBoundingClientRect();
+  const more=stillRect($('#selMore')||bar);
   const area=r=>Math.max(0, Math.min(r.right,sel?sel.right:r.left)-Math.max(r.left,sel?sel.left:r.right))*Math.max(0, Math.min(r.bottom,sel?sel.bottom:r.top)-Math.max(r.top,sel?sel.top:r.bottom));
   const candidates=[];
   const add=(l,t,kind)=>{
@@ -1744,7 +1754,7 @@ function ttsMeasureReservePx(){
   if(!clip) return 0;
   const defaultBottom=clip.getBoundingClientRect().bottom + cur;
   /* Measure from the pill only. Hints and the voice chip render inside this reserved strip so they never change the page count. */
-  const top=b.getBoundingClientRect().top;
+  const top=stillRect(b).top; /* not moved by the Style's pop-in */
   const pad=ttsLinePad();
   /* Scroll gets one extra line so the last line can rest fully above the pill, not flush against its top. */
   const extra=(R.mode==='scroll')?pad:0;
@@ -1754,7 +1764,7 @@ function ttsReserveSync(){
   const v=$('#v-reader'), b=$('#ttsBar');
   const on=!!(TTS.mode && R.mode!=='speed' && b && !b.hidden);
   const wasOn=!!(v && v.classList.contains('tts-pill-on'));
-  if(v && b && !b.hidden){ const lift=Math.ceil(b.getBoundingClientRect().height+8); if(lift>0) v.style.setProperty('--tts-chip-lift', lift+'px'); v.style.setProperty('--tts-line-pad', ttsLinePad()+'px'); }
+  if(v && b && !b.hidden){ const lift=Math.ceil(stillRect(b).height+8); if(lift>0) v.style.setProperty('--tts-chip-lift', lift+'px'); v.style.setProperty('--tts-line-pad', ttsLinePad()+'px'); }
   const next=on?ttsMeasureReservePx():0;
   if(next===ttsResPx && on===wasOn){
     if(v) v.classList.toggle('tts-pill-on', on);
@@ -2031,7 +2041,7 @@ function backToBook(){
   holdPlace(); applyLook(); relayoutSoon(); updateChrome();
 }
 function resetReading(){
-  const keep={linkService:S.linkService, goalMins:S.goalMins, measuredWpm:S.measuredWpm, info:S.info};
+  const keep={linkService:S.linkService, goalMins:S.goalMins, measuredWpm:S.measuredWpm, info:S.info, style:S.style};
   Object.assign(S, DEFAULTS, keep, {mode:S.mode}); saveSettings(); applyLook(); setWpm(S.wpm); asUI(); relayoutSoon();
 }
 function afterSet(key){

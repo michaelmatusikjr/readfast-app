@@ -41,7 +41,7 @@ function tourMeasureRfoot(){
 
 function tourBox(el, pad){
   if(!el || el.hidden || (el.closest && el.closest('[hidden]'))) return null;
-  const r=el.getBoundingClientRect();
+  const r=stillRect(el);
   if(r.width<2 || r.height<2) return null;
   const p=pad||0;
   return {left:r.left-p, top:r.top-p, right:r.right+p, bottom:r.bottom+p};
@@ -163,7 +163,7 @@ function tourPlaceCaption(hole){
   /* Re-measure and push the card clear of the spotlight if it still overlaps. */
   const capH2=Math.max(capH, cap.offsetHeight||capH);
   if(holeBox){
-    const r=()=>cap.getBoundingClientRect();
+    const r=()=>stillRect(cap);
     const hits=()=>{
       const a=r();
       return !(a.bottom<=holeBox.top-8 || a.top>=holeBox.bottom+8 || a.right<=holeBox.left-8 || a.left>=holeBox.right-8);
@@ -237,6 +237,7 @@ function tourSay(text){
   const main=$('#tourCaptionText');
   if(main) main.textContent=text||'';
   else cap.textContent=text||'';
+  cap.classList.remove('st-in'); void cap.offsetWidth; cap.classList.add('st-in'); /* the card enters in the app's Style */
 }
 
 function tourSetDots(n){

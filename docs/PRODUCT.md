@@ -41,11 +41,32 @@ and move items out of **Pending changes** once they're built.
   "Pages" / "Scrolling". The **Book's font** tile shows only when a book has its own font.
 - Fonts include dyslexia-friendly Lexend and OpenDyslexic. Paragraph styles: Indented, Spaced, Spaced and indented.
 - **Light** settings (dim, warmth, night theme) are app-wide, so they live in app Settings, not Aa.
-- App Settings holds only app-wide items: Reading (idle limit, what the bottom line shows, reset), Light, Backup and
+- App Settings holds only app-wide items: Style (at the top), Reading (idle limit, what the bottom line shows, reset), Light, Backup and
   restore, Storage, Library, Adding books, Help (first-run tour, tutorial book, version, What’s new), Erase.
 - Bottom bars (tab bar and in-book bar) are tall enough and fill the home-indicator area.
 - Reader top bar: Back, Contents and Aa. Search and this book’s notes live at the top of the Contents sheet. The bars hide while he reads (on a page turn or scroll) and come back on a tap in the middle of the page. Hiding them does not change the page layout; thin reserved strips at the top and bottom keep the running title and page label off the text.
 - The OpenDyslexic title must not overflow the font picker.
+
+## Styles
+
+- Three app-wide **Styles** (built Nov 18) sit on top of the page colours, which are unchanged. Each sets the look, the
+  touch feedback and the motion of the app's chrome:
+  - **Quiet** (default; existing installs land here): serif headings, hairline dividers, generous spacing, almost no
+    chrome. Sheets, the read-aloud pill, the selection bar and tour cards fade in (about 200 ms, no movement); a
+    pressed button dims. Suggests the Paper page colour.
+  - **Paper**: warm off-white surfaces with a faint CSS paper grain, soft shadows on cards and sheets. Sheets settle in
+    from the bottom (about 320 ms, a slight drag); sliding page turns get a soft edge shadow; pressed buttons sink 1 px
+    and lose their shadow. Suggests Sepia.
+  - **Lively**: big rounded corners (cards about 20 px, pill buttons), a rounded sans-serif interface, black/white/grey
+    with one coral accent (#FF5A4E, #FF7A6E on dark pages) for the active or primary thing only. Taps squish and spring
+    back; sheets, the pill, the selection bar and tour cards spring in (about 380 ms). Suggests White.
+- Picker: Settings → Style, three live preview tiles (Quiet "Calm & still", Paper "Tactile & warm", Lively "Bouncy &
+  bright"). A tap applies the Style at once with a short crossfade, sets its suggested page colour (still changeable in
+  Aa afterwards), plays the Style's motion on the tile and marks it selected. "Reset reading options" keeps the Style.
+- Firm rules: a Style never changes the reading text's font, size or layout, the reader bars or the pill's size, so
+  switching never repaginates or moves your place. It never changes what a gesture does. The **Page turn** reading
+  option (Slide / Fade / None) still decides how pages turn; the Style only sets the slide's timing and shadow. With
+  Reduce Motion on, every Style uses short fades only, and a sliding page turn becomes a fade.
 
 ## Library
 

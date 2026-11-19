@@ -25,7 +25,7 @@
 /* ---------- settings (one set, used everywhere) ---------- */
 const DEFAULTS = {
   v:2, mode:'pages',
-  theme:'auto', nightAuto:false, nightFrom:'21:00', nightTo:'07:00', nightTheme:'dark', dim:0, warmth:0,
+  style:'quiet', theme:'auto', nightAuto:false, nightFrom:'21:00', nightTo:'07:00', nightTheme:'dark', dim:0, warmth:0,
   font:'original', size:19, lineH:1.55, margin:'normal', para:'indent', justify:true, hyphen:true, boldText:false, wordStart:false,
   turn:'slide', tapZones:'edges', twoCol:true, focus:true,
   autoScroll:false, scrollWpm:220, asRamp:true, asPauses:true,
@@ -67,6 +67,24 @@ const THEMES = {
   dark:{label:'Dark', bg:'#16181C', ink:'#D8DBE0', muted:'#8C929C', line:'#2A2E35', link:'#8AA4FF', dark:true},
   black:{label:'Black', bg:'#000000', ink:'#C8C8C8', muted:'#7D7D7D', line:'#1E1E1E', link:'#7C97F2', dark:true}
 };
+/* app-wide Styles: look, touch feedback and motion on top of the page colour (CSS in a_head.html, [data-style]).
+   Picking one also picks its suggested page colour; the page colour can still be changed afterwards. */
+const STYLES = {
+  quiet:{label:'Quiet', cap:'Calm & still', theme:'paper'},
+  paper:{label:'Paper', cap:'Tactile & warm', theme:'sepia'},
+  lively:{label:'Lively', cap:'Bouncy & bright', theme:'white'}
+};
+const styleKey=()=>STYLES[S.style]?S.style:'quiet';
+const reducedMotion=()=>{ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } };
+/* an element's box without the Style entrance or press motion (translate/scale), so measuring never depends on the Style */
+function stillRect(el){
+  const st=el.style, t=st.getPropertyValue('translate'), tp=st.getPropertyPriority('translate'), c=st.getPropertyValue('scale'), cp=st.getPropertyPriority('scale');
+  st.setProperty('translate','none','important'); st.setProperty('scale','none','important');
+  const r=el.getBoundingClientRect();
+  if(t) st.setProperty('translate',t,tp); else st.removeProperty('translate');
+  if(c) st.setProperty('scale',c,cp); else st.removeProperty('scale');
+  return r;
+}
 const HL_LIGHT=['#FFE58A','#C4EDB5','#C5E1FF','#FFC9DF'], HL_DARK=['rgba(255,214,64,.42)','rgba(110,200,90,.38)','rgba(90,160,255,.40)','rgba(255,110,170,.40)'], HL_DARK_DOT=['#FFE14D','#8BE07A','#7EB6FF','#FF9EC8'];
 /* margins grow with the screen: [smallest in px, share of the reading width] */
 const MARGINS={narrow:[12,0.03], normal:[22,0.065], wide:[44,0.13]};
@@ -89,6 +107,7 @@ function fontCSS(){
 function applyLook(){
   const r=document.documentElement, st=r.style, T=THEMES[effectiveTheme()];
   r.setAttribute('data-theme', T.dark?'dark':'light');
+  if(r.getAttribute('data-style')!==styleKey()) r.setAttribute('data-style', styleKey());
   st.setProperty('--page-bg',T.bg); st.setProperty('--page-ink',T.ink); st.setProperty('--page-muted',T.muted); st.setProperty('--page-line',T.line); st.setProperty('--page-link',T.link);
   (T.dark?HL_DARK:HL_LIGHT).forEach((c,k)=>st.setProperty('--hl'+(k+1),c));
   (T.dark?HL_DARK_DOT:HL_LIGHT).forEach((c,k)=>st.setProperty('--hl-dot'+(k+1),c));

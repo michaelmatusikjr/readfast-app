@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-style="quiet">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -312,7 +312,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;anima
 #barHint.on{animation:barHintPulse 1.4s ease 1}
 @keyframes barHintPulse{0%,100%{opacity:0}25%,55%{opacity:1}}
 @media (prefers-reduced-motion:reduce){#barHint.on{animation:none}}
-#pgFlow.anim-slide{transition:transform .28s cubic-bezier(.3,.6,.2,1)}
+#pgFlow.anim-slide{transition:transform var(--turn-dur,.28s) var(--turn-ease,cubic-bezier(.3,.6,.2,1))}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
 /* Scroll */
 #scrollView{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
@@ -562,7 +562,7 @@ body.tts-pill-on #toast{bottom:calc(168px + env(safe-area-inset-bottom,0px))}
 .seg.big button{padding:11px 4px;font-size:.95rem}
 input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;border-radius:50%;cursor:pointer}
 .dim{opacity:.45;pointer-events:none}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (prefers-reduced-motion: reduce){*{transition-property:opacity!important}} /* fades only: nothing moves */
 /* phones: Tooz does its own selection in a book, so the phone's selection and menu stay off */
 @media (hover:none),(pointer:coarse){ #pagesView,#pagesView *,#scFlow,#scFlow *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important} }
 
@@ -663,10 +663,9 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourSel .dot[data-hl="4"]{background:var(--hl4)}
 #tourSel .sep{width:1px;height:20px;background:var(--line)}
 #tourSel .tour-more{font-weight:700;padding:0 8px}
-#tourPeek{position:absolute;left:12px;right:12px;top:calc(56px + var(--sat));z-index:4;background:var(--surface);color:var(--ink);border-radius:16px 16px 0 0;padding:16px 16px 20px;box-shadow:0 -8px 30px rgba(0,0,0,.2);animation:tourPeek .8s ease-out}
-@keyframes tourPeek{from{transform:translateY(40%);opacity:0}}
+#tourPeek{position:absolute;left:12px;right:12px;top:calc(56px + var(--sat));z-index:4;background:var(--surface);color:var(--ink);border-radius:16px 16px 0 0;padding:16px 16px 20px;box-shadow:0 -8px 30px rgba(0,0,0,.2);animation:st-sheet calc(var(--motion-dur) * 2) var(--motion-ease)}
 .tour-peek-row{padding:12px 10px;border-bottom:1px solid var(--line);font-weight:700}
-#tourMoment{position:absolute;left:16px;right:16px;bottom:calc(116px + var(--sab));z-index:6;display:flex;gap:10px;align-items:flex-start;background:var(--surface);color:var(--ink);border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:tourIn .8s ease-out}
+#tourMoment{position:absolute;left:16px;right:16px;bottom:calc(116px + var(--sab));z-index:6;display:flex;gap:10px;align-items:flex-start;background:var(--surface);color:var(--ink);border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:st-pop var(--motion-dur) var(--motion-ease)}
 #tourSpeedWord{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-family:var(--bfont),Georgia,serif;font-size:2.4rem;font-weight:700;color:var(--page-ink,#1b1b1b);z-index:4}
 #tourSpeedWord.flash{animation:tourFlash .8s ease-out}
 @keyframes tourFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(.92)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1}}
@@ -700,6 +699,130 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 @media (prefers-reduced-motion: reduce){
   #tour *,#tour #tourCaption{animation:none !important;transition:none !important}
 }
+
+/* ---------- Styles (v37): Quiet, Paper, Lively ----------
+   One app-wide Style sits on top of the page colour. Everything below is driven by custom properties set per
+   [data-style] (on <html>, and on the Settings preview tiles). Styles change the app's chrome and motion only:
+   the reading text, the reader bars and the read-aloud pill keep their sizes, so pages never change. */
+[data-style="quiet"]{
+  --paper:#E9EDF2; --surface:#FFFFFF; --raise:#F4F6F9; --ink:#15202D; --muted:#5A6779;
+  --line:#D7DEE7; --accent:#2244B5; --accent-soft:#DCE4FA; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
+  --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --head-font:"Literata","New York",ui-serif,Georgia,serif; --head-weight:600;
+  --radius-card:10px; --radius-btn:10px; --radius-sheet:14px;
+  --shadow:none; --btn-shadow:none; --float-shadow:0 2px 14px rgba(0,0,0,.12); --sheet-shadow:0 -1px 0 var(--line);
+  --grain:none; --gap:18px;
+  --motion-dur:200ms; --motion-ease:cubic-bezier(0,0,.2,1);
+  --sheet-y:0%; --pop-y:0px; --pop-scale:1;
+  --turn-dur:280ms; --turn-ease:cubic-bezier(.3,.6,.2,1); --turn-shade:0;
+  --press-scale:1; --press-y:0px; --press-op:.55; --press-dur:140ms; --press-ease:ease-out;
+}
+[data-style="paper"]{
+  --paper:#EFE8DB; --surface:#FBF8F1; --raise:#F4EEE2; --ink:#2A241D; --muted:#6C6357;
+  --line:#E0D6C4; --accent:#8C5220; --accent-soft:#F1E1CC; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
+  --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --head-font:"Iowan Old Style","Palatino","Literata",Georgia,serif; --head-weight:700;
+  --radius-card:14px; --radius-btn:12px; --radius-sheet:18px;
+  --shadow:0 1px 2px rgba(70,50,20,.08),0 4px 14px rgba(70,50,20,.08);
+  --btn-shadow:0 1px 0 rgba(70,50,20,.10),0 2px 5px rgba(70,50,20,.12);
+  --float-shadow:0 2px 4px rgba(70,50,20,.10),0 10px 28px rgba(70,50,20,.18);
+  --sheet-shadow:0 -2px 6px rgba(70,50,20,.08),0 -12px 34px rgba(70,50,20,.16);
+  /* paper grain: two offset dot lattices, very faint (no image files) */
+  --grain:radial-gradient(rgba(90,64,30,.06) .6px,transparent .9px),radial-gradient(rgba(90,64,30,.04) .6px,transparent .9px);
+  --gap:16px;
+  --motion-dur:320ms; --motion-ease:cubic-bezier(.2,.7,.2,1);
+  --sheet-y:32%; --pop-y:8px; --pop-scale:1;
+  --turn-dur:320ms; --turn-ease:cubic-bezier(.2,.7,.2,1); --turn-shade:.16;
+  --press-scale:1; --press-y:1px; --press-op:1; --press-dur:120ms; --press-ease:ease-out;
+}
+[data-style="lively"]{
+  --paper:#F2F2F2; --surface:#FFFFFF; --raise:#F5F5F5; --ink:#141414; --muted:#626262;
+  --line:#E3E3E3; --accent:#FF5A4E; --accent-soft:#EDEDED; --accent-ink:#1B1B1B; --chip-ink:var(--ink); --fill-c:var(--ink);
+  --ui-font:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,system-ui,"Atkinson Hyperlegible",sans-serif;
+  --head-font:"Bricolage Grotesque",ui-rounded,"Avenir Next",system-ui,sans-serif; --head-weight:800;
+  --radius-card:20px; --radius-btn:999px; --radius-sheet:26px;
+  --shadow:0 2px 10px rgba(0,0,0,.06); --btn-shadow:none; --float-shadow:0 10px 30px rgba(0,0,0,.18); --sheet-shadow:0 -8px 30px rgba(0,0,0,.16);
+  --grain:none; --gap:14px;
+  --motion-dur:380ms; --motion-ease:cubic-bezier(.34,1.56,.64,1);
+  --sheet-y:40%; --pop-y:12px; --pop-scale:.9;
+  --turn-dur:260ms; --turn-ease:cubic-bezier(.2,.9,.3,1); --turn-shade:0; --chrome-on:var(--accent);
+  --press-scale:.96; --press-y:0px; --press-op:1; --press-dur:260ms; --press-ease:cubic-bezier(.34,1.56,.64,1);
+}
+:root[data-theme="dark"][data-style="quiet"],:root[data-theme="dark"] [data-style="quiet"]{
+  --paper:#0E1217; --surface:#171C23; --raise:#1E242C; --ink:#E4E9F0; --muted:#8D99A8;
+  --line:#262D36; --accent:#8AA4FF; --accent-soft:#232E4D; --accent-ink:#0E1217}
+:root[data-theme="dark"][data-style="paper"],:root[data-theme="dark"] [data-style="paper"]{
+  --paper:#15120E; --surface:#1F1B16; --raise:#28231D; --ink:#EDE5D8; --muted:#A79C8C;
+  --line:#3A3229; --accent:#E2A76B; --accent-soft:#3A2C1D; --accent-ink:#15120E;
+  --grain:radial-gradient(rgba(255,240,215,.035) .6px,transparent .9px),radial-gradient(rgba(255,240,215,.025) .6px,transparent .9px)}
+:root[data-theme="dark"][data-style="lively"],:root[data-theme="dark"] [data-style="lively"]{
+  --paper:#0F0F0F; --surface:#1B1B1B; --raise:#242424; --ink:#F2F2F2; --muted:#9A9A9A;
+  --line:#2E2E2E; --accent:#FF7A6E; --accent-soft:#2A2A2A; --accent-ink:#141414}
+/* every style collapses to a short fade when the phone asks for less motion */
+@media (prefers-reduced-motion: reduce){
+  :root,[data-style]{--motion-dur:160ms !important; --motion-ease:ease-out !important; --sheet-y:0% !important; --pop-y:0px !important; --pop-scale:1 !important;
+    --press-scale:1 !important; --press-y:0px !important; --press-op:.6 !important; --turn-shade:0 !important}
+}
+:root{--f-ui:var(--ui-font); --f-display:var(--head-font); --fill:color-mix(in srgb,var(--fill-c,var(--accent)) 16%,var(--surface))}
+h1,h2{font-weight:var(--head-weight,700)}
+body,#sheet,.group{background-image:var(--grain,none);background-size:3px 3px,5px 5px;background-position:0 0,1px 2px}
+.wrap{gap:var(--gap,14px)}
+/* shapes */
+.btn,.tbtn,.seg,.toc-tool,.chip:not(.tagchips .chip),.input,textarea.input,select.input,.fopt{border-radius:var(--radius-btn)}
+.doc,.group,.fsec,.addopt,.sortopt,.empty,#selMenu,#toast,.wn{border-radius:var(--radius-card)}
+#v-library .continue-hero{border-radius:calc(var(--radius-card) + 2px);box-shadow:var(--shadow)}
+.doc,.group,.addopt{box-shadow:var(--shadow)}
+.btn,.tbtn,.addopt,.sortopt,.toc-tool{box-shadow:var(--btn-shadow)}
+#sheet{border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;box-shadow:var(--sheet-shadow)}
+#selBar{border-radius:var(--radius-card);box-shadow:var(--float-shadow)}
+#selMenu{box-shadow:var(--float-shadow)}
+.tag,.doc .tg span{color:var(--chip-ink)}
+/* the reader's active controls (scrubber, bookmark, speaker) use the page's link colour, or Lively's one accent */
+#rScrub,#v-reader input[type=range]{accent-color:var(--chrome-on,var(--page-link))}
+#rMark.on,#rTts.on{color:var(--chrome-on,var(--page-link))}
+/* touch feedback: Quiet dims, Paper sinks 1px and loses its shadow, Lively squishes and springs back */
+button,.doc{transition:scale var(--press-dur) var(--press-ease),translate var(--press-dur) var(--press-ease),opacity var(--press-dur) ease-out,box-shadow var(--press-dur) ease-out}
+button:active:not(:disabled),.doc:active{scale:var(--press-scale);translate:0 var(--press-y);opacity:var(--press-op)}
+.btn:active,.tbtn:active,.addopt:active,.sortopt:active,.toc-tool:active,.doc:active{box-shadow:none}
+/* entrances: sheets settle in from the bottom; the pill, selection bar and tour cards pop in */
+@keyframes st-sheet{from{opacity:0;translate:0 var(--sheet-y)}}
+@keyframes st-pop{from{opacity:0;translate:0 var(--pop-y);scale:var(--pop-scale)}}
+@keyframes st-fade{from{opacity:0}}
+@media (prefers-reduced-motion: reduce){ @keyframes st-sheet{from{opacity:0}} @keyframes st-pop{from{opacity:0}} @keyframes st-press{50%{opacity:var(--press-op)}} }
+#sheet{animation:st-sheet var(--motion-dur) var(--motion-ease)}
+#sheet::after{content:"";position:absolute;left:0;right:0;top:100%;height:120px;background:var(--surface);pointer-events:none} /* covers the gap while a springy sheet overshoots */
+#backdrop{animation:st-fade var(--motion-dur) ease-out}
+#ttsBar,#selBar,#tourCaption.st-in{animation:st-pop var(--motion-dur) var(--motion-ease)}
+#v-library .continue-hero{animation:st-fade var(--motion-dur) ease-out}
+/* Pages-mode page turn: a soft shadow along the incoming edge (only where the style gives it a shade) */
+#pgClip::after{content:"";position:absolute;top:0;bottom:0;width:28px;right:0;pointer-events:none;opacity:0;z-index:2;
+  background:linear-gradient(to left,rgba(40,25,5,var(--turn-shade,0)),transparent)}
+#pgClip.turn-back::after{right:auto;left:0;background:linear-gradient(to right,rgba(40,25,5,var(--turn-shade,0)),transparent)}
+#pgClip.turning::after{animation:st-edge var(--turn-dur) var(--turn-ease)}
+@keyframes st-edge{0%{opacity:0}35%{opacity:1}100%{opacity:0}}
+/* applying a style: a short crossfade (used when the browser has no view transitions) */
+:root.style-xfade *{transition:background-color 250ms ease,color 250ms ease,border-color 250ms ease,box-shadow 250ms ease,border-radius 250ms ease !important}
+::view-transition-old(root),::view-transition-new(root){animation-duration:250ms;animation-timing-function:ease}
+/* Settings: the Style picker */
+.stylepick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:2px 0 4px}
+.stile{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none;cursor:pointer;color:var(--ink);font:inherit;min-width:0}
+.stile .mini{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden;background:var(--tile-bg);color:var(--tile-ink);
+  border-radius:var(--radius-card);box-shadow:var(--shadow),0 0 0 1px var(--line);background-image:var(--grain,none);background-size:3px 3px,5px 5px;
+  display:flex;flex-direction:column;gap:5px;padding:10px 9px;text-align:left;font-family:var(--ui-font)}
+.stile .mini b{font-family:var(--head-font);font-weight:var(--head-weight);font-size:1rem;line-height:1.1;letter-spacing:-.01em}
+.stile .mini i{display:block;height:3px;border-radius:2px;background:currentColor;opacity:.18}
+.stile .mini i.s{width:62%}
+.stile .mini .mbtn{align-self:flex-start;margin-top:3px;height:12px;width:38%;border-radius:var(--radius-btn);background:var(--accent);box-shadow:var(--btn-shadow)}
+.stile .mini .msheet{position:absolute;left:5px;right:5px;bottom:0;height:24%;background:color-mix(in srgb,var(--tile-bg) 55%,#fff);border-radius:calc(var(--radius-card)*.6) calc(var(--radius-card)*.6) 0 0;box-shadow:var(--sheet-shadow),0 0 0 1px color-mix(in srgb,var(--tile-ink) 10%,transparent)}
+.stile .mini .msheet::before{content:"";display:block;width:22%;height:3px;border-radius:2px;background:color-mix(in srgb,var(--tile-ink) 25%,transparent);margin:5px auto 0}
+.stile.play .mini .msheet{animation:st-sheet var(--motion-dur) var(--motion-ease)}
+.stile.play .mini .mbtn{animation:st-press calc(var(--press-dur) * 2) var(--press-ease)}
+@keyframes st-press{50%{scale:var(--press-scale);translate:0 var(--press-y);opacity:var(--press-op);box-shadow:none}}
+.stile .cap{font-size:.78rem;color:var(--muted);text-align:center;line-height:1.25}
+.stile .nm{font-size:.86rem;font-weight:700}
+.stile[aria-checked="true"] .mini{box-shadow:var(--shadow),0 0 0 2.5px var(--accent)}
+.stile .tick{position:absolute;top:-6px;right:-6px;z-index:1;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 2px var(--surface);display:none;align-items:center;justify-content:center;font-size:.72rem;font-weight:800}
+.stile[aria-checked="true"] .tick{display:flex}
 
 </style>
 </head>

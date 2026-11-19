@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-style="quiet">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -312,7 +312,7 @@ w.found{background:var(--page-link);color:var(--page-bg);border-radius:3px;anima
 #barHint.on{animation:barHintPulse 1.4s ease 1}
 @keyframes barHintPulse{0%,100%{opacity:0}25%,55%{opacity:1}}
 @media (prefers-reduced-motion:reduce){#barHint.on{animation:none}}
-#pgFlow.anim-slide{transition:transform .28s cubic-bezier(.3,.6,.2,1)}
+#pgFlow.anim-slide{transition:transform var(--turn-dur,.28s) var(--turn-ease,cubic-bezier(.3,.6,.2,1))}
 #pgFlow.fade{opacity:0;transition:opacity .14s ease}
 /* Scroll */
 #scrollView{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
@@ -562,7 +562,7 @@ body.tts-pill-on #toast{bottom:calc(168px + env(safe-area-inset-bottom,0px))}
 .seg.big button{padding:11px 4px;font-size:.95rem}
 input[type=color]{width:44px;height:44px;border:0;padding:0;background:none;border-radius:50%;cursor:pointer}
 .dim{opacity:.45;pointer-events:none}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (prefers-reduced-motion: reduce){*{transition-property:opacity!important}} /* fades only: nothing moves */
 /* phones: Tooz does its own selection in a book, so the phone's selection and menu stay off */
 @media (hover:none),(pointer:coarse){ #pagesView,#pagesView *,#scFlow,#scFlow *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important} }
 
@@ -663,10 +663,9 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 #tourSel .dot[data-hl="4"]{background:var(--hl4)}
 #tourSel .sep{width:1px;height:20px;background:var(--line)}
 #tourSel .tour-more{font-weight:700;padding:0 8px}
-#tourPeek{position:absolute;left:12px;right:12px;top:calc(56px + var(--sat));z-index:4;background:var(--surface);color:var(--ink);border-radius:16px 16px 0 0;padding:16px 16px 20px;box-shadow:0 -8px 30px rgba(0,0,0,.2);animation:tourPeek .8s ease-out}
-@keyframes tourPeek{from{transform:translateY(40%);opacity:0}}
+#tourPeek{position:absolute;left:12px;right:12px;top:calc(56px + var(--sat));z-index:4;background:var(--surface);color:var(--ink);border-radius:16px 16px 0 0;padding:16px 16px 20px;box-shadow:0 -8px 30px rgba(0,0,0,.2);animation:st-sheet calc(var(--motion-dur) * 2) var(--motion-ease)}
 .tour-peek-row{padding:12px 10px;border-bottom:1px solid var(--line);font-weight:700}
-#tourMoment{position:absolute;left:16px;right:16px;bottom:calc(116px + var(--sab));z-index:6;display:flex;gap:10px;align-items:flex-start;background:var(--surface);color:var(--ink);border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:tourIn .8s ease-out}
+#tourMoment{position:absolute;left:16px;right:16px;bottom:calc(116px + var(--sab));z-index:6;display:flex;gap:10px;align-items:flex-start;background:var(--surface);color:var(--ink);border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:st-pop var(--motion-dur) var(--motion-ease)}
 #tourSpeedWord{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-family:var(--bfont),Georgia,serif;font-size:2.4rem;font-weight:700;color:var(--page-ink,#1b1b1b);z-index:4}
 #tourSpeedWord.flash{animation:tourFlash .8s ease-out}
 @keyframes tourFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(.92)}40%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:1}}
@@ -701,11 +700,135 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   #tour *,#tour #tourCaption{animation:none !important;transition:none !important}
 }
 
+/* ---------- Styles (v37): Quiet, Paper, Lively ----------
+   One app-wide Style sits on top of the page colour. Everything below is driven by custom properties set per
+   [data-style] (on <html>, and on the Settings preview tiles). Styles change the app's chrome and motion only:
+   the reading text, the reader bars and the read-aloud pill keep their sizes, so pages never change. */
+[data-style="quiet"]{
+  --paper:#E9EDF2; --surface:#FFFFFF; --raise:#F4F6F9; --ink:#15202D; --muted:#5A6779;
+  --line:#D7DEE7; --accent:#2244B5; --accent-soft:#DCE4FA; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
+  --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --head-font:"Literata","New York",ui-serif,Georgia,serif; --head-weight:600;
+  --radius-card:10px; --radius-btn:10px; --radius-sheet:14px;
+  --shadow:none; --btn-shadow:none; --float-shadow:0 2px 14px rgba(0,0,0,.12); --sheet-shadow:0 -1px 0 var(--line);
+  --grain:none; --gap:18px;
+  --motion-dur:200ms; --motion-ease:cubic-bezier(0,0,.2,1);
+  --sheet-y:0%; --pop-y:0px; --pop-scale:1;
+  --turn-dur:280ms; --turn-ease:cubic-bezier(.3,.6,.2,1); --turn-shade:0;
+  --press-scale:1; --press-y:0px; --press-op:.55; --press-dur:140ms; --press-ease:ease-out;
+}
+[data-style="paper"]{
+  --paper:#EFE8DB; --surface:#FBF8F1; --raise:#F4EEE2; --ink:#2A241D; --muted:#6C6357;
+  --line:#E0D6C4; --accent:#8C5220; --accent-soft:#F1E1CC; --accent-ink:#FFFFFF; --chip-ink:var(--accent); --fill-c:var(--accent);
+  --ui-font:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --head-font:"Iowan Old Style","Palatino","Literata",Georgia,serif; --head-weight:700;
+  --radius-card:14px; --radius-btn:12px; --radius-sheet:18px;
+  --shadow:0 1px 2px rgba(70,50,20,.08),0 4px 14px rgba(70,50,20,.08);
+  --btn-shadow:0 1px 0 rgba(70,50,20,.10),0 2px 5px rgba(70,50,20,.12);
+  --float-shadow:0 2px 4px rgba(70,50,20,.10),0 10px 28px rgba(70,50,20,.18);
+  --sheet-shadow:0 -2px 6px rgba(70,50,20,.08),0 -12px 34px rgba(70,50,20,.16);
+  /* paper grain: two offset dot lattices, very faint (no image files) */
+  --grain:radial-gradient(rgba(90,64,30,.06) .6px,transparent .9px),radial-gradient(rgba(90,64,30,.04) .6px,transparent .9px);
+  --gap:16px;
+  --motion-dur:320ms; --motion-ease:cubic-bezier(.2,.7,.2,1);
+  --sheet-y:32%; --pop-y:8px; --pop-scale:1;
+  --turn-dur:320ms; --turn-ease:cubic-bezier(.2,.7,.2,1); --turn-shade:.16;
+  --press-scale:1; --press-y:1px; --press-op:1; --press-dur:120ms; --press-ease:ease-out;
+}
+[data-style="lively"]{
+  --paper:#F2F2F2; --surface:#FFFFFF; --raise:#F5F5F5; --ink:#141414; --muted:#626262;
+  --line:#E3E3E3; --accent:#FF5A4E; --accent-soft:#EDEDED; --accent-ink:#1B1B1B; --chip-ink:var(--ink); --fill-c:var(--ink);
+  --ui-font:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,system-ui,"Atkinson Hyperlegible",sans-serif;
+  --head-font:"Bricolage Grotesque",ui-rounded,"Avenir Next",system-ui,sans-serif; --head-weight:800;
+  --radius-card:20px; --radius-btn:999px; --radius-sheet:26px;
+  --shadow:0 2px 10px rgba(0,0,0,.06); --btn-shadow:none; --float-shadow:0 10px 30px rgba(0,0,0,.18); --sheet-shadow:0 -8px 30px rgba(0,0,0,.16);
+  --grain:none; --gap:14px;
+  --motion-dur:380ms; --motion-ease:cubic-bezier(.34,1.56,.64,1);
+  --sheet-y:40%; --pop-y:12px; --pop-scale:.9;
+  --turn-dur:260ms; --turn-ease:cubic-bezier(.2,.9,.3,1); --turn-shade:0; --chrome-on:var(--accent);
+  --press-scale:.96; --press-y:0px; --press-op:1; --press-dur:260ms; --press-ease:cubic-bezier(.34,1.56,.64,1);
+}
+:root[data-theme="dark"][data-style="quiet"],:root[data-theme="dark"] [data-style="quiet"]{
+  --paper:#0E1217; --surface:#171C23; --raise:#1E242C; --ink:#E4E9F0; --muted:#8D99A8;
+  --line:#262D36; --accent:#8AA4FF; --accent-soft:#232E4D; --accent-ink:#0E1217}
+:root[data-theme="dark"][data-style="paper"],:root[data-theme="dark"] [data-style="paper"]{
+  --paper:#15120E; --surface:#1F1B16; --raise:#28231D; --ink:#EDE5D8; --muted:#A79C8C;
+  --line:#3A3229; --accent:#E2A76B; --accent-soft:#3A2C1D; --accent-ink:#15120E;
+  --grain:radial-gradient(rgba(255,240,215,.035) .6px,transparent .9px),radial-gradient(rgba(255,240,215,.025) .6px,transparent .9px)}
+:root[data-theme="dark"][data-style="lively"],:root[data-theme="dark"] [data-style="lively"]{
+  --paper:#0F0F0F; --surface:#1B1B1B; --raise:#242424; --ink:#F2F2F2; --muted:#9A9A9A;
+  --line:#2E2E2E; --accent:#FF7A6E; --accent-soft:#2A2A2A; --accent-ink:#141414}
+/* every style collapses to a short fade when the phone asks for less motion */
+@media (prefers-reduced-motion: reduce){
+  :root,[data-style]{--motion-dur:160ms !important; --motion-ease:ease-out !important; --sheet-y:0% !important; --pop-y:0px !important; --pop-scale:1 !important;
+    --press-scale:1 !important; --press-y:0px !important; --press-op:.6 !important; --turn-shade:0 !important}
+}
+:root{--f-ui:var(--ui-font); --f-display:var(--head-font); --fill:color-mix(in srgb,var(--fill-c,var(--accent)) 16%,var(--surface))}
+h1,h2{font-weight:var(--head-weight,700)}
+body,#sheet,.group{background-image:var(--grain,none);background-size:3px 3px,5px 5px;background-position:0 0,1px 2px}
+.wrap{gap:var(--gap,14px)}
+/* shapes */
+.btn,.tbtn,.seg,.toc-tool,.chip:not(.tagchips .chip),.input,textarea.input,select.input,.fopt{border-radius:var(--radius-btn)}
+.doc,.group,.fsec,.addopt,.sortopt,.empty,#selMenu,#toast,.wn{border-radius:var(--radius-card)}
+#v-library .continue-hero{border-radius:calc(var(--radius-card) + 2px);box-shadow:var(--shadow)}
+.doc,.group,.addopt{box-shadow:var(--shadow)}
+.btn,.tbtn,.addopt,.sortopt,.toc-tool{box-shadow:var(--btn-shadow)}
+#sheet{border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;box-shadow:var(--sheet-shadow)}
+#selBar{border-radius:var(--radius-card);box-shadow:var(--float-shadow)}
+#selMenu{box-shadow:var(--float-shadow)}
+.tag,.doc .tg span{color:var(--chip-ink)}
+/* the reader's active controls (scrubber, bookmark, speaker) use the page's link colour, or Lively's one accent */
+#rScrub,#v-reader input[type=range]{accent-color:var(--chrome-on,var(--page-link))}
+#rMark.on,#rTts.on{color:var(--chrome-on,var(--page-link))}
+/* touch feedback: Quiet dims, Paper sinks 1px and loses its shadow, Lively squishes and springs back */
+button,.doc{transition:scale var(--press-dur) var(--press-ease),translate var(--press-dur) var(--press-ease),opacity var(--press-dur) ease-out,box-shadow var(--press-dur) ease-out}
+button:active:not(:disabled),.doc:active{scale:var(--press-scale);translate:0 var(--press-y);opacity:var(--press-op)}
+.btn:active,.tbtn:active,.addopt:active,.sortopt:active,.toc-tool:active,.doc:active{box-shadow:none}
+/* entrances: sheets settle in from the bottom; the pill, selection bar and tour cards pop in */
+@keyframes st-sheet{from{opacity:0;translate:0 var(--sheet-y)}}
+@keyframes st-pop{from{opacity:0;translate:0 var(--pop-y);scale:var(--pop-scale)}}
+@keyframes st-fade{from{opacity:0}}
+@media (prefers-reduced-motion: reduce){ @keyframes st-sheet{from{opacity:0}} @keyframes st-pop{from{opacity:0}} @keyframes st-press{50%{opacity:var(--press-op)}} }
+#sheet{animation:st-sheet var(--motion-dur) var(--motion-ease)}
+#sheet::after{content:"";position:absolute;left:0;right:0;top:100%;height:120px;background:var(--surface);pointer-events:none} /* covers the gap while a springy sheet overshoots */
+#backdrop{animation:st-fade var(--motion-dur) ease-out}
+#ttsBar,#selBar,#tourCaption.st-in{animation:st-pop var(--motion-dur) var(--motion-ease)}
+#v-library .continue-hero{animation:st-fade var(--motion-dur) ease-out}
+/* Pages-mode page turn: a soft shadow along the incoming edge (only where the style gives it a shade) */
+#pgClip::after{content:"";position:absolute;top:0;bottom:0;width:28px;right:0;pointer-events:none;opacity:0;z-index:2;
+  background:linear-gradient(to left,rgba(40,25,5,var(--turn-shade,0)),transparent)}
+#pgClip.turn-back::after{right:auto;left:0;background:linear-gradient(to right,rgba(40,25,5,var(--turn-shade,0)),transparent)}
+#pgClip.turning::after{animation:st-edge var(--turn-dur) var(--turn-ease)}
+@keyframes st-edge{0%{opacity:0}35%{opacity:1}100%{opacity:0}}
+/* applying a style: a short crossfade (used when the browser has no view transitions) */
+:root.style-xfade *{transition:background-color 250ms ease,color 250ms ease,border-color 250ms ease,box-shadow 250ms ease,border-radius 250ms ease !important}
+::view-transition-old(root),::view-transition-new(root){animation-duration:250ms;animation-timing-function:ease}
+/* Settings: the Style picker */
+.stylepick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:2px 0 4px}
+.stile{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none;cursor:pointer;color:var(--ink);font:inherit;min-width:0}
+.stile .mini{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden;background:var(--tile-bg);color:var(--tile-ink);
+  border-radius:var(--radius-card);box-shadow:var(--shadow),0 0 0 1px var(--line);background-image:var(--grain,none);background-size:3px 3px,5px 5px;
+  display:flex;flex-direction:column;gap:5px;padding:10px 9px;text-align:left;font-family:var(--ui-font)}
+.stile .mini b{font-family:var(--head-font);font-weight:var(--head-weight);font-size:1rem;line-height:1.1;letter-spacing:-.01em}
+.stile .mini i{display:block;height:3px;border-radius:2px;background:currentColor;opacity:.18}
+.stile .mini i.s{width:62%}
+.stile .mini .mbtn{align-self:flex-start;margin-top:3px;height:12px;width:38%;border-radius:var(--radius-btn);background:var(--accent);box-shadow:var(--btn-shadow)}
+.stile .mini .msheet{position:absolute;left:5px;right:5px;bottom:0;height:24%;background:color-mix(in srgb,var(--tile-bg) 55%,#fff);border-radius:calc(var(--radius-card)*.6) calc(var(--radius-card)*.6) 0 0;box-shadow:var(--sheet-shadow),0 0 0 1px color-mix(in srgb,var(--tile-ink) 10%,transparent)}
+.stile .mini .msheet::before{content:"";display:block;width:22%;height:3px;border-radius:2px;background:color-mix(in srgb,var(--tile-ink) 25%,transparent);margin:5px auto 0}
+.stile.play .mini .msheet{animation:st-sheet var(--motion-dur) var(--motion-ease)}
+.stile.play .mini .mbtn{animation:st-press calc(var(--press-dur) * 2) var(--press-ease)}
+@keyframes st-press{50%{scale:var(--press-scale);translate:0 var(--press-y);opacity:var(--press-op);box-shadow:none}}
+.stile .cap{font-size:.78rem;color:var(--muted);text-align:center;line-height:1.25}
+.stile .nm{font-size:.86rem;font-weight:700}
+.stile[aria-checked="true"] .mini{box-shadow:var(--shadow),0 0 0 2.5px var(--accent)}
+.stile .tick{position:absolute;top:-6px;right:-6px;z-index:1;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 2px var(--surface);display:none;align-items:center;justify-content:center;font-size:.72rem;font-weight:800}
+.stile[aria-checked="true"] .tick{display:flex}
+
 </style>
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.36</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.37</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -993,7 +1116,7 @@ const Store = {
 /* ---------- settings (one set, used everywhere) ---------- */
 const DEFAULTS = {
   v:2, mode:'pages',
-  theme:'auto', nightAuto:false, nightFrom:'21:00', nightTo:'07:00', nightTheme:'dark', dim:0, warmth:0,
+  style:'quiet', theme:'auto', nightAuto:false, nightFrom:'21:00', nightTo:'07:00', nightTheme:'dark', dim:0, warmth:0,
   font:'original', size:19, lineH:1.55, margin:'normal', para:'indent', justify:true, hyphen:true, boldText:false, wordStart:false,
   turn:'slide', tapZones:'edges', twoCol:true, focus:true,
   autoScroll:false, scrollWpm:220, asRamp:true, asPauses:true,
@@ -1035,6 +1158,24 @@ const THEMES = {
   dark:{label:'Dark', bg:'#16181C', ink:'#D8DBE0', muted:'#8C929C', line:'#2A2E35', link:'#8AA4FF', dark:true},
   black:{label:'Black', bg:'#000000', ink:'#C8C8C8', muted:'#7D7D7D', line:'#1E1E1E', link:'#7C97F2', dark:true}
 };
+/* app-wide Styles: look, touch feedback and motion on top of the page colour (CSS in a_head.html, [data-style]).
+   Picking one also picks its suggested page colour; the page colour can still be changed afterwards. */
+const STYLES = {
+  quiet:{label:'Quiet', cap:'Calm & still', theme:'paper'},
+  paper:{label:'Paper', cap:'Tactile & warm', theme:'sepia'},
+  lively:{label:'Lively', cap:'Bouncy & bright', theme:'white'}
+};
+const styleKey=()=>STYLES[S.style]?S.style:'quiet';
+const reducedMotion=()=>{ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } };
+/* an element's box without the Style entrance or press motion (translate/scale), so measuring never depends on the Style */
+function stillRect(el){
+  const st=el.style, t=st.getPropertyValue('translate'), tp=st.getPropertyPriority('translate'), c=st.getPropertyValue('scale'), cp=st.getPropertyPriority('scale');
+  st.setProperty('translate','none','important'); st.setProperty('scale','none','important');
+  const r=el.getBoundingClientRect();
+  if(t) st.setProperty('translate',t,tp); else st.removeProperty('translate');
+  if(c) st.setProperty('scale',c,cp); else st.removeProperty('scale');
+  return r;
+}
 const HL_LIGHT=['#FFE58A','#C4EDB5','#C5E1FF','#FFC9DF'], HL_DARK=['rgba(255,214,64,.42)','rgba(110,200,90,.38)','rgba(90,160,255,.40)','rgba(255,110,170,.40)'], HL_DARK_DOT=['#FFE14D','#8BE07A','#7EB6FF','#FF9EC8'];
 /* margins grow with the screen: [smallest in px, share of the reading width] */
 const MARGINS={narrow:[12,0.03], normal:[22,0.065], wide:[44,0.13]};
@@ -1057,6 +1198,7 @@ function fontCSS(){
 function applyLook(){
   const r=document.documentElement, st=r.style, T=THEMES[effectiveTheme()];
   r.setAttribute('data-theme', T.dark?'dark':'light');
+  if(r.getAttribute('data-style')!==styleKey()) r.setAttribute('data-style', styleKey());
   st.setProperty('--page-bg',T.bg); st.setProperty('--page-ink',T.ink); st.setProperty('--page-muted',T.muted); st.setProperty('--page-line',T.line); st.setProperty('--page-link',T.link);
   (T.dark?HL_DARK:HL_LIGHT).forEach((c,k)=>st.setProperty('--hl'+(k+1),c));
   (T.dark?HL_DARK_DOT:HL_LIGHT).forEach((c,k)=>st.setProperty('--hl-dot'+(k+1),c));
@@ -2216,9 +2358,10 @@ function pgPinWord(i){
   pgSet(p, false);
 }
 function pgSet(page, anim){
-  P.page=clamp(page,0,P.pages-1);
-  const slide = anim && S.turn==='slide';
+  P.page0=P.page; P.page=clamp(page,0,P.pages-1);
+  const slide = anim && S.turn==='slide', from=P.page0;
   pgFlow.classList.toggle('anim-slide', slide);
+  if(slide && from!=null && from!==P.page) pgEdge(P.page>from);
   pgFlow.style.transform=`translateX(${-P.page*P.g.stride+pgShift()}px)`;
   P.topWord = P.page>0 ? pgFirstWord(P.page) : (pgFlow.firstElementChild ? pgFlow.firstElementChild._a : R.pos);
   P.rangeEnd = P.page<P.pages-1 ? pgFirstWord(P.page+1) : (pgFlow.firstElementChild?pgFlow.firstElementChild._b:R.n);
@@ -2231,6 +2374,15 @@ async function pgShow(i, keepPos){
   pgSet(p, false);
   if(!keepPos) R.pos=i; updateChrome();
 }
+/* the Style's soft edge shadow during a sliding page turn (CSS only shows it where the Style gives it a shade) */
+let pgEdgeT=0;
+function pgEdge(fwd){
+  const c=$('#pgClip'); if(!c) return;
+  c.classList.remove('turning'); c.classList.toggle('turn-back', !fwd); void c.offsetWidth; c.classList.add('turning');
+  clearTimeout(pgEdgeT); pgEdgeT=setTimeout(()=>c.classList.remove('turning','turn-back'), 700);
+}
+/* with reduced motion a sliding page turn becomes a short fade */
+const turnFades=()=>S.turn==='fade' || (S.turn==='slide' && reducedMotion());
 async function pgFade(fn){
   if(S.turn==='none'){ await fn(); return; }
   pgFlow.classList.add('fade'); await sleep(130); await fn(); pgFlow.classList.remove('fade');
@@ -2239,11 +2391,11 @@ async function pgTurn(d){
   if(P.busy || R.mode!=='pages') return; pgClearPin(); R.anchor=null;
   if(!TS.edge) selClear();
   if(d>0){
-    if(P.page<P.pages-1){ if(S.turn==='fade') await pgFade(()=>pgSet(P.page+1,false)); else pgSet(P.page+1,true); }
+    if(P.page<P.pages-1){ if(turnFades()) await pgFade(()=>pgSet(P.page+1,false)); else pgSet(P.page+1,true); }
     else if(P.k<R.SEC.length-1){ P.busy=true; try{ await pgFade(async()=>{ await pgLoad(P.k+1); pgSet(0,false); }); } finally{ P.busy=false; } }
     else { R.meta.finished=true; saveProgress(true); toast('You’ve reached the end of “'+R.meta.title+'”'); return; }
   } else {
-    if(P.page>0){ if(S.turn==='fade') await pgFade(()=>pgSet(P.page-1,false)); else pgSet(P.page-1,true); }
+    if(P.page>0){ if(turnFades()) await pgFade(()=>pgSet(P.page-1,false)); else pgSet(P.page-1,true); }
     else if(P.k>0){ P.busy=true; try{ await pgFade(async()=>{ await pgLoad(P.k-1); pgSet(P.pages-1,false); }); } finally{ P.busy=false; } }
     else return;
   }
@@ -2985,7 +3137,7 @@ function placeSelBar(){
   bar.style.right='auto';
   if(!menuOpen) return;
   const br={left:barLeft, top:barTop, right:barLeft+barW, bottom:barTop+barH};
-  const more=($('#selMore')||bar).getBoundingClientRect();
+  const more=stillRect($('#selMore')||bar);
   const area=r=>Math.max(0, Math.min(r.right,sel?sel.right:r.left)-Math.max(r.left,sel?sel.left:r.right))*Math.max(0, Math.min(r.bottom,sel?sel.bottom:r.top)-Math.max(r.top,sel?sel.top:r.bottom));
   const candidates=[];
   const add=(l,t,kind)=>{
@@ -3660,7 +3812,7 @@ function ttsMeasureReservePx(){
   if(!clip) return 0;
   const defaultBottom=clip.getBoundingClientRect().bottom + cur;
   /* Measure from the pill only. Hints and the voice chip render inside this reserved strip so they never change the page count. */
-  const top=b.getBoundingClientRect().top;
+  const top=stillRect(b).top; /* not moved by the Style's pop-in */
   const pad=ttsLinePad();
   /* Scroll gets one extra line so the last line can rest fully above the pill, not flush against its top. */
   const extra=(R.mode==='scroll')?pad:0;
@@ -3670,7 +3822,7 @@ function ttsReserveSync(){
   const v=$('#v-reader'), b=$('#ttsBar');
   const on=!!(TTS.mode && R.mode!=='speed' && b && !b.hidden);
   const wasOn=!!(v && v.classList.contains('tts-pill-on'));
-  if(v && b && !b.hidden){ const lift=Math.ceil(b.getBoundingClientRect().height+8); if(lift>0) v.style.setProperty('--tts-chip-lift', lift+'px'); v.style.setProperty('--tts-line-pad', ttsLinePad()+'px'); }
+  if(v && b && !b.hidden){ const lift=Math.ceil(stillRect(b).height+8); if(lift>0) v.style.setProperty('--tts-chip-lift', lift+'px'); v.style.setProperty('--tts-line-pad', ttsLinePad()+'px'); }
   const next=on?ttsMeasureReservePx():0;
   if(next===ttsResPx && on===wasOn){
     if(v) v.classList.toggle('tts-pill-on', on);
@@ -3947,7 +4099,7 @@ function backToBook(){
   holdPlace(); applyLook(); relayoutSoon(); updateChrome();
 }
 function resetReading(){
-  const keep={linkService:S.linkService, goalMins:S.goalMins, measuredWpm:S.measuredWpm, info:S.info};
+  const keep={linkService:S.linkService, goalMins:S.goalMins, measuredWpm:S.measuredWpm, info:S.info, style:S.style};
   Object.assign(S, DEFAULTS, keep, {mode:S.mode}); saveSettings(); applyLook(); setWpm(S.wpm); asUI(); relayoutSoon();
 }
 function afterSet(key){
@@ -4800,14 +4952,9 @@ async function ttsDownloadNatural(){
 $('#ttsNatChip')&&$('#ttsNatChip').addEventListener('click',()=>{ ttsHideNatChip(true); openVoiceSheet(); });
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.18.36-tutorial';
+const APP_VERSION='2026.11.18.37-styles';
 const WHATSNEW=[
-  ['A clearer first tour','Tour captions now sit on a dark card so they stay readable on a light page, and the last card stays clear of Continue on a smaller screen.'],
-  ['A quick first tour','The first time you open Tooz, a short tour shows the shelf, a page turn, notes, Speed and listen. Skip it any time. Replay it later from Settings → Help.'],
-  ['A floating read-aloud pill','The speaker opens a small floating pill with play/pause, a speed chip and a close button. Nothing plays until you press play. Tap a word to choose where to start, or to jump while it is reading. Swipe the pill to skip a sentence. Touch and hold the body of the pill (not Play or the speed chip) for voice options; a one-time Hold for voices hint appears next to the speed chip. The pill stays when you switch between Pages and Scroll; Speed has no pill. Tap the X or the speaker again to close it. If the natural voice is not downloaded yet, Tooz starts with the iPhone voice and offers the better one without waiting.'],
-  ['Read-aloud pill fixes','The read-aloud pill now keeps your place when it opens or closes, sits in a reserved strip so it doesn’t cover the last lines or the “Back to where you were” chip, and works with a mouse or trackpad as well as a finger. A close button is on the pill, and a second tap on the speaker still puts it away.'],
-  ['Read-aloud stays with you','Closing the read-aloud pill leaves you on the page you were listening to, and opening or closing it no longer nudges the view in Scroll. Long sentences stay softly highlighted around the word being read, and the first-time hint no longer changes the page count.'],
-  ['A calmer library and last page','The backup reminder no longer covers the Continue button, page totals stay steady while pages are counted, and opening listen at the end of a book in Scroll keeps your place.']
+  ['Pick a Style','Settings now starts with three Styles. Quiet (calm and still, the one you have now), Paper (tactile and warm) and Lively (bouncy and bright) each change how Tooz looks, how buttons feel and how sheets and controls move. Picking one also picks a page colour to suit it; you can still change the page colour in Aa. Your pages, text and place in the book stay exactly the same.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
@@ -5050,7 +5197,7 @@ function tourMeasureRfoot(){
 
 function tourBox(el, pad){
   if(!el || el.hidden || (el.closest && el.closest('[hidden]'))) return null;
-  const r=el.getBoundingClientRect();
+  const r=stillRect(el);
   if(r.width<2 || r.height<2) return null;
   const p=pad||0;
   return {left:r.left-p, top:r.top-p, right:r.right+p, bottom:r.bottom+p};
@@ -5172,7 +5319,7 @@ function tourPlaceCaption(hole){
   /* Re-measure and push the card clear of the spotlight if it still overlaps. */
   const capH2=Math.max(capH, cap.offsetHeight||capH);
   if(holeBox){
-    const r=()=>cap.getBoundingClientRect();
+    const r=()=>stillRect(cap);
     const hits=()=>{
       const a=r();
       return !(a.bottom<=holeBox.top-8 || a.top>=holeBox.bottom+8 || a.right<=holeBox.left-8 || a.left>=holeBox.right-8);
@@ -5246,6 +5393,7 @@ function tourSay(text){
   const main=$('#tourCaptionText');
   if(main) main.textContent=text||'';
   else cap.textContent=text||'';
+  cap.classList.remove('st-in'); void cap.offsetWidth; cap.classList.add('st-in'); /* the card enters in the app's Style */
 }
 
 function tourSetDots(n){
@@ -5820,6 +5968,7 @@ function renderSettings(){
   $('#settingsBody').innerHTML=`
     ${R.inSet?`<button class="btn" type="button" id="backToBook" style="margin-bottom:10px">‹ Back to the book</button>`:''}
     <div class="topbar"><div><div class="eyebrow">Tooz eReader</div><h1>Settings</h1></div></div>
+    ${styleRowHTML()}
     <p class="note" style="margin:-6px 0 14px">Text size, theme and fonts are in <b>Aa</b> inside any book. Read-aloud, auto-scroll and speed-reading options are on their own controls.</p>
     <h2>Reading</h2>
     <div class="group"><div class="set">
@@ -5927,6 +6076,27 @@ function renderSettings(){
   bindPanel($('#lightSet'));
   $('#infoSeg').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.info=+b.dataset.v; saveSettings(); $('#infoSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); if(R.meta) updateChrome(); };
   if($('#backToBook')) $('#backToBook').onclick=backToBook;
+  $('#stylePick').onclick=e=>{ const b=e.target.closest('[data-style-pick]'); if(b) pickStyle(b.dataset.stylePick, b); };
+}
+/* Settings → Style: three live preview tiles, each a mini page drawn in that Style */
+function styleRowHTML(){
+  return `<div class="group"><div class="set"><div class="hd"><b id="styleHd">Style</b></div>
+    <div class="stylepick" id="stylePick" role="radiogroup" aria-labelledby="styleHd">${Object.keys(STYLES).map(k=>{ const st=STYLES[k], T=THEMES[st.theme];
+      return `<button type="button" class="stile" role="radio" aria-checked="${styleKey()===k}" data-style-pick="${k}" aria-label="${st.label}: ${esc(st.cap)}">
+        <span class="mini" data-style="${k}" style="--tile-bg:${T.bg};--tile-ink:${T.ink}" aria-hidden="true"><b>${st.label}</b><i></i><i></i><i class="s"></i><span class="mbtn"></span><span class="msheet"></span></span><span class="tick" aria-hidden="true">✓</span>
+        <span class="cap" aria-hidden="true">${esc(st.cap)}</span></button>`; }).join('')}</div></div></div>`;
+}
+/* apply a Style at once with a short crossfade, set its suggested page colour, and play its motion on the tile */
+function pickStyle(k, tile){
+  if(!STYLES[k]) return;
+  const apply=()=>{
+    S.style=k; S.theme=STYLES[k].theme; saveSettings(); applyLook();
+    document.querySelectorAll('#stylePick .stile').forEach(b=>b.setAttribute('aria-checked', b.dataset.stylePick===k));
+  };
+  const root=document.documentElement;
+  if(typeof document.startViewTransition==='function'){ try{ document.startViewTransition(apply); }catch(e){ apply(); } }
+  else { root.classList.add('style-xfade'); apply(); clearTimeout(pickStyle.t); pickStyle.t=setTimeout(()=>root.classList.remove('style-xfade'), 320); }
+  if(tile){ tile.classList.remove('play'); void tile.offsetWidth; tile.classList.add('play'); clearTimeout(tile._t); tile._t=setTimeout(()=>tile.classList.remove('play'), 1400); }
 }
 
 /* ---------- backup / restore ---------- */

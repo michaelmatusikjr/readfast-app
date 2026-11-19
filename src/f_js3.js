@@ -63,6 +63,7 @@ function renderSettings(){
   $('#settingsBody').innerHTML=`
     ${R.inSet?`<button class="btn" type="button" id="backToBook" style="margin-bottom:10px">‹ Back to the book</button>`:''}
     <div class="topbar"><div><div class="eyebrow">Tooz eReader</div><h1>Settings</h1></div></div>
+    ${styleRowHTML()}
     <p class="note" style="margin:-6px 0 14px">Text size, theme and fonts are in <b>Aa</b> inside any book. Read-aloud, auto-scroll and speed-reading options are on their own controls.</p>
     <h2>Reading</h2>
     <div class="group"><div class="set">
@@ -170,6 +171,27 @@ function renderSettings(){
   bindPanel($('#lightSet'));
   $('#infoSeg').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; S.info=+b.dataset.v; saveSettings(); $('#infoSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); if(R.meta) updateChrome(); };
   if($('#backToBook')) $('#backToBook').onclick=backToBook;
+  $('#stylePick').onclick=e=>{ const b=e.target.closest('[data-style-pick]'); if(b) pickStyle(b.dataset.stylePick, b); };
+}
+/* Settings → Style: three live preview tiles, each a mini page drawn in that Style */
+function styleRowHTML(){
+  return `<div class="group"><div class="set"><div class="hd"><b id="styleHd">Style</b></div>
+    <div class="stylepick" id="stylePick" role="radiogroup" aria-labelledby="styleHd">${Object.keys(STYLES).map(k=>{ const st=STYLES[k], T=THEMES[st.theme];
+      return `<button type="button" class="stile" role="radio" aria-checked="${styleKey()===k}" data-style-pick="${k}" aria-label="${st.label}: ${esc(st.cap)}">
+        <span class="mini" data-style="${k}" style="--tile-bg:${T.bg};--tile-ink:${T.ink}" aria-hidden="true"><b>${st.label}</b><i></i><i></i><i class="s"></i><span class="mbtn"></span><span class="msheet"></span></span><span class="tick" aria-hidden="true">✓</span>
+        <span class="cap" aria-hidden="true">${esc(st.cap)}</span></button>`; }).join('')}</div></div></div>`;
+}
+/* apply a Style at once with a short crossfade, set its suggested page colour, and play its motion on the tile */
+function pickStyle(k, tile){
+  if(!STYLES[k]) return;
+  const apply=()=>{
+    S.style=k; S.theme=STYLES[k].theme; saveSettings(); applyLook();
+    document.querySelectorAll('#stylePick .stile').forEach(b=>b.setAttribute('aria-checked', b.dataset.stylePick===k));
+  };
+  const root=document.documentElement;
+  if(typeof document.startViewTransition==='function'){ try{ document.startViewTransition(apply); }catch(e){ apply(); } }
+  else { root.classList.add('style-xfade'); apply(); clearTimeout(pickStyle.t); pickStyle.t=setTimeout(()=>root.classList.remove('style-xfade'), 320); }
+  if(tile){ tile.classList.remove('play'); void tile.offsetWidth; tile.classList.add('play'); clearTimeout(tile._t); tile._t=setTimeout(()=>tile.classList.remove('play'), 1400); }
 }
 
 /* ---------- backup / restore ---------- */
