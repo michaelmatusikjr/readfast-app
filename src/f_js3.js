@@ -186,11 +186,12 @@ function styleRowHTML(){
         <span class="cap" aria-hidden="true">${esc(st.cap)}</span></button>`; }).join('')}</div></div></div>`;
 }
 /* apply a Style at once with a short crossfade and play its motion on the tile. Its suggested page colour is set only
-   for a reader on a light page colour (White, Paper, Sepia) without night-auto; anyone else keeps their page colour,
+   when the Style actually changes, and only for a reader on a light page colour (White, Paper, Sepia) without night-auto; anyone else keeps their page colour,
    and the Style shows its dark variant through the page colour's data-theme. */
 const styleSetsPage=()=>!S.nightAuto && ['white','paper','sepia'].includes(S.theme);
 function pickStyle(k, tile){
-  if(!STYLES[k]) return;
+  /* re-tapping the Style already in use changes nothing: the reader's own page colour stays */
+  if(!STYLES[k] || k===styleKey()) return;
   const apply=()=>{
     S.style=k; if(styleSetsPage()) S.theme=STYLES[k].theme; saveSettings(); applyLook();
     document.querySelectorAll('#stylePick .stile').forEach(b=>{ const on=b.dataset.stylePick===k; b.setAttribute('aria-checked', on); b.tabIndex=on?0:-1; });

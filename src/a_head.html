@@ -644,6 +644,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
 .tour-dot.on,.tour-dot.done{background:#fff}
 /* the current step: a longer dot in the app's accent, lifted toward white so it reads on the dark card in every Style and theme */
 #tourDots .tour-dot.on{width:18px;border-radius:4px;background:color-mix(in srgb,var(--accent) 55%,#fff)}
+[data-style="lively"] #tourDots .tour-dot.on{background:var(--accent)} /* Lively: the active step dot is full coral (≥3:1 on the dot card) */
 .tour-pill-btn{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--sab));z-index:5;min-height:44px;min-width:120px;padding:0 22px;border:0;border-radius:22px;background:#fff;color:#111;font:700 16px/1 var(--f-ui);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .tour-pill-btn.primary{background:var(--accent);color:var(--accent-ink,#fff)}
 #tourStart.primary{background:#fff;color:#111}
@@ -746,6 +747,8 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --sheet-y:32%; --pop-y:8px; --pop-scale:1;
   --turn-dur:320ms; --turn-ease:cubic-bezier(.2,.7,.2,1); --turn-shade:.16;
   --press-scale:1; --press-y:1px; --press-op:1; --press-dur:120ms; --press-ease:ease-out;
+  /* the reader's active controls (scrubber, speaker, bookmark) and the tour pulse take Paper's brown instead of link blue */
+  --chrome-on:var(--accent); --pulse-rgb:140,82,32;
 }
 [data-style="lively"]{
   --paper:#F2F2F2; --surface:#FFFFFF; --raise:#F5F5F5; --ink:#141414; --muted:#626262;
@@ -773,7 +776,7 @@ body:has(#v-reader:not([hidden])) #swUpdate{display:none}
   --line:#2B333D; --accent:#8AA4FF; --accent-soft:#232E4D; --accent-ink:#0E1217}
 :root[data-theme="dark"][data-style="paper"],:root[data-theme="dark"] [data-style="paper"]{
   --paper:#15120E; --surface:#1F1B16; --raise:#28231D; --ink:#EDE5D8; --muted:#A79C8C;
-  --line:#3A3229; --accent:#E2A76B; --accent-soft:#3A2C1D; --accent-ink:#15120E; --chip-ink:var(--accent);
+  --line:#3A3229; --accent:#E2A76B; --accent-soft:#3A2C1D; --accent-ink:#15120E; --chip-ink:var(--accent); --chrome-on:var(--accent); --pulse-rgb:226,167,107;
   --grain:radial-gradient(rgba(255,240,215,.035) .6px,transparent .9px),radial-gradient(rgba(255,240,215,.025) .6px,transparent .9px)}
 :root[data-theme="dark"][data-style="lively"],:root[data-theme="dark"] [data-style="lively"]{
   --paper:#0F0F0F; --surface:#1B1B1B; --raise:#242424; --ink:#F2F2F2; --muted:#9A9A9A;
@@ -807,7 +810,9 @@ body,#sheet,.group{background-image:var(--grain,none);background-size:3px 3px,5p
 #rMark.on,#rTts.on{color:var(--chrome-on,var(--page-link))}
 /* touch feedback: Quiet dims, Paper sinks 1px and loses its shadow, Lively squishes and springs back */
 button,.doc{transition:scale var(--press-dur) var(--press-ease),translate var(--press-dur) var(--press-ease),opacity var(--press-dur) ease-out,box-shadow var(--press-dur) ease-out}
-button:active:not(:disabled),.doc:active{scale:var(--press-scale);translate:0 var(--press-y);opacity:var(--press-op)}
+button:active:not(:disabled),.doc:active,.switch:active:not(:disabled){scale:var(--press-scale);translate:0 var(--press-y);opacity:var(--press-op)}
+/* toggle switches answer a press in the Style too (their own colour/knob transitions stay) */
+.switch{transition:background .15s,scale var(--press-dur) var(--press-ease),translate var(--press-dur) var(--press-ease),opacity var(--press-dur) ease-out}
 .btn:active,.tbtn:active,.addopt:active,.sortopt:active,.toc-tool:active,.doc:active{box-shadow:none}
 /* entrances: sheets settle in from the bottom; the pill, selection bar and tour cards pop in */
 @keyframes st-sheet{from{opacity:0;translate:0 var(--sheet-y)}}
