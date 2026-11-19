@@ -16,6 +16,11 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   /* scroll down like a reader would */
   await pg.evaluate(()=>{ SC.userScrolled=true; SC.gestureAt=performance.now(); R.anchor=null; scView.scrollTop+=1300; }); await sleep(600);
   await pg.evaluate(()=>{ SC.gestureAt=performance.now(); scView.dispatchEvent(new Event('scroll')); }); await sleep(400);
+  /* don't depend on where a fixed scroll lands: if the top line is a section start (a heading), read on a line or two */
+  for(let i=0;i<12 && await pg.evaluate(()=>R.SEC.some(s=>s[0]===scPos()));i++){
+    await pg.evaluate(()=>{ SC.userScrolled=true; SC.gestureAt=performance.now(); R.anchor=null; scView.scrollTop+=30; }); await sleep(250);
+    await pg.evaluate(()=>{ SC.gestureAt=performance.now(); scView.dispatchEvent(new Event('scroll')); }); await sleep(250);
+  }
   const top=await pg.evaluate(()=>{ const k=scPos(); return {k, w:R.words[k], prev:R.words[k-1]}; });
   await hide(true); await sleep(200); await hide(false); await sleep(900);
   const r=await pg.evaluate(()=>{ const t=scFlow.querySelector('.tear'); if(!t) return null; const tr=t.getBoundingClientRect(), v=scView.getBoundingClientRect();
@@ -39,6 +44,10 @@ const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stri
   await pg.evaluate(async()=>{ const id=R.meta.id; closeReader(true); await new Promise(r=>setTimeout(r,300)); await openDoc(id); }); await sleep(1000);
   const r2=await pg.evaluate(()=>{ const t=scFlow.querySelector('.tear'); if(!t) return null; const tr=t.getBoundingClientRect(), v=scView.getBoundingClientRect(); return {tear:+t.dataset.tear, d:Math.round(tr.top+tr.height/2-(v.top+v.height/2))}; });
   ok('reopening the book shows it centred', r2 && r2.tear===top2 && Math.abs(r2.d)<3, r2);
+  /* a tear on the first word of a section (a heading) is shown too */
+  const k0=await pg.evaluate(async()=>{ const s=R.SEC.find(s=>s[0]>scPos()+50)||R.SEC[R.SEC.length-1]; goTo(s[0]); await new Promise(r=>setTimeout(r,500)); SC.gestureAt=performance.now(); scView.dispatchEvent(new Event('scroll')); await new Promise(r=>setTimeout(r,300)); return {k:scPos(), a:s[0]}; });
+  await hide(true); await sleep(200); await hide(false); await sleep(900);
+  ok('a tear on a section start is shown', await pg.evaluate(k=>{ const t=scFlow.querySelectorAll('.tear'); return t.length===1 && +t[0].dataset.tear===k; }, k0.k) && k0.k===k0.a, k0);
   /* dark theme look */
   await pg.evaluate(()=>{ S.theme='dark'; saveSettings(); applyLook(); }); await sleep(300); await pg.evaluate(()=>tearCenterNow()); await sleep(200);
   await pg.screenshot({path:S+'tear_dark.png'});

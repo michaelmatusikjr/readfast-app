@@ -155,7 +155,7 @@ function tearHTML(t){
 }
 function sectionHTML(k){
   const [a,b]=R.SEC[k]; const B=R.blocks; let h='';
-  const tear= SEC_TEAR && R.tear!=null && R.tear>a && R.tear<b ? R.tear : -1;
+  const tear= SEC_TEAR && R.tear!=null && R.tear>=a && R.tear<b ? R.tear : -1;
   for(let bi=blockAt(a); bi<B.length && B[bi].s<b; bi++){
     const blk=B[bi]; if(blk.e<=a) continue;
     const bef=R.imgBefore.get(bi); if(bef && blk.s>=a) h+=bef.map(figHTML).join('');
