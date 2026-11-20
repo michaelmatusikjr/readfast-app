@@ -90,8 +90,10 @@ and move items out of **Pending changes** once they're built.
   colour is one small soft character that always sits where he should look or tap next, and is never absent. One fixed
   overlay above every view (`#guide`, aria-hidden, pointer-events none): purely visual, it never takes a tap, focus or
   VoiceOver.
-  - Library: it rests as the fill of **Continue** on the most recent book (no Continue card: the **Add to library**
-    fill; other tabs: a small mark fully below the active tab's label). At rest it is completely still.
+  - v40 "Living Substance" (slice 1, Nov 19): **the bottom tab bar is home base.** The Guide (the "Source") rests as a
+    small mark fully below the active tab's label on every tab, Library included. On the Library a **child blob**
+    fills **Continue** (no Continue card: the **Add to library** fill), so Continue still shows the accent as its own
+    real fill: one accent per control, never a blob on top of a fill. At rest it is completely still.
   - Tap Continue: it wakes (about 100 ms: squash, gather out of the button, lean toward the reader, peel off with a
     sticky strand that snaps), the reader opens under it, and it comes in already moving on an arc, its outline
     wobbling like a jelly membrane, lands with overshoot, a squash and 1-3 damped jiggles, fills its target's exact
@@ -103,23 +105,43 @@ and move items out of **Pending changes** once they're built.
     M" text when there is room, otherwise beside it, never on it. It never covers or hovers over the text, not even
     during book-open. Page turns put the mark at the new place instantly with no motion; the bars hiding take the
     mark with them at once; it never travels while he reads, and it never nudges in the reader.
-  - Back: it hops back to Continue. A tap on the button it rests on gives a small squish (passive). One idle nudge
+  - Back: the Source flies home to the Library tab while a child buds off it and pours into Continue (Continue shows
+    no fill of its own until the child lands; both under 550 ms). If the reader takes longer than 150 ms to lay out
+    after a tap, it does not make a late long flight: the exact shape settles in at its reader spot (140 ms opacity +
+    a small scale). A tap on the button it rests on, or on its child's fill, gives a small squish (passive). One idle nudge
     (a little hop) after about 6 s on the same screen, once per screen, outside the reader only, never with Reduce
     Motion, cancelled by any touch.
   - First-run tour: it moves to each step's target; where a step has several it goes to the main one, then splits
     (mitosis, at most three) with staggered droplets on strands that snap, and the droplets are drawn back and merge
     with a ripple before it moves on.
+  - Child fills (v40): on Settings, Notes and Stats, accented controls (switches on, selected segments and chips,
+    checked badges) are filled by child droplets from the Source as they scroll into view: an IntersectionObserver
+    plus a velocity/settle gate (about 120 ms after scrolling stops; a fling over 900 px/s just fades them in over
+    140 ms), at most three droplets per wave (the rest fade), each control once per visit (reset on a tab switch).
+    A control that is coming into view waits without its fill until its droplet arrives (no filled-empty-filled).
+  - Transfers (v40): in any group of mutually exclusive options marked `data-accent-group` (Style, idle, info,
+    reminders, goals, page settings, fonts, themes, focus colours), picking another option sends the accent across
+    as a child blob from the old option to the new one (its fill, or a small drop under a ring-style option).
+  - One liquid layer (v40): a single full-viewport SVG holds the Source, a pool of 4 child blobs made once (no DOM
+    churn), the tether path and the focus-border rect (both reserved for the next slice). The gooey merge filter
+    runs only in ~100 ms windows while a strand buds, and a frame over 24 ms turns it off for 3 s (plain-path
+    strand). On arrival the blob carries a copy of the label's ink in its real on-fill colour until the real control
+    takes over. Colours follow a Style or page-colour change at once, even mid-flight (Lively crossfades in 120 ms).
   - Built as an SVG path of 12 points (Catmull-Rom) driven by damped springs at a fixed 240 Hz step. Each move is
     simulated once at launch; the position and opacity become one Web Animation on the wrapper (compositor, survives
-    a busy main thread) and the outline is drawn from the precomputed frames. No rAF at rest. Arcs and overshoot are
-    clamped inside the viewport.
+    a busy main thread) and the outline is drawn from the precomputed frames. No rAF at rest. Arcs, overshoot and
+    every point of the stretched outline are clamped inside the viewport.
   - Temperament per Style, from CSS variables only (`--guide-anticip`, `--guide-travel`, `--guide-settle`,
     `--guide-stiffness`, `--guide-damping`, `--guide-wobble`, `--guide-squash`, `--guide-jiggles`, `--guide-stretch`,
-    `--guide-arc`, `--guide-overshoot`): Quiet shy (small squash, one soft settle); Paper heavy (deep squash, no
-    bounce); Lively bouncy (big squash and stretch, three jiggles). Reduce Motion: it fades out at the old spot and in
-    at the new one (opacity only, no rAF).
-  - It steps aside (opacity 0, class `html.guide-under`) under sheets, the selection bar, the image viewer, the "Back
-    to where you were" chip and toasts. A Style switch or a library re-render snaps it (the real fill shows at once).
+    `--guide-arc`, `--guide-overshoot`, and from v40 `--guide-curve` (the stretch cap), `--guide-weight`,
+    `--guide-xfade`): Quiet shy (stretch ≤1.6, no overshoot, high damping); Paper heavy (+75 ms weight, stretch ≤2.0,
+    deep squash, no bounce); Lively bouncy (stretch ≤3.4, three jiggles, 120 ms colour crossfade). Reduce Motion:
+    it fades out at the old spot and in at the new one, and children and transfers are 140 ms fades (opacity only,
+    no rAF).
+  - It steps aside (opacity 0, class `html.guide-under`) under sheets, the selection bar, the image viewer and the
+    "Back to where you were" chip, and under a toast only where they actually overlap. With no side inset the
+    reading strip is one continuous line just above the "Page N of M" text; in landscape it keeps inside the left and
+    right safe areas. The first-run tour waits for each step's layout to settle before it moves. A Style switch or a library re-render snaps it (the real fill shows at once).
     Taps during a move work; it retargets mid-flight. Resize and rotation re-snap it.
   - Firm rules: it never repaginates or moves his place, and it moves by transform and opacity only.
   - For later screens: `guideTo(targets, {main})` (up to three targets: an element or `{el, kind}`, kind `fill`,

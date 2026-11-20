@@ -508,7 +508,7 @@ const getRad=x=>x.split(' ')[0];
     ov.toastHit=await pg.evaluate(()=>{ const t=$('#toast').getBoundingClientRect(), m=GUIDE.rest&&guideBox(GUIDE.rest.t); return !!(m && !$('#toast').hidden && m.x<t.right && m.x+m.w>t.left && m.y<t.bottom && m.y+m.h>t.top); });
     ok(`${sty} hides under the Back chip; a toast hides it only where they overlap; it comes back after`, ov.back.under && ov.back.op===0 && !ov.after.under && ov.after.op===1 && ov.toast.under===ov.toastHit && (ov.toast.op===0)===ov.toastHit, ov);
     { const o2=await pg.evaluate(async()=>{ toast('Overlap'); await new Promise(r=>setTimeout(r,200)); await guideTo([{el:$('#toast'), kind:'fill'}], {snap:true}); await new Promise(r=>setTimeout(r,60));
-        const a={under:document.documentElement.classList.contains('guide-under'), op:+getComputedStyle($('#guide')).opacity}; $('#toast').hidden=true; await guideScreen({snap:true}); await new Promise(r=>setTimeout(r,60)); a.after=document.documentElement.classList.contains('guide-under'); return a; });
+        await new Promise(r=>setTimeout(r,300)); const a={under:document.documentElement.classList.contains('guide-under'), op:+getComputedStyle($('#guide')).opacity}; $('#toast').hidden=true; await guideScreen({snap:true}); await new Promise(r=>setTimeout(r,60)); a.after=document.documentElement.classList.contains('guide-under'); return a; });
       ok(`${sty} a toast that does overlap the guide hides it (and it comes back after)`, o2.under && o2.op===0 && !o2.after, o2); }
     await pg.waitForFunction(()=>$('#toast').hidden, null, {timeout:9000}).catch(()=>{}); await wait(250);
     // 5. Play: its own fill is hidden from the pill's first frame until the blob lands; 6. labels keep their ink
@@ -614,7 +614,7 @@ const getRad=x=>x.split(' ')[0];
     // 6. per-style physics from CSS variables: stretch caps (Quiet 1.6, Paper 2.0, Lively 3.4), Paper +75ms weight, no overshoot in Quiet/Paper
     { const cap={quiet:1.6, paper:2.0, lively:3.4}, sty={};
       for(const s of STY){
-        sty[s]=await pg.evaluate(async(s)=>{ S.style=s; saveSettings(); applyLook(); await new Promise(r=>setTimeout(r,250)); const P=guideParams(); setChrome(true); await guideScreen({snap:true});
+        sty[s]=await pg.evaluate(async(s)=>{ S.style=s; saveSettings(); applyLook(); for(let i=0;i<40 && document.documentElement.dataset.style!==s;i++) await new Promise(r=>setTimeout(r,25)); await new Promise(r=>setTimeout(r,300)); const P=guideParams(); setChrome(true); await guideScreen({snap:true});
           guideManual(true); $('#rBack').click(); await new Promise(r=>setTimeout(r,60)); const b=GUIDE.main; const F=b&&b.frames, pl=b&&b.plan;
           let asp=0, over=0, out=0; if(F){ for(const f of F){ if(f.pre) asp=Math.max(asp,f.asp); const pr=(f.cx-pl.dst.x)*pl.dir.x+(f.cy-pl.dst.y)*pl.dir.y; over=Math.max(over,pr);
             for(let q=0;q<f.pts.length;q+=2){ const x=f.cx+f.pts[q], y=f.cy+f.pts[q+1]; if(x<0||x>innerWidth||y<0||y>innerHeight) out++; } } }
@@ -642,7 +642,7 @@ const getRad=x=>x.split(' ')[0];
           if(n<60) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
         await new Promise(r=>setTimeout(r,500));
         return {on, win, frames, trips:GUIDE.gooTrips-tr0, blocked, offAfter, restFilter:!!$('#guide').querySelector('[filter]')}; });
-      ok('v40 goo filter: on only while a strand exists (a short window), off at rest', g.on>0 && g.win!=null && g.win<=160 && !g.restFilter, g);
+      ok('v40 goo filter: on only while a strand exists (a short window), off at rest', g.on>0 && g.win!=null && g.win<=120 && !g.restFilter, g);
       ok('v40 goo guard: a frame over 24ms turns the filter off (pure-path strand) for 3s', g.trips>=1 && g.blocked && g.offAfter, g); }
     // 8. settings waves: IntersectionObserver + velocity/settle gate, once per visit, at most 3 per wave
     { const w=await pg.evaluate(async()=>{ const sl=ms=>new Promise(r=>setTimeout(r,ms));

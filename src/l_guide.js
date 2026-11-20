@@ -393,7 +393,7 @@ function guidePlay(b, pl, P, ev){
   for(let i=0;i<n;i+=step){ const f=F[i]; kf.push({offset:Math.min(1,f.t/dur), transform:`translate(${gf(f.cx)}px,${gf(f.cy)}px)`, opacity:gf(f.op)}); }
   const L=F[n-1]; kf.push({offset:1, transform:`translate(${gf(L.cx)}px,${gf(L.cy)}px)`, opacity:gf(L.op)});
   for(let i=1;i<kf.length;i++) if(kf[i].offset<=kf[i-1].offset) kf[i].offset=Math.min(1,kf[i-1].offset+1e-6);
-  b.frames=F; b.plan=pl; b.ev=Object.assign({sim, fired:{}}, ev||{}); b.lastIdx=-1;
+  b.frames=F; b.plan=pl; b.ev=Object.assign({sim, fired:{}}, ev||{}); b.lastIdx=-1; b.gooT0=null;
   const a=b.wrap.animate(kf, {duration:dur, easing:'linear', fill:'forwards'}); b.anim=a;
   if(GUIDE.manual) a.pause();
   a.finished.then(()=>{ if(b.anim===a) guideBodyEnd(b); }).catch(()=>{});
@@ -439,12 +439,14 @@ function guideBodyDraw(b, i){
     }
   }
   b.strand.setAttribute('d', d);
-  const goo=!!sd && !guideGooBlocked(); if(goo!==b.goo){ b.goo=goo; if(goo) b.g.setAttribute('filter','url(#gGoo)'); else b.g.removeAttribute('filter'); }
+  if(sd && b.gooT0==null) b.gooT0=f.t;
+  const goo=!!sd && f.t-b.gooT0<=GUIDE_GOO_MS && !guideGooBlocked(); if(goo!==b.goo){ b.goo=goo; if(goo) b.g.setAttribute('filter','url(#gGoo)'); else b.g.removeAttribute('filter'); }
   if(goo) GUIDE.gooOnFrames++;
 }
 /* the loop: only while a flight plays; it reads the animation's own clock, so a busy main thread only delays the outline */
 function guideKick(){ if(GUIDE.manual || GUIDE.raf) return; if(GUIDE.bodies.some(b=>b.anim)) GUIDE.raf=requestAnimationFrame(guideFrame); }
 /* the gooey filter's frame-time guard: a frame over 24 ms while it is on turns it off (pure-path strand) for 3 s */
+const GUIDE_GOO_MS=100; /* the gooey merge only runs in a short window as a strand buds; then it is a plain path */
 const guideGooBlocked=()=>performance.now()<GUIDE.gooUntil;
 function guideGooTrip(dt){
   GUIDE.gooTrips++; GUIDE.gooUntil=performance.now()+3000;
