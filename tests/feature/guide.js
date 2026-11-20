@@ -276,7 +276,7 @@ async function restCheck(pg, label, expect){
 const getRad=x=>x.split(' ')[0];
 
 (async()=>{
-  const b = await chromium.launch({ executablePath: fs.existsSync(CHROME)?CHROME:undefined, args:['--autoplay-policy=no-user-gesture-required'] });
+  const b = await chromium.launch(__E.launch({ args:['--autoplay-policy=no-user-gesture-required'] }));
   const ctx = await b.newContext({ viewport:{width:390, height:844}, deviceScaleFactor:2, serviceWorkers:'block', hasTouch:true, isMobile:true,
     recordVideo:{dir:SHOTS+'/video', size:{width:390, height:844}} });
   await ctx.addInitScript(voiceMock);

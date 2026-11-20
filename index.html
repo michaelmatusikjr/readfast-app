@@ -846,35 +846,57 @@ button:active:not(:disabled),.doc:active,.switch:active:not(:disabled){scale:var
 /* applying a style: a short crossfade (used when the browser has no view transitions) */
 :root.style-xfade *{transition:background-color 250ms ease,color 250ms ease,border-color 250ms ease,box-shadow 250ms ease,border-radius 250ms ease !important}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:250ms;animation-timing-function:ease}
-/* ---------- the Guide (v39): one soft-body accent character where you look or tap next ----------
+/* ---------- the Guide (v40, Living Substance): the Style's accent as one liquid ----------
    Its temperament per Style lives here only; l_guide.js reads these once per flight and has no per-Style code.
-   anticip/travel: wind-up and flight times (anticipation + flight + landing stays under ~550ms); stiffness/damping: the
-   outline springs (low damping = more jiggle); wobble: membrane; squash: wind-up and impact; jiggles: landing wobbles;
-   stretch: with speed; arc: path bow; overshoot: past the target before settling. */
-[data-style="quiet"]{--guide-anticip:70ms; --guide-travel:215ms; --guide-settle:110ms; --guide-stiffness:700; --guide-damping:.55; --guide-wobble:.03; --guide-squash:.14; --guide-jiggles:1; --guide-stretch:.25; --guide-arc:.12; --guide-overshoot:.6}
-[data-style="paper"]{--guide-anticip:100ms; --guide-travel:225ms; --guide-settle:110ms; --guide-stiffness:480; --guide-damping:.8; --guide-wobble:.008; --guide-squash:.26; --guide-jiggles:1; --guide-stretch:.16; --guide-arc:.08; --guide-overshoot:.12}
-[data-style="lively"]{--guide-anticip:90ms; --guide-travel:205ms; --guide-settle:150ms; --guide-stiffness:1300; --guide-damping:.17; --guide-wobble:.09; --guide-squash:.42; --guide-jiggles:3; --guide-stretch:.6; --guide-arc:.2; --guide-overshoot:1.5;
+   anticip/travel: wind-up and flight times; weight: extra travel for a heavier ink (Paper); stiffness/damping: the
+   outline springs (low damping = more jiggle); wobble: membrane; squash: wind-up and impact (landing flatten); jiggles:
+   landing wobbles; stretch: with speed; curve: the stretch cap (outline long/short axis while flying); arc: path bow;
+   overshoot: past the target before settling (0 = no bounce); xfade: colour crossfade over the wake; tether-*/sag:
+   the strand (hairline, ribbon, taffy); trace: how long a border trace takes. */
+[data-style="quiet"]{--guide-anticip:70ms; --guide-travel:215ms; --guide-weight:0ms; --guide-settle:110ms; --guide-stiffness:700; --guide-damping:.85; --guide-wobble:.02; --guide-squash:.12; --guide-jiggles:1; --guide-stretch:.22; --guide-curve:1.6; --guide-arc:.1; --guide-overshoot:0; --guide-xfade:0ms;
+  --guide-tether-w:1.2; --guide-tether-op:.5; --guide-sag:0; --guide-tether-jiggle:0; --guide-trace:200ms}
+[data-style="paper"]{--guide-anticip:100ms; --guide-travel:200ms; --guide-weight:75ms; --guide-settle:110ms; --guide-stiffness:480; --guide-damping:.9; --guide-wobble:.006; --guide-squash:.32; --guide-jiggles:1; --guide-stretch:.16; --guide-curve:2; --guide-arc:.07; --guide-overshoot:0; --guide-xfade:0ms;
+  --guide-tether-w:3; --guide-tether-op:.85; --guide-sag:14; --guide-tether-jiggle:0; --guide-trace:275ms}
+[data-style="lively"]{--guide-anticip:90ms; --guide-travel:205ms; --guide-weight:0ms; --guide-settle:150ms; --guide-stiffness:1300; --guide-damping:.17; --guide-wobble:.09; --guide-squash:.42; --guide-jiggles:3; --guide-stretch:.6; --guide-curve:3.4; --guide-arc:.2; --guide-overshoot:1.5; --guide-xfade:120ms;
+  --guide-tether-w:2.4; --guide-tether-op:1; --guide-sag:4; --guide-tether-jiggle:1; --guide-trace:240ms;
   --guide-mark:var(--chrome-on,var(--accent))} /* the resting mark on a light page keeps 3:1 like the other coral controls */
-:root{--guide-size:26px; --guide-fly:1; --guide-fade:160ms; --guide-strip-op:.42; --guide-thumb:16px}
+:root{--guide-size:26px; --guide-fly:1; --guide-fade:160ms; --guide-strip-op:.42; --guide-thumb:16px; --guide-hold:240ms; --guide-lift:52px}
 @supports (-webkit-touch-callout:none){ :root{--guide-thumb:28px} } /* iOS draws a bigger range thumb */
 @media (prefers-reduced-motion: reduce){ :root,[data-style]{--guide-fly:0 !important} }
-#guide{position:fixed;inset:0;z-index:20001;pointer-events:none;overflow:hidden;contain:strict;transition:opacity 160ms ease-out}
+#guide{position:fixed;inset:0;z-index:20001;pointer-events:none;overflow:hidden;contain:strict;transition:opacity 160ms ease-out;view-transition-name:tooz-guide}
+/* a Style switch's view transition never freezes the liquid: the layer stays live, uncrossfaded */
+::view-transition-group(tooz-guide){animation:none}
+::view-transition-old(tooz-guide){display:none}
+::view-transition-new(tooz-guide){animation:none}
 #guide .gpos{position:absolute;left:0;top:0;width:26px;height:26px;will-change:transform;pointer-events:none}
 #guide .gbody{position:absolute;inset:0;display:block;border-radius:50%;background:var(--accent);opacity:0;transform-origin:50% 50%}
 #guide .gshape .gbody{background:var(--guide-mark,var(--accent))}
 #guide .gring .gbody{background:transparent;box-shadow:0 0 0 2px var(--accent)}
-#guide .gdefs{position:absolute;width:0;height:0}
-/* the character: an SVG outline in a wrapper that only ever moves by transform and opacity */
-#guide .gbod{position:absolute;left:0;top:0;width:1px;height:1px;will-change:transform,opacity;pointer-events:none;opacity:0}
-#guide .gsvg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+/* the one liquid layer: a fixed viewport SVG; each body is a <g> that only moves by transform and opacity */
+#guide .gsvg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+#guide .gbod{will-change:transform,opacity;opacity:0}
 #guide .gblob,#guide .gstrand{fill:var(--guide-mark,var(--accent))}
+#guide .gtether{fill:var(--guide-mark,var(--accent));opacity:var(--guide-tether-op)}
+#guide .gfocus{fill:none;stroke:var(--accent);stroke-width:2;opacity:0;stroke-linecap:round}
+/* ink floats on the liquid: label copies sit above a filling blob */
+#guide .ginks{position:absolute;inset:0;pointer-events:none}
+#guide .gink{position:absolute;left:0;top:0;box-sizing:border-box;margin:0;border-style:solid;border-color:transparent;background:transparent;opacity:0;pointer-events:none;overflow:hidden}
+#guide .gink svg{color:inherit}
+#guide .gsafe{position:absolute;left:0;top:0;width:0;height:0;visibility:hidden;padding:0 env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 /* the progress mark you read beside stays faint: low contrast, but there */
 #guide[data-at="strip"] .gshape{opacity:var(--guide-strip-op)}
 /* while the blob is on its way, the button it left or is heading for shows no fill of its own (one accent blob only);
-   its label keeps full ink */
-.guide-off{background-color:transparent !important;border-color:color-mix(in srgb,currentColor 22%,transparent) !important;box-shadow:none !important;color:var(--ink) !important}
+   its label keeps full ink. guide-wait: an accent scrolling into view, waiting for its droplet. */
+.guide-off,.guide-wait{background-color:transparent !important;border-color:color-mix(in srgb,currentColor 22%,transparent) !important;box-shadow:none !important;color:var(--ink) !important}
 #v-reader .guide-off,#tour .guide-off{color:var(--page-ink,var(--ink)) !important}
 #v-reader .guide-off svg,#tour .guide-off svg,.guide-off svg{color:inherit}
+/* the read-aloud Play button while its blob is on the way: it takes the pill's own colour and the pill's contrasting
+   ink, so the triangle stays readable (never page ink on a dark fill) */
+#ttsBar .icon-btn.play.guide-off{background-color:color-mix(in srgb,var(--page-bg) 94%,var(--page-ink)) !important;color:var(--page-ink) !important}
+.switch.guide-wait,.switch.guide-off{background:var(--line) !important}
+/* an accent that skips the droplet (a fast fling, Reduce Motion): a quick fade */
+@keyframes guideFadeIn{from{background-color:transparent;border-color:transparent;box-shadow:none}}
+.guide-fadein{animation:guideFadeIn 140ms ease-out}
 /* it steps aside under anything that sits on top of the screen (class set by l_guide.js) */
 html.guide-under #guide{opacity:0}
 /* Settings: the Style picker */
@@ -905,7 +927,7 @@ html.guide-under #guide{opacity:0}
 </head>
 
 <body>
-<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.39</div>
+<div id="htmlVer" style="position:fixed;bottom:8px;left:8px;z-index:99999;background:#111;color:#0f0;font:700 12px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none">HTML v18.40</div>
 <div id="app">
   <section id="v-library" class="view" aria-label="Library">
     <div class="wrap">
@@ -5036,9 +5058,9 @@ async function ttsDownloadNatural(){
 $('#ttsNatChip')&&$('#ttsNatChip').addEventListener('click',()=>{ ttsHideNatChip(true); openVoiceSheet(); });
 
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.19.39-guide';
+const APP_VERSION='2026.11.19.40-source-blob';
 const WHATSNEW=[
-  ['Meet the Guide','Your Style’s accent colour is now a small soft character that sits where you’d look or tap next. On the shelf it is the Continue button. Tap Continue and it squashes, peels off with a little sticky strand, hops into the book and lands with a jiggle as the faint progress mark at the bottom (or the Play button when read aloud is open). It never sits on the words, never wanders while you read, and only nudges once if you seem stuck on a screen. Go back and it hops home to Continue. In the first-run tour it splits into droplets to point at a few things, then merges again. Quiet is shy, Paper is heavy, Lively is bouncy; with Reduce Motion it simply fades. Your pages and place are unchanged.'],
+  ['Living accent','Your Style’s accent is now one living liquid. It rests on the tab bar at the bottom, and little droplets bud off it to fill Continue and the switches and buttons that are on as you scroll to them. Pick another option and the colour hops straight across to it, with the label always crisp on top. Quiet glides softly, Paper moves like heavy ink and Lively bounces. While you read it stays perfectly still, and if a book is slow to open it simply settles in. Your pages and place in the book never change.'],
   ['Pick a Style','Settings now starts with three Styles. Quiet (calm and still, the one you have now), Paper (tactile and warm) and Lively (bouncy and bright) each change how Tooz looks, how buttons feel and how sheets and controls move. Picking one also picks a page colour to suit it; you can still change the page colour in Aa. Your pages, text and place in the book stay exactly the same.']
 ];
 function whatsNewSheet(){
@@ -5926,14 +5948,13 @@ function maybeStartTour(){
 
 /* ---------- the Guide (v40, Living Substance + Accent Gravity) ----------
    v40: one fixed viewport <svg> (pointer-events none) holds the Source blob, a fixed pool of 4 reusable child blobs
-   (zero DOM churn), the live tether strand and the focus-border <rect>. The Source lives on the bottom tab bar (home
-   base) outside the reader; child blobs bud off it to fill accented controls (Continue, active pills and switches as
-   they scroll into view), hop between options of a [data-accent-group] and trace a search field's border. Hold the
-   Source (or an active accent) ~240 ms to pull it out on a tether (Accent Gravity): drop it on a book to open it, on a
-   Style or page colour to live-paint it, on a search field to focus it, slide it along the tabs to scrub them, or (in
-   the reader, on the scrubber or the bottom progress mark only) pull it up for fine scrubbing. Labels float above the
-   liquid (an ink copy of the label sits over a filling blob). The gooey filter is on only during a bud/peel window and
-   switches itself off when a frame takes over 24 ms. Per-Style physics come only from CSS variables.
+   (zero DOM churn), the tether strand path and the focus-border <rect>. The Source lives on the bottom tab bar (home
+   base) outside the reader; child blobs bud off it to fill accented controls (Continue on the Library, active pills
+   and switches as Settings, Notes or Stats scroll them into view, behind a velocity + settle gate, at most 3 a wave,
+   once per visit) and hop between the options of a [data-accent-group]. Labels float above the liquid (an ink copy of
+   the label sits over a filling blob). The gooey filter is on only during a bud/peel window and switches itself off
+   when a frame takes over 24 ms. Per-Style physics (stretch cap, weight, bounce, colour crossfade) come only from CSS
+   variables. A reader that takes over 150 ms to lay out gets a 140 ms settle-in instead of an arc.
    ---------- the Guide (v39): one soft-body accent character that sits where you look or tap next ----------
    One fixed, aria-hidden, pointer-events:none layer above every view. It is purely visual: it never takes a tap, focus
    or VoiceOver, never rests on any text and never moves while you read. Screens call guideTo(targets, {main}).
@@ -5958,9 +5979,9 @@ const GUIDE={on:true, layer:null, shapes:[], cur:0, ring:null, bodies:[], main:n
   idleMs:6000, idleTimer:0, screenSeq:0, nudged:-1, nudges:0, nudgeAnim:null, pulses:0, flights:[],
   /* v40 */
   svg:null, liq:null, tetherPath:null, focusRect:null, inkLayer:null, pool:[], gooUntil:0, gooTrips:0, gooOnFrames:0, lastFrameT:0,
-  kids:new Set(), ktok:0, tether:null, pend:null, focusEl:null, focusT:0, xfer:null, seen:new WeakSet(), waits:new Set(),
+  kids:new Set(), ktok:0, tether:null, xfer:null, seen:new WeakSet(), waits:new Set(),
   wave:{pending:new Set(), timer:0, lastScroll:0, peak:0, lastY:null, lastT:0, waves:0, sent:0, faded:0, maxWave:0, io:null, mo:null, view:''},
-  transfers:0, settles:0, traces:0, unzips:0, pours:0, scrubs:0, gravity:[], tetherFrames:0, backHow:'', safe:null, under:null};
+  kidLog:[], transfers:0, settles:0, safe:null, under:null};
 function guideCss(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function guideNum(name, def){ const v=parseFloat(guideCss(name)); return isFinite(v)?v:def; }
 function guideMs(name, def){ const s=guideCss(name); const v=parseFloat(s); if(!isFinite(v)) return def; return /ms$/.test(s)?v:(/s$/.test(s)?v*1000:v); }
@@ -6081,6 +6102,7 @@ function guideBox(t){
   const w=Math.max(12, Math.min(28, r.width*.5)), h=4;
   return {x:r.left+r.width/2-w/2, y:Math.min(innerHeight-h-2, below+3), w, h, rad:'2px', bg:'', fill:false};
 }
+const guideName=el=>el.id||(el.dataset&&el.dataset.tab?'tab:'+el.dataset.tab:'')||String(el.className||'').replace(/ ?guide-(off|wait|fadein)/g,'');
 const guideC=b=>({x:b.x+b.w/2, y:b.y+b.h/2});
 const guideSame=(a,b)=>a && b && Math.abs(a.x-b.x)<2 && Math.abs(a.y-b.y)<2 && Math.abs(a.w-b.w)<2 && Math.abs(a.h-b.h)<2;
 function guideOff(el, on){
@@ -6543,7 +6565,7 @@ function guideFly(t, bx, tok){
 function guideHandOff(t, bx, tok, body, info){
   if(tok!==GUIDE.token) return;
   const now=performance.now();
-  GUIDE.flights.push({target:t.el.id||String(t.el.className||'').replace(/ ?guide-off/,''), kind:'fly', start:info.start, launch:info.launch,
+  GUIDE.flights.push({target:guideName(t.el), kind:'fly', start:info.start, launch:info.launch,
     arrive:info.launch+info.sim.arrive, rest:now+60, hold:info.hold, style:document.documentElement.dataset.style});
   if(GUIDE.flights.length>60) GUIDE.flights.shift();
   GUIDE.cur=1-GUIDE.cur; const s=GUIDE.shapes[GUIDE.cur];
@@ -6571,7 +6593,7 @@ function guideSettleIn(t, bx, tok){
     if(tok!==GUIDE.token) return false;
     guideStopAnims(); if(bx.fill) guideOff(t.el, false); guideShapeAt(s, bx, bx.fill?0:1);
     const now=performance.now();
-    GUIDE.flights.push({target:t.el.id||String(t.el.className||'').replace(/ ?guide-off/,''), kind:'settle', start, launch:now-140, arrive:now, rest:now, hold, style:document.documentElement.dataset.style});
+    GUIDE.flights.push({target:guideName(t.el), kind:'settle', start, launch:now-140, arrive:now, rest:now, hold, style:document.documentElement.dataset.style});
     if(GUIDE.flights.length>60) GUIDE.flights.shift();
     guideSetRest(t, bx); return true;
   }).catch(()=>false);
@@ -6642,7 +6664,8 @@ function guideChildFly(src, el, o){
   const bx=o.box||guideBox({el, kind:fill?'fill':'mark'}); if(!bx) return Promise.resolve(false);
   if(fill) guideOff(el, true);
   const rec={el:fill?el:null, body:null}; GUIDE.kids.add(rec);
-  const done=(ok)=>{ GUIDE.kids.delete(rec); if(rec.el){ guideOff(rec.el, false); } if(rec.body){ guideBodyKill(rec.body); rec.body=null; } return ok; };
+  const log={target:guideName(el), kind:o.kind, start:performance.now(), fill:null, end:null}; GUIDE.kidLog.push(log); if(GUIDE.kidLog.length>40) GUIDE.kidLog.shift();
+  const done=(ok)=>{ log.end=performance.now(); log.ok=ok; GUIDE.kids.delete(rec); if(rec.el){ guideOff(rec.el, false); } if(rec.body){ guideBodyKill(rec.body); rec.body=null; } return ok; };
   if(!P.fly){ /* Reduce Motion: the accent fades in at its spot */
     return new Promise(res=>setTimeout(()=>{ if(fill && el.isConnected) guideFadeIn(el); res(done(kt===GUIDE.ktok)); }, (o.delay||0)*1000));
   }
@@ -6661,12 +6684,12 @@ function guideChildFly(src, el, o){
   return new Promise(res=>{
     guidePlay(d, pl, P, {
       onArrive:(b)=>{ if(kt!==GUIDE.ktok) return; if(fill) guideInkOn(b, el); if(o.onArrive) o.onArrive(b); },
-      onFill:()=>{ if(kt===GUIDE.ktok && fill){ guideOff(el, false); rec.el=null; } },
+      onFill:()=>{ log.fill=performance.now(); if(kt===GUIDE.ktok && fill){ guideOff(el, false); rec.el=null; } },
       onEnd:(b)=>{
         if(kt!==GUIDE.ktok){ res(done(false)); return; }
         if(fill){ guideOff(el, false); rec.el=null; }
         b.fadeA=b.wrap.animate([{opacity:b.op},{opacity:0}], {duration:fill?60:Math.max(90,P.fade*.8), delay:fill?0:(o.linger||0), easing:'ease-out', fill:'forwards'});
-        b.fadeA.finished.then(()=>{ b.fadeA=null; res(done(true)); }).catch(()=>res(done(false)));
+        b.fadeA.finished.then(()=>{ res(done(true)); }).catch(()=>res(done(false))); /* done() kills the body, which cancels the fade (no fill-forwards left behind) */
       }});
   });
 }
@@ -6708,10 +6731,6 @@ function guideTo(targets, opts){
   guideMount();
   let list=(Array.isArray(targets)?targets:[targets]).map(guideNorm).filter(Boolean);
   if(!list.length) return Promise.resolve(false);
-  if(GUIDE.tether && !opts.force){ /* the Source is held on its tether: only its home moves (no flight) */
-    const m0=list[typeof opts.main==='number'&&list[opts.main]?opts.main:0], b0=guideBox(m0); if(b0){ GUIDE.rest={t:m0, b:b0}; guideTetherHome(); }
-    return Promise.resolve(true);
-  }
   let main=list[0];
   if(typeof opts.main==='number' && list[opts.main]) main=list[opts.main];
   else if(opts.main){ const m=list.find(x=>x.el===opts.main || x.el===(opts.main.el||null)); if(m) main=m; }
@@ -6760,7 +6779,6 @@ function guideReaderTarget(){
   const bar=$('#ttsBar');
   if(bar && !bar.hidden) return {el:$('#ttsPlay'), kind:'fill'};
   if(R.mode==='speed') return {el:$('#playBtn'), kind:'fill'};
-  const bp=$('#backPill'); if(bp && !bp.hidden && $('#backGo')) return {el:$('#backGo'), kind:'mark'}; /* Tethered Return: still on "Back to where you were" */
   if(!v.classList.contains('chrome-off')) return {el:$('#rScrub'), kind:'thumb'};
   return {el:$('#runFoot'), kind:'strip'};
 }
@@ -6795,7 +6813,7 @@ function guideSettled(els, max){
 function guideTour(targets){ GUIDE.tour=(targets||[]).filter(Boolean); if(GUIDE.tour.length) return guideTo(GUIDE.tour, {main:0}); return Promise.resolve(false); }
 /* the guide on or off (tests compare layout with it on and off; it never changes layout either way) */
 function guideSet(on){
-  GUIDE.on=!!on; GUIDE.token++; guideStopAnims(); guideTetherEnd(true); guideKidsStop(); guideFocusOff(true); guideWaitsClear(); guideMergeNow(); guideClearOff(null); clearTimeout(GUIDE.liftTimer); GUIDE.lifted=false; GUIDE.held=false; GUIDE.flying=false;
+  GUIDE.on=!!on; GUIDE.token++; guideStopAnims(); guideKidsStop(); guideWaitsClear(); guideMergeNow(); guideClearOff(null); clearTimeout(GUIDE.liftTimer); GUIDE.lifted=false; GUIDE.held=false; GUIDE.flying=false;
   guideSleep(); for(const b of [...GUIDE.bodies]) guideBodyKill(b);
   if(!on){ if(GUIDE.layer) GUIDE.layer.remove(); GUIDE.layer=null; GUIDE.rest=null; GUIDE.main=null; GUIDE.bodies=[]; GUIDE.pool=[]; return; }
   guideMount(); GUIDE.rest=null; guideScreen({snap:true});
@@ -6806,8 +6824,8 @@ function guideRingOn(b){
   g.style.width=b.w+'px'; g.style.height=b.h+'px'; g.style.transform=`translate(${b.x}px,${b.y}px)`;
   g.firstChild.style.borderRadius=b.rad; return g.firstChild;
 }
-function guidePulse(){
-  const r=GUIDE.rest; if(!r || GUIDE.flying || GUIDE.lifted || !GUIDE.on) return;
+function guidePulse(child){
+  const r=child?{t:child.t, b:guideBox(child.t)||child.b}:GUIDE.rest; if(!r || GUIDE.flying || GUIDE.lifted || !GUIDE.on) return;
   if(!guideParams().fly) return;
   GUIDE.pulses++;
   if(r.b.fill){ const i=guideRingOn(r.b); if(i) i.animate([{opacity:.9, transform:'scale(.95,.86)'},{opacity:.7, transform:'scale(1.05,1.08)', offset:.45},{opacity:0, transform:'scale(1.12)'}], {duration:340, easing:'cubic-bezier(.34,1.56,.64,1)'}); }
@@ -6820,7 +6838,7 @@ function guideIdleReset(){
 }
 function guideNudge(){
   const r=GUIDE.rest, v=$('#v-reader');
-  if(!r || !GUIDE.on || GUIDE.flying || GUIDE.lifted || GUIDE.splitOn) return;
+  if(!r || !GUIDE.on || GUIDE.flying || GUIDE.lifted || (GUIDE.splitOn && GUIDE.extras.some(x=>x.body)) || GUIDE.kids.size) return;
   if(v && !v.hidden) return;                                   /* never in the reader */
   if(GUIDE.nudged===GUIDE.screenSeq || !guideParams().fly || document.hidden) return; /* once per screen; never with Reduce Motion */
   if(document.documentElement.classList.contains('guide-under') || !guideVisible(r.t.el)) return;
@@ -6885,38 +6903,6 @@ function guideXferClick(){
   };
   setTimeout(go, 0);
 }
-/* ---------- v40: focus-border wrap ----------
-   Focusing a search field sends a droplet from the Source to the field; a strand then traces its border
-   (stroke-dashoffset on the one focus <rect>, as a CSS transition). Blur unzips it and a droplet goes home. */
-const GUIDE_FINDS='#libFind,#notesFind,#srchIn,#hlFind';
-function guideFocusBox(el){
-  const r=el.getBoundingClientRect(), cs=getComputedStyle(el), rad=parseFloat(cs.borderTopLeftRadius)||0;
-  const x=r.left-2, y=r.top-2, w=r.width+4, h=r.height+4, rx=Math.max(0, Math.min(rad+2, h/2, w/2));
-  return {x, y, w, h, rx, len:2*(w+h-4*rx)+2*Math.PI*rx};
-}
-function guideFocusPlace(b){ const R_=GUIDE.focusRect; R_.setAttribute('x',gf(b.x)); R_.setAttribute('y',gf(b.y)); R_.setAttribute('width',gf(b.w)); R_.setAttribute('height',gf(b.h)); R_.setAttribute('rx',gf(b.rx)); R_.style.strokeDasharray=gf(b.len)+' '+gf(b.len+4); }
-function guideFocusOn(el){
-  if(!GUIDE.on || !el || !guideVisible(el)) return;
-  guideMount(); const P=guideParams(), R_=GUIDE.focusRect, tk=++GUIDE.focusT, b=guideFocusBox(el);
-  GUIDE.focusEl=el; GUIDE.focusBox=b; el.classList.add('guide-focus');
-  R_.style.transition='none'; guideFocusPlace(b); R_.style.strokeDashoffset=gf(b.len); R_.style.opacity='1'; void R_.getBoundingClientRect();
-  if(!P.fly){ R_.style.strokeDashoffset='0'; R_.style.opacity='0'; void getComputedStyle(R_).opacity; R_.style.transition=`opacity ${P.fade}ms ease-out`; R_.style.opacity='1'; GUIDE.traces++; return; }
-  const trace=()=>{ if(tk!==GUIDE.focusT) return; R_.style.transition=`stroke-dashoffset ${P.trace}ms cubic-bezier(.45,0,.2,1)`; R_.style.strokeDashoffset='0'; GUIDE.traces++; };
-  const from=GUIDE.pourFrom||guideSourceAt(); GUIDE.pourFrom=null;
-  const start={x:b.x+b.rx, y:b.y};
-  guideChildFly(from, el, {kind:'drop', point:start, box:{x:start.x-1, y:start.y-1, w:2, h:2, rad:'50%', fill:false}, onArrive:trace}).then(ok=>{ if(!ok) trace(); });
-}
-function guideFocusOff(instant){
-  const el=GUIDE.focusEl; if(!el) return; GUIDE.focusEl=null; el.classList.remove('guide-focus');
-  const R_=GUIDE.focusRect, P=guideParams(), b=GUIDE.focusBox, tk=++GUIDE.focusT; if(!R_) return;
-  const hide=()=>{ if(tk!==GUIDE.focusT) return; R_.style.transition='none'; R_.style.opacity='0'; R_.setAttribute('width','0'); R_.setAttribute('height','0'); };
-  if(instant || !b || !guideVisible(el)){ hide(); return; }
-  GUIDE.unzips++;
-  if(!P.fly){ R_.style.transition=`opacity ${P.fade}ms ease-out`; R_.style.opacity='0'; setTimeout(hide, P.fade+20); return; }
-  const dur=Math.round(P.trace*.7); R_.style.transition=`stroke-dashoffset ${dur}ms cubic-bezier(.5,0,.75,0)`; R_.style.strokeDashoffset=gf(-b.len);
-  setTimeout(()=>{ hide(); if(GUIDE.on && GUIDE.rest){ const home=guideSourceAt(); guideChildFly({x:b.x+b.rx, y:b.y}, el, {kind:'drop', point:home, box:{x:home.x-1,y:home.y-1,w:2,h:2,rad:'50%',fill:false}}); } }, dur);
-}
-function guideFocusSync(){ const el=GUIDE.focusEl; if(!el || !GUIDE.focusRect) return; if(!guideVisible(el)){ guideFocusOff(true); return; } const b=guideFocusBox(el); GUIDE.focusBox=b; guideFocusPlace(b); }
 /* ---------- v40: child blobs fill accented controls as Settings (or Notes, Stats) scroll them into view ----------
    An IntersectionObserver (threshold .92, a little inward) watches the accented controls; a velocity + ~120 ms settle
    gate decides: a fast fling (over 900 px/s) just fades them in (140 ms CSS), a normal scroll sends staggered droplets
@@ -6929,7 +6915,6 @@ function guideView(v){
   const w=GUIDE.wave;
   guideKidsStop(); guideWaitsClear(); GUIDE.seen=new WeakSet(); w.pending.clear(); clearTimeout(w.timer); w.peak=0; w.lastY=null; w.view=v;
   if(w.io){ w.io.disconnect(); w.io=null; } if(w.mo){ w.mo.disconnect(); w.mo=null; }
-  if(GUIDE.focusEl && !guideVisible(GUIDE.focusEl)) guideFocusOff(true);
   if(!GUIDE.on || !GUIDE_WATCH.includes(v) || typeof IntersectionObserver!=='function') return;
   const view=$('#v-'+v); if(!view) return;
   w.io=new IntersectionObserver(guideWaveSeen, {root:view, threshold:[0,.92], rootMargin:'-6px 0px -6px 0px'});
@@ -6973,191 +6958,6 @@ function guideWaveFlush(){
   const src=guideSourceAt();
   send.forEach((el,k)=>{ el.classList.remove('guide-wait'); GUIDE.waits.delete(el); guideChildFly(src, el, {kind:guideAccentKind(el), delay:k*.06, linger:300}); });
 }
-/* ---------- v40: tap-and-hold tether + Accent Gravity ----------
-   Hold the Source (its tab, or in the reader the scrubber / the bottom progress mark) or an active accent (Continue,
-   the chosen option) for ~240 ms without moving more than 8 px (moving first is a scroll and native scrolling wins;
-   reading prose is never a grab point). The blob is pulled out above the thumb on a live tapered strand (one rAF only
-   while held) and drags: onto a book (opens it), a Style tile or page colour (live preview; release commits, pulling
-   away reverts), a search field (focuses it and pours into its border), along the tabs (scrubs them), or, on the
-   scrubber, upward (finer scrubbing). Release anywhere else: it snaps home and nothing changes. */
-const GUIDE_PROSE='#pagesView,#scFlow,#pgClip,#scView,#scrollView,#stage,#tour,#pgMeasure';
-function guideGrab(e){
-  const t=e.target; if(!t || !t.closest || !GUIDE.layer) return null;
-  if(t.closest(GUIDE_PROSE)) return null;                                   /* never on reading prose */
-  if(t.closest('textarea,[contenteditable],input:not([type="range"]):not([type="checkbox"])')) return null;
-  const v=$('#v-reader'), inReader=!!(v && !v.hidden);
-  if(inReader){
-    const sc=$('#rScrub');
-    if(sc && t===sc && !v.classList.contains('chrome-off')) return {kind:'scrub', el:sc};
-    if(v.classList.contains('chrome-off')){ const f=$('#runFoot'), r=f && f.getBoundingClientRect(); if(r && r.width && e.clientY>=r.top-14 && !t.closest('.rchrome,#ttsBar,#backPill,#sheet')) return {kind:'strip', el:f}; }
-  } else {
-    const r=GUIDE.rest; if(r && r.t.el && (r.t.el===t || r.t.el.contains(t))) return {kind:'source', el:r.t.el};
-    const go=t.closest('#v-library .hero-go'); if(go) return {kind:'accent', el:go};
-  }
-  const opt=t.closest(GUIDE_OPT); if(opt && opt.matches(GUIDE_ACTIVE) && (opt.closest('#v-settings') || opt.closest('#sheet .themes'))) return {kind:'accent', el:opt};
-  return null;
-}
-function guideTouchBlock(e){ if(GUIDE.tether && e.cancelable) e.preventDefault(); }
-function guideTetherDown(e){
-  if(!GUIDE.on || GUIDE.tether || (e.button||0)>0 || e.isPrimary===false) return;
-  if(typeof TOUR!=='undefined' && TOUR.on) return;
-  const g=guideGrab(e); if(!g) return;
-  guideTetherCancel();
-  document.addEventListener('touchmove', guideTouchBlock, {passive:false, capture:true});
-  GUIDE.pend={x:e.clientX, y:e.clientY, id:e.pointerId, g, timer:setTimeout(guideTetherStart, guideParams().hold)};
-}
-function guideTetherCancel(){ const p=GUIDE.pend; if(!p) return; clearTimeout(p.timer); GUIDE.pend=null; if(!GUIDE.tether) document.removeEventListener('touchmove', guideTouchBlock, {capture:true}); }
-function guideTetherMove(e){
-  const p=GUIDE.pend;
-  if(p && e.pointerId===p.id && Math.hypot(e.clientX-p.x, e.clientY-p.y)>8) guideTetherCancel(); /* it's a scroll or a drag of its own */
-  const T=GUIDE.tether; if(T && e.pointerId===T.id){ T.x=e.clientX; T.y=e.clientY; guideTetherKick(); }
-}
-function guideTetherUp(e){
-  if(GUIDE.pend && e.pointerId===GUIDE.pend.id) guideTetherCancel();
-  const T=GUIDE.tether; if(T && e.pointerId===T.id){ T.x=e.clientX||T.x; T.y=e.clientY||T.y; guideTetherRelease(e.type==='pointercancel'); }
-}
-function guideTetherHomeAt(T){
-  if(T.sc){ const k=T.kind==='scrub'?{el:T.sc, kind:'thumb'}:{el:T.el, kind:'strip'}; const b=guideBox(k); return b?guideC(b):T.home; }
-  if(T.kind==='source' && GUIDE.rest) return guideC(GUIDE.rest.b);
-  return T.home;
-}
-function guideTetherHome(){ const T=GUIDE.tether; if(T){ T.home=guideTetherHomeAt(T); guideTetherKick(); } }
-function guideTetherStart(){
-  const p=GUIDE.pend; GUIDE.pend=null; if(!p || !GUIDE.on) return;
-  const P=guideParams(), g=p.g, r=g.el.getBoundingClientRect();
-  ++GUIDE.token; guideStopAnims(); clearTimeout(GUIDE.liftTimer); guideKidsStop(); guideSleep();
-  const T={kind:g.kind, el:g.el, id:p.id, x:p.x, y:p.y, x0:p.x, y0:p.y, over:null, paint:null, raf:0, sens:1, t0:performance.now(),
-    home:g.kind==='source'&&GUIDE.rest?guideC(GUIDE.rest.b):{x:r.left+r.width/2, y:r.top+r.height/2}, gooTill:performance.now()+110};
-  if(g.kind==='scrub' || g.kind==='strip'){ const sc=$('#rScrub'); T.sc=sc; T.v=+sc.value||0; T.vf=T.v; T.track=(g.kind==='scrub'?sc:g.el).getBoundingClientRect(); T.lx=p.x; T.home=guideTetherHomeAt(T); }
-  GUIDE.tether=T; GUIDE.flying=false; GUIDE.lifted=false; GUIDE.held=false;
-  document.documentElement.classList.add('guide-tether');
-  if(P.fly){
-    guideHideShapes(null);
-    const b=guideMainBody(); guideBodyStop(b); b.r=P.size/2; b.c={x:T.home.x, y:T.home.y}; b.op=1; guideBodySet(b, guideCircle(b.r)); guideColour(b, null); b.tgt=null; guideBodyPlace(b);
-    GUIDE.tetherPath.style.fill=guideMarkColour(); GUIDE.tetherPath.style.opacity=String(P.top);
-    if(!guideGooBlocked()) GUIDE.tetherPath.setAttribute('filter','url(#gGoo)');
-  }
-  guideTetherKick();
-}
-function guideTetherKick(){ const T=GUIDE.tether; if(!T) return; if(!guideParams().fly){ guideTetherFrame(); return; } if(!T.raf) T.raf=requestAnimationFrame(guideTetherFrame); }
-function guideTetherFrame(now){
-  const T=GUIDE.tether; if(!T) return; T.raf=0; GUIDE.tetherFrames++;
-  const P=guideParams(), fly=P.fly, W=innerWidth, H=innerHeight, rr=P.size/2;
-  if(fly){ GUIDE.rafCount++; now=+now||performance.now(); const dt=GUIDE.lastFrameT?now-GUIDE.lastFrameT:0; GUIDE.lastFrameT=now; if(dt>24 && GUIDE.tetherPath.hasAttribute('filter')) guideGooTrip(dt); }
-  const bx=Math.max(rr+2, Math.min(W-rr-2, T.x)), by=Math.max(rr+2, Math.min(H-rr-2, T.y-P.lift));
-  T.bx=bx; T.by=by;
-  /* fine scrubbing: pulling up off the track lowers the sensitivity smoothly */
-  if(T.sc){
-    const tr=T.track, mn=+T.sc.min||0, mx=+T.sc.max||1, span=Math.max(1, mx-mn), up=Math.max(0, tr.top-T.y);
-    T.sens=Math.max(.05, 1/(1+up/50));
-    const dx=T.x-T.lx; T.lx=T.x;
-    T.vf=Math.max(mn, Math.min(mx, T.vf+dx/Math.max(40, tr.width-16)*span*T.sens));
-    const nv=Math.round(T.vf); if(nv!==T.v){ T.v=nv; T.self=true; T.sc.value=String(nv); T.sc.dispatchEvent(new Event('input', {bubbles:true})); T.self=false; }
-  } else {
-    const over=guideGravityAt(bx, by, T.x, T.y);
-    if((over&&over.el)!==(T.over&&T.over.el)) guideGravitySwap(T, over);
-  }
-  T.home=guideTetherHomeAt(T);
-  if(!fly) return;
-  const b=GUIDE.main; if(!b) return;
-  const hx=T.home.x, hy=T.home.y, dx=bx-hx, dy=by-hy, dist=Math.hypot(dx,dy)||1, ux=dx/dist, uy=dy/dist, ten=Math.min(1, dist/240);
-  const st=Math.min(P.curve, 1+(P.curve-1)*ten*.6), pts=[];
-  for(let i=0;i<GUIDE_N;i++){ const u=GUIDE_UC[i]; let al=(u.x*ux+u.y*uy)*rr, pp=(-u.x*uy+u.y*ux)*rr; al*= al<0?st:1+(st-1)*.35; pp/=Math.sqrt(st); pts.push({x:ux*al-uy*pp, y:uy*al+ux*pp}); }
-  b.c={x:bx, y:by}; guideBodySet(b, pts);
-  b.wrap.style.transform=`translate(${gf(bx)}px,${gf(by)}px)`; b.wrap.style.opacity='1'; b.path.setAttribute('d', guidePathD(b.p));
-  /* the strand: a tapered quadratic ribbon from home to the blob, sagging with the Style's gravity (--guide-sag) */
-  const wa=P.tw*(1.7-ten*.6), wb=Math.max(.8, P.tw*.8), sag=P.sag*ten, mx_=(hx+bx)/2, my_=(hy+by)/2+sag, nx=-uy, ny=ux, wm=Math.max(.5, P.tw*(1-ten*.55));
-  GUIDE.tetherPath.setAttribute('d', `M${gf(hx+nx*wa)} ${gf(hy+ny*wa)}Q${gf(mx_+nx*wm)} ${gf(my_+ny*wm)} ${gf(bx+nx*wb)} ${gf(by+ny*wb)}L${gf(bx-nx*wb)} ${gf(by-ny*wb)}Q${gf(mx_-nx*wm)} ${gf(my_-ny*wm)} ${gf(hx-nx*wa)} ${gf(hy-ny*wa)}Z`);
-  if(GUIDE.tetherPath.hasAttribute('filter') && performance.now()>T.gooTill) GUIDE.tetherPath.removeAttribute('filter');
-}
-function guideGravityAt(bx, by, fx, fy){
-  const tabs=$('#tabs');
-  if(tabs && !tabs.hidden){ const r=tabs.getBoundingClientRect(); if(r.height && fy>=r.top-28 && fy<=r.bottom+12){
-    const btn=[...tabs.querySelectorAll('button[data-tab]')].find(x=>{ const q=x.getBoundingClientRect(); return fx>=q.left && fx<q.right; }); return btn?{type:'tab', el:btn}:null; } }
-  const hit=document.elementFromPoint(bx, by); if(!hit || !hit.closest) return null;
-  const inp=hit.closest(GUIDE_FINDS); if(inp) return {type:'search', el:inp};
-  const tile=hit.closest('#stylePick [data-style-pick]'); if(tile) return {type:'style', el:tile, v:tile.dataset.stylePick};
-  const sw=hit.closest('.themes button[data-v]'); if(sw) return {type:'theme', el:sw, v:sw.dataset.v};
-  const bk=hit.closest('#v-library [data-open]'); if(bk) return {type:'book', el:bk.closest('.doc')||bk, id:bk.dataset.open};
-  return null;
-}
-function guideGravitySwap(T, over){
-  const prev=T.over; if(prev){ prev.el.classList.remove('guide-drop'); if(prev.type==='style' || prev.type==='theme') guideLivePaint(T, null); }
-  T.over=over; if(!over) return;
-  GUIDE.gravity.push(over.type); if(GUIDE.gravity.length>40) GUIDE.gravity.shift();
-  if(over.type!=='tab') over.el.classList.add('guide-drop');
-  if(over.type==='style' || over.type==='theme') guideLivePaint(T, over);
-  if(over.type==='tab' && over.el.getAttribute('aria-current')!=='page') over.el.click();   /* horizontal tab scrub */
-}
-/* live paint: a preview only (nothing saved); the app's own pick runs on release */
-function guideLivePaint(T, over){
-  const root=document.documentElement;
-  if(!T.paint) T.paint={style:root.getAttribute('data-style'), theme:S.theme};
-  if(root.getAttribute('data-style')!==T.paint.style) root.setAttribute('data-style', T.paint.style);
-  if(S.theme!==T.paint.theme){ S.theme=T.paint.theme; applyLook(); }
-  if(!over) return;
-  if(over.type==='style') root.setAttribute('data-style', over.v);
-  else if(over.type==='theme'){ S.theme=over.v; applyLook(); }
-}
-function guideSwallowClick(){
-  const until=performance.now()+450;
-  const h=e=>{ document.removeEventListener('click', h, true); if(performance.now()<until){ e.stopPropagation(); e.preventDefault(); } };
-  document.addEventListener('click', h, true); setTimeout(()=>document.removeEventListener('click', h, true), 470);
-}
-function guideTetherRelease(cancel){
-  const T=GUIDE.tether; if(!T) return;
-  const P=guideParams(), over=cancel?null:T.over, at={x:T.bx!=null?T.bx:T.x, y:T.by!=null?T.by:T.y-P.lift};
-  if(T.sc){ T.self=true; T.sc.value=String(T.v); T.sc.dispatchEvent(new Event('change', {bubbles:true})); T.self=false; GUIDE.scrubs++; T.scrubEnd=performance.now(); GUIDE.lastScrubEnd=T.scrubEnd; }
-  let act=null;
-  if(over) over.el.classList.remove('guide-drop');
-  if(over && over.type==='style'){ T.paint=null; over.el.click(); act='style'; }
-  else if(over && over.type==='theme'){ if(T.paint) S.theme=T.paint.theme; T.paint=null; over.el.click(); act='theme'; }
-  else if(T.paint){ guideLivePaint(T, null); T.paint=null; }
-  if(over && over.type==='search'){ act='search'; GUIDE.pours++; GUIDE.pourFrom=at; }
-  if(over && over.type==='book'){ act='book'; GUIDE.pours++; }
-  if(over && over.type==='tab') act='tab';
-  guideTetherEnd(false, at, act, over);
-}
-function guideTetherEnd(instant, at, act, over){
-  guideTetherCancel();
-  const T=GUIDE.tether; if(!T) return;
-  if(T.raf) cancelAnimationFrame(T.raf); GUIDE.tether=null; GUIDE.lastFrameT=0;
-  document.removeEventListener('touchmove', guideTouchBlock, {capture:true});
-  document.documentElement.classList.remove('guide-tether');
-  if(GUIDE.tetherPath){ GUIDE.tetherPath.setAttribute('d',''); GUIDE.tetherPath.removeAttribute('filter'); }
-  if(T.over) T.over.el.classList.remove('guide-drop');
-  if(T.paint){ guideLivePaint(T, null); T.paint=null; }
-  if(instant){ if(GUIDE.main) guideBodyQuiet(GUIDE.main, null); return; }
-  guideSwallowClick();
-  const P=guideParams(), b=GUIDE.main;
-  if(act==='book' && over){ /* it pours into the cover, then the book opens and it comes up in the reader */
-    if(b && P.fly){ const r=over.el.getBoundingClientRect(), c={x:r.left+r.width/2, y:r.top+Math.min(r.height/2, 60)};
-      const pl=guidePlan(at, c, P, {kind:'pour', r:P.size/2, T:P.T*.55, rT:5, hover:true, settle:.04}); guidePlay(b, pl, P, {});
-      GUIDE.lifted=true; GUIDE.flying=true; GUIDE.liftT0=performance.now(); GUIDE.holdT0=0; if(GUIDE.layer) GUIDE.layer.dataset.at='flight';
-      clearTimeout(GUIDE.liftTimer); GUIDE.liftTimer=setTimeout(()=>{ if(GUIDE.lifted) guideScreen(); }, 1600); }
-    const id=over.id; setTimeout(()=>{ try{ openDoc(id); }catch(e){} }, P.fly?120:0);
-    return;
-  }
-  if(act==='search' && over){ if(b) guideBodyQuiet(b, null); if(GUIDE.rest) guideRest(GUIDE.rest.t, GUIDE.rest.b); over.el.focus(); return; }
-  guideTetherHomeFly(at);
-}
-/* release: the blob springs home along its strand (one baked flight, then still) */
-function guideTetherHomeFly(at){
-  const P=guideParams(), b=GUIDE.main;
-  const v=$('#v-reader'), r=(v && !v.hidden) ? (guideReaderTarget() && {t:guideReaderTarget(), b:guideBox(guideReaderTarget())}) : GUIDE.rest;
-  if(!r || !r.b){ if(b) guideBodyQuiet(b, null); guideScreen({snap:true}); return; }
-  if(!b || !P.fly){ if(b) guideBodyQuiet(b, null); guideRest(r.t, r.b); return; }
-  const home=guideC(r.b), tok=++GUIDE.token, start=performance.now();
-  guideBodyStop(b); b.c={x:at.x, y:at.y}; b.v={x:0,y:0}; b.op=1;
-  const len=Math.hypot(home.x-at.x, home.y-at.y);
-  guideColour(b, r.b); b.tgt={el:r.t.el, kind:r.t.kind};
-  const pl=guidePlan(at, home, P, {kind:'home', r:P.size/2, T:P.T*.8, settle:P.settle*(1+P.tjig*.6), mould:guideOutline(r.b.w, r.b.h, guideRadPx(r.b)),
-    rT:r.b.fill?P.size/2:Math.max(2, Math.min(P.size/2, Math.min(r.b.w,r.b.h)/2)), strand:{a:{x:home.x, y:home.y}, ra:Math.max(1.2,P.tw), snap:len+60}});
-  if(r.b.fill) guideOff(r.t.el, true);
-  GUIDE.flying=true; GUIDE.flyTo={el:r.t.el, b:r.b, p:null}; if(GUIDE.layer) GUIDE.layer.dataset.at='flight';
-  const sim=guidePlay(b, pl, P, {onArrive:()=>{ if(tok===GUIDE.token && r.b.fill) guideInkOn(b, r.t.el); }, onFill:()=>{ if(tok===GUIDE.token && r.b.fill) guideOff(r.t.el, false); },
-    onEnd:(body)=>guideHandOff(r.t, r.b, tok, body, {start, hold:0, launch:start, sim})});
-}
 /* test/diagnostic view of the guide */
 function guideState(){
   const L=GUIDE.layer; if(!L) return {on:GUIDE.on, layers:document.querySelectorAll('#guide').length};
@@ -7172,8 +6972,8 @@ function guideState(){
     bodies:GUIDE.bodies.length, strands:GUIDE.bodies.filter(b=>(b.strand.getAttribute('d')||'').length>2).length, playing:GUIDE.bodies.filter(b=>b.anim).length, raf:!!GUIDE.raf, rafCount:GUIDE.rafCount, snaps:GUIDE.snaps,
     nudges:GUIDE.nudges, pulses:GUIDE.pulses, under:document.documentElement.classList.contains('guide-under'), pe:getComputedStyle(L).pointerEvents, aria:L.getAttribute('aria-hidden'),
     svgs:L.querySelectorAll('svg').length, pool:GUIDE.pool.length, poolFree:GUIDE.pool.filter(b=>b.free).length, kids:GUIDE.kids.size, goo:GUIDE.bodies.some(b=>b.goo), gooTrips:GUIDE.gooTrips, gooBlocked:guideGooBlocked(),
-    tether:GUIDE.tether?{kind:GUIDE.tether.kind, over:GUIDE.tether.over?GUIDE.tether.over.type:'', sens:GUIDE.tether.sens}:null, focus:GUIDE.focusEl?GUIDE.focusEl.id:'', waits:GUIDE.waits.size,
-    wave:{waves:GUIDE.wave.waves, sent:GUIDE.wave.sent, faded:GUIDE.wave.faded, maxWave:GUIDE.wave.maxWave}, transfers:GUIDE.transfers, settles:GUIDE.settles, traces:GUIDE.traces, unzips:GUIDE.unzips, pours:GUIDE.pours};
+    waits:GUIDE.waits.size,
+    wave:{waves:GUIDE.wave.waves, sent:GUIDE.wave.sent, faded:GUIDE.wave.faded, maxWave:GUIDE.wave.maxWave}, transfers:GUIDE.transfers, settles:GUIDE.settles};
 }
 (function bindGuide(){
   const ready=()=>{
@@ -7185,31 +6985,19 @@ function guideState(){
     }, {capture:true, passive:true});
     document.addEventListener('pointerdown', e=>{
       guideIdleReset();
-      const r=GUIDE.rest; if(r && e.target && (r.t.el===e.target || (r.t.el.contains && r.t.el.contains(e.target)))) guidePulse();
+      const r=GUIDE.rest, hit=el=>el && e.target && (el===e.target || (el.contains && el.contains(e.target)));
+      if(r && hit(r.t.el)) guidePulse(); else { const x=GUIDE.extras.find(x=>x.t.kind==='fill' && !x.body && hit(x.t.el)); if(x) guidePulse(x); }
     }, {capture:true, passive:true});
     for(const ev of ['keydown','wheel','touchstart','scroll']) document.addEventListener(ev, guideIdleReset, {capture:true, passive:true});
-    /* v40: hold-to-tether, option transfers, focus wraps, scroll waves (all passive; the tether's touchmove blocker is
-       added only while a grab point is held, and only blocks once the hold has started) */
-    document.addEventListener('pointerdown', e=>{ guideXferDown(e); guideTetherDown(e); }, {capture:true, passive:true});
-    document.addEventListener('pointermove', guideTetherMove, {capture:true, passive:true});
-    document.addEventListener('pointerup', guideTetherUp, {capture:true, passive:true});
-    document.addEventListener('pointercancel', guideTetherUp, {capture:true, passive:true});
-    document.addEventListener('contextmenu', e=>{ if(GUIDE.tether || GUIDE.pend) e.preventDefault(); }, true);
+    /* v40: option transfers and scroll waves (passive listeners only; nothing here ever blocks a touch or a scroll) */
+    document.addEventListener('pointerdown', guideXferDown, {capture:true, passive:true});
     document.addEventListener('click', e=>{ if(e.target && e.target.closest && e.target.closest(GUIDE_OPT)) guideXferClick(); }, {capture:true, passive:true});
-    document.addEventListener('focusin', e=>{ const t=e.target; if(t && t.matches && t.matches(GUIDE_FINDS)) guideFocusOn(t); }, true);
-    document.addEventListener('focusout', e=>{ const t=e.target; if(t && t===GUIDE.focusEl) guideFocusOff(false); }, true);
-    document.addEventListener('scroll', e=>{ guideWaveScroll(e); if(GUIDE.focusEl) guideFocusSync(); }, {capture:true, passive:true});
-    if(window.visualViewport) visualViewport.addEventListener('resize', ()=>{ if(GUIDE.focusEl) guideFocusSync(); });
-    /* the scrubber held on the tether: the native drag never fights the fine scrub */
-    document.addEventListener('input', e=>{ const T=GUIDE.tether; if(T && T.sc && e.target===T.sc && !T.self){ T.sc.value=String(T.v); } }, true);
-    document.addEventListener('change', e=>{ const T=GUIDE.tether, sc=$('#rScrub'); if(!sc || e.target!==sc) return;
-      if(T && T.sc && !T.self) e.stopImmediatePropagation(); else if(!T && e.isTrusted && GUIDE.lastScrubEnd && performance.now()-GUIDE.lastScrubEnd<250) e.stopImmediatePropagation(); }, true);
+    document.addEventListener('scroll', guideWaveScroll, {capture:true, passive:true});
     /* a user's own tap on a control means it is already "seen" (no droplet re-fills it) */
     document.addEventListener('click', e=>{ const c=e.target && e.target.closest && e.target.closest('button,input,[role="radio"]'); if(c){ GUIDE.seen.add(c); const f=c.querySelector && c.querySelector('[data-accent-fill]'); if(f) GUIDE.seen.add(f); } }, {capture:true, passive:true});
     /* it steps aside (opacity 0) under anything that sits on top: a sheet, the selection bar, the image viewer, the
        "Back to where you were" chip and toasts. A class, set from their own open/close (no :has(), so iOS < 15.4 too). */
-    /* v40: the "Back to where you were" chip is where it rests (Tethered Return), and a toast hides it only where they
-       actually overlap */
+    /* v40: a toast hides it only where they actually overlap */
     const toastOver=()=>{
       const t=document.getElementById('toast'); if(!t || t.hidden) return false; const a=guideStillRect(t); if(!a.width) return false;
       const rs=[]; if(GUIDE.rest) rs.push(GUIDE.rest.b); if(GUIDE.flying && GUIDE.flyTo && GUIDE.flyTo.b) rs.push(GUIDE.flyTo.b);
@@ -7218,7 +7006,7 @@ function guideState(){
     };
     const under=()=>{
       const vis=id=>{ const e=document.getElementById(id); return !!(e && !e.hidden); };
-      const on=vis('sheet') || vis('selBar') || !!document.getElementById('imgOverlay') || toastOver();
+      const on=vis('sheet') || vis('selBar') || !!document.getElementById('imgOverlay') || vis('backPill') || toastOver();
       document.documentElement.classList.toggle('guide-under', on);
     };
     GUIDE.under=under;
@@ -7226,7 +7014,7 @@ function guideState(){
     new MutationObserver(under).observe(document.body, {childList:true});
     under();
     /* resize and rotation re-snap it (rects are measured again once, after the layout settles) */
-    let rt=0; const resnap=()=>{ cancelAnimationFrame(rt); rt=requestAnimationFrame(()=>requestAnimationFrame(()=>{ GUIDE.safe=null; if(GUIDE.focusEl) guideFocusSync(); if(GUIDE.tether) return; if(!GUIDE.flying && !GUIDE.lifted) guideScreen({snap:true}); else guideScreen(); })); };
+    let rt=0; const resnap=()=>{ cancelAnimationFrame(rt); rt=requestAnimationFrame(()=>requestAnimationFrame(()=>{ GUIDE.safe=null; if(!GUIDE.flying && !GUIDE.lifted) guideScreen({snap:true}); else guideScreen(); })); };
     window.addEventListener('resize', resnap); window.addEventListener('orientationchange', resnap);
     /* the library re-rendering (a Style switch, the first render, an empty shelf) snaps it into place: the real fill
        shows at once, no flight. Only navigation flies. */
@@ -7263,19 +7051,6 @@ function guideState(){
         if(!bar.hidden){ const p=$('#ttsPlay'); if(p && guideParams().fly) guideOff(p, true); } /* Play's own fill stays off from the pill's first frame until the blob lands */
         if(!v.hidden && R.meta) later(null);
       }).observe(bar, {attributes:true, attributeFilter:['hidden']});
-      /* Tethered Return: when "Back to where you were" shows, it settles still on it (a calm fade); tapping Back springs it
-         back to your reading strip, dismissing it (or the chip timing out) returns calmly */
-      const bp=$('#backPill'); let bpWas=bp?bp.hidden:true;
-      if(bp){
-        new MutationObserver(()=>{
-          if(bp.hidden===bpWas) return; bpWas=bp.hidden; if(v.hidden || !R.meta) return;
-          const how=GUIDE.backHow; GUIDE.backHow='';
-          later(bp.hidden && how==='go' ? null : {fade:true});
-        }).observe(bp, {attributes:true, attributeFilter:['hidden']});
-        const bg=$('#backGo'), bx=$('#backX');
-        if(bg) bg.addEventListener('click', ()=>{ GUIDE.backHow='go'; }, {capture:true, passive:true});
-        if(bx) bx.addEventListener('click', ()=>{ GUIDE.backHow='x'; }, {capture:true, passive:true});
-      }
       /* your progress: on a page turn the faint mark is put at the new place instantly (no motion) */
       const foot=$('#runFoot');
       if(foot) new MutationObserver(()=>{

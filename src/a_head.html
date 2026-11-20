@@ -846,35 +846,57 @@ button:active:not(:disabled),.doc:active,.switch:active:not(:disabled){scale:var
 /* applying a style: a short crossfade (used when the browser has no view transitions) */
 :root.style-xfade *{transition:background-color 250ms ease,color 250ms ease,border-color 250ms ease,box-shadow 250ms ease,border-radius 250ms ease !important}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:250ms;animation-timing-function:ease}
-/* ---------- the Guide (v39): one soft-body accent character where you look or tap next ----------
+/* ---------- the Guide (v40, Living Substance): the Style's accent as one liquid ----------
    Its temperament per Style lives here only; l_guide.js reads these once per flight and has no per-Style code.
-   anticip/travel: wind-up and flight times (anticipation + flight + landing stays under ~550ms); stiffness/damping: the
-   outline springs (low damping = more jiggle); wobble: membrane; squash: wind-up and impact; jiggles: landing wobbles;
-   stretch: with speed; arc: path bow; overshoot: past the target before settling. */
-[data-style="quiet"]{--guide-anticip:70ms; --guide-travel:215ms; --guide-settle:110ms; --guide-stiffness:700; --guide-damping:.55; --guide-wobble:.03; --guide-squash:.14; --guide-jiggles:1; --guide-stretch:.25; --guide-arc:.12; --guide-overshoot:.6}
-[data-style="paper"]{--guide-anticip:100ms; --guide-travel:225ms; --guide-settle:110ms; --guide-stiffness:480; --guide-damping:.8; --guide-wobble:.008; --guide-squash:.26; --guide-jiggles:1; --guide-stretch:.16; --guide-arc:.08; --guide-overshoot:.12}
-[data-style="lively"]{--guide-anticip:90ms; --guide-travel:205ms; --guide-settle:150ms; --guide-stiffness:1300; --guide-damping:.17; --guide-wobble:.09; --guide-squash:.42; --guide-jiggles:3; --guide-stretch:.6; --guide-arc:.2; --guide-overshoot:1.5;
+   anticip/travel: wind-up and flight times; weight: extra travel for a heavier ink (Paper); stiffness/damping: the
+   outline springs (low damping = more jiggle); wobble: membrane; squash: wind-up and impact (landing flatten); jiggles:
+   landing wobbles; stretch: with speed; curve: the stretch cap (outline long/short axis while flying); arc: path bow;
+   overshoot: past the target before settling (0 = no bounce); xfade: colour crossfade over the wake; tether-*/sag:
+   the strand (hairline, ribbon, taffy); trace: how long a border trace takes. */
+[data-style="quiet"]{--guide-anticip:70ms; --guide-travel:215ms; --guide-weight:0ms; --guide-settle:110ms; --guide-stiffness:700; --guide-damping:.85; --guide-wobble:.02; --guide-squash:.12; --guide-jiggles:1; --guide-stretch:.22; --guide-curve:1.6; --guide-arc:.1; --guide-overshoot:0; --guide-xfade:0ms;
+  --guide-tether-w:1.2; --guide-tether-op:.5; --guide-sag:0; --guide-tether-jiggle:0; --guide-trace:200ms}
+[data-style="paper"]{--guide-anticip:100ms; --guide-travel:200ms; --guide-weight:75ms; --guide-settle:110ms; --guide-stiffness:480; --guide-damping:.9; --guide-wobble:.006; --guide-squash:.32; --guide-jiggles:1; --guide-stretch:.16; --guide-curve:2; --guide-arc:.07; --guide-overshoot:0; --guide-xfade:0ms;
+  --guide-tether-w:3; --guide-tether-op:.85; --guide-sag:14; --guide-tether-jiggle:0; --guide-trace:275ms}
+[data-style="lively"]{--guide-anticip:90ms; --guide-travel:205ms; --guide-weight:0ms; --guide-settle:150ms; --guide-stiffness:1300; --guide-damping:.17; --guide-wobble:.09; --guide-squash:.42; --guide-jiggles:3; --guide-stretch:.6; --guide-curve:3.4; --guide-arc:.2; --guide-overshoot:1.5; --guide-xfade:120ms;
+  --guide-tether-w:2.4; --guide-tether-op:1; --guide-sag:4; --guide-tether-jiggle:1; --guide-trace:240ms;
   --guide-mark:var(--chrome-on,var(--accent))} /* the resting mark on a light page keeps 3:1 like the other coral controls */
-:root{--guide-size:26px; --guide-fly:1; --guide-fade:160ms; --guide-strip-op:.42; --guide-thumb:16px}
+:root{--guide-size:26px; --guide-fly:1; --guide-fade:160ms; --guide-strip-op:.42; --guide-thumb:16px; --guide-hold:240ms; --guide-lift:52px}
 @supports (-webkit-touch-callout:none){ :root{--guide-thumb:28px} } /* iOS draws a bigger range thumb */
 @media (prefers-reduced-motion: reduce){ :root,[data-style]{--guide-fly:0 !important} }
-#guide{position:fixed;inset:0;z-index:20001;pointer-events:none;overflow:hidden;contain:strict;transition:opacity 160ms ease-out}
+#guide{position:fixed;inset:0;z-index:20001;pointer-events:none;overflow:hidden;contain:strict;transition:opacity 160ms ease-out;view-transition-name:tooz-guide}
+/* a Style switch's view transition never freezes the liquid: the layer stays live, uncrossfaded */
+::view-transition-group(tooz-guide){animation:none}
+::view-transition-old(tooz-guide){display:none}
+::view-transition-new(tooz-guide){animation:none}
 #guide .gpos{position:absolute;left:0;top:0;width:26px;height:26px;will-change:transform;pointer-events:none}
 #guide .gbody{position:absolute;inset:0;display:block;border-radius:50%;background:var(--accent);opacity:0;transform-origin:50% 50%}
 #guide .gshape .gbody{background:var(--guide-mark,var(--accent))}
 #guide .gring .gbody{background:transparent;box-shadow:0 0 0 2px var(--accent)}
-#guide .gdefs{position:absolute;width:0;height:0}
-/* the character: an SVG outline in a wrapper that only ever moves by transform and opacity */
-#guide .gbod{position:absolute;left:0;top:0;width:1px;height:1px;will-change:transform,opacity;pointer-events:none;opacity:0}
-#guide .gsvg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+/* the one liquid layer: a fixed viewport SVG; each body is a <g> that only moves by transform and opacity */
+#guide .gsvg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+#guide .gbod{will-change:transform,opacity;opacity:0}
 #guide .gblob,#guide .gstrand{fill:var(--guide-mark,var(--accent))}
+#guide .gtether{fill:var(--guide-mark,var(--accent));opacity:var(--guide-tether-op)}
+#guide .gfocus{fill:none;stroke:var(--accent);stroke-width:2;opacity:0;stroke-linecap:round}
+/* ink floats on the liquid: label copies sit above a filling blob */
+#guide .ginks{position:absolute;inset:0;pointer-events:none}
+#guide .gink{position:absolute;left:0;top:0;box-sizing:border-box;margin:0;border-style:solid;border-color:transparent;background:transparent;opacity:0;pointer-events:none;overflow:hidden}
+#guide .gink svg{color:inherit}
+#guide .gsafe{position:absolute;left:0;top:0;width:0;height:0;visibility:hidden;padding:0 env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 /* the progress mark you read beside stays faint: low contrast, but there */
 #guide[data-at="strip"] .gshape{opacity:var(--guide-strip-op)}
 /* while the blob is on its way, the button it left or is heading for shows no fill of its own (one accent blob only);
-   its label keeps full ink */
-.guide-off{background-color:transparent !important;border-color:color-mix(in srgb,currentColor 22%,transparent) !important;box-shadow:none !important;color:var(--ink) !important}
+   its label keeps full ink. guide-wait: an accent scrolling into view, waiting for its droplet. */
+.guide-off,.guide-wait{background-color:transparent !important;border-color:color-mix(in srgb,currentColor 22%,transparent) !important;box-shadow:none !important;color:var(--ink) !important}
 #v-reader .guide-off,#tour .guide-off{color:var(--page-ink,var(--ink)) !important}
 #v-reader .guide-off svg,#tour .guide-off svg,.guide-off svg{color:inherit}
+/* the read-aloud Play button while its blob is on the way: it takes the pill's own colour and the pill's contrasting
+   ink, so the triangle stays readable (never page ink on a dark fill) */
+#ttsBar .icon-btn.play.guide-off{background-color:color-mix(in srgb,var(--page-bg) 94%,var(--page-ink)) !important;color:var(--page-ink) !important}
+.switch.guide-wait,.switch.guide-off{background:var(--line) !important}
+/* an accent that skips the droplet (a fast fling, Reduce Motion): a quick fade */
+@keyframes guideFadeIn{from{background-color:transparent;border-color:transparent;box-shadow:none}}
+.guide-fadein{animation:guideFadeIn 140ms ease-out}
 /* it steps aside under anything that sits on top of the screen (class set by l_guide.js) */
 html.guide-under #guide{opacity:0}
 /* Settings: the Style picker */
