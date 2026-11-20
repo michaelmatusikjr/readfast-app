@@ -476,7 +476,10 @@ async function tourRunStep(n){
     if(tok!==TOUR.token) return;
     tourSay('Search and notes live here.');
     tourSpot(ico, 10);
-    /* two places at once: the Guide goes to the icon, then splits to the two rows it opens */
+    /* two places at once: the Guide goes to the icon, then splits to the two rows it opens; measured only once the
+       top bar's slide-in and the panel's entrance have settled (never mid-transition) */
+    if(typeof guideSettled==='function') await guideSettled([ico, peek, top], 1000);
+    if(tok!==TOUR.token) return;
     typeof guideTour==='function' && guideTour([{el:ico, kind:'mark'}, ...[...document.querySelectorAll('#tourPeek .tour-peek-row')].map(el=>({el, kind:'mark'}))]);
   }
 

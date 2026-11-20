@@ -1,7 +1,7 @@
 /* ---------- version and what's new ---------- */
-const APP_VERSION='2026.11.19.39-guide';
+const APP_VERSION='2026.11.19.40-source-blob';
 const WHATSNEW=[
-  ['Meet the Guide','Your Style’s accent colour is now a small soft character that sits where you’d look or tap next. On the shelf it is the Continue button. Tap Continue and it squashes, peels off with a little sticky strand, hops into the book and lands with a jiggle as the faint progress mark at the bottom (or the Play button when read aloud is open). It never sits on the words, never wanders while you read, and only nudges once if you seem stuck on a screen. Go back and it hops home to Continue. In the first-run tour it splits into droplets to point at a few things, then merges again. Quiet is shy, Paper is heavy, Lively is bouncy; with Reduce Motion it simply fades. Your pages and place are unchanged.'],
+  ['Living accent','Your Style’s accent is now one living liquid. It rests on the tab bar at the bottom, and little droplets bud off it to fill Continue and the switches and buttons that are on as you scroll to them. Pick another option and the colour hops straight across to it, with the label always crisp on top. Quiet glides softly, Paper moves like heavy ink and Lively bounces. While you read it stays perfectly still, and if a book is slow to open it simply settles in. Your pages and place in the book never change.'],
   ['Pick a Style','Settings now starts with three Styles. Quiet (calm and still, the one you have now), Paper (tactile and warm) and Lively (bouncy and bright) each change how Tooz looks, how buttons feel and how sheets and controls move. Picking one also picks a page colour to suit it; you can still change the page colour in Aa. Your pages, text and place in the book stay exactly the same.']
 ];
 function whatsNewSheet(){

@@ -226,6 +226,7 @@ function pgApplyGeom(){
    text settings; sections not measured yet are estimated from the ones that are */
 const PC={sig:'', counts:[], token:0, fontGen:0};
 function pcSync(){
+  if(!R.meta) return; /* the book closed while openDoc was still entering its mode (Back mid-open): nothing to count */
   const g=P.g; const sig=[R.meta.id,R.SEC.length,g.W,g.H,g.two,S.size,S.lineH,S.margin,S.para,S.justify,S.hyphen,S.boldText,S.wordStart,S.font,R.bookFamily,S.focus,PC.fontGen].join('|');
   if(sig===PC.sig && PC.counts.length===R.SEC.length) return;
   /* Keep the last measured counts as a fallback so bookPages().total does not
@@ -908,8 +909,9 @@ async function openDoc(id){
   showView('reader'); applyLook(); setChrome(true);
   await new Promise(r=>requestAnimationFrame(r));
   await fontsReady(1500);
+  if(R.meta!==meta) return false; /* Back (or another book) while this one was still loading: don't lay out a closed book */
   try{ await switchMode(S.mode); }
-  catch(e){ console.error(e); toast('Something went wrong opening this book.', null, 6000); }
+  catch(e){ if(R.meta===meta){ console.error(e); toast('Something went wrong opening this book.', null, 6000); } }
   finally{ if(big && $('#toastMsg').textContent.startsWith('Opening')) $('#toast').hidden=true; }
   resetClock(); updateChrome();
   if(typeof guideScreen==='function') requestAnimationFrame(()=>guideScreen()); /* the Guide flies to its spot in the reader */
@@ -1887,7 +1889,7 @@ const LAYOUT_KEYS=new Set(['font','size','lineH','margin','para','justify','hyph
 const REPANEL_KEYS=new Set(['mode','autoScroll','nightAuto','ramp','multi']);
 const pRange=(key,label,min,max,step,desc)=>`<div class="set"><div class="hd"><label for="o_${key}">${label}</label><span class="val" data-val="${key}">${FMT[key]?FMT[key](S[key]):S[key]}</span></div><input type="range" id="o_${key}" data-set="${key}" data-type="range" min="${min}" max="${max}" step="${step}" value="${S[key]}">${desc?`<div class="desc">${desc}</div>`:''}</div>`;
 const pToggle=(key,label,desc)=>`<div class="set"><div class="hd"><label for="o_${key}">${label}</label><input type="checkbox" class="switch" id="o_${key}" data-set="${key}" data-type="toggle"${S[key]?' checked':''}></div>${desc?`<div class="desc">${desc}</div>`:''}</div>`;
-const pSeg=(key,opts,label,desc)=>`<div class="set">${label?`<div class="hd"><label>${label}</label></div>`:''}<div class="seg" data-set="${key}" data-type="seg">${opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(S[key])===String(v)}">${l}</button>`).join('')}</div>${desc?`<div class="desc">${desc}</div>`:''}</div>`;
+const pSeg=(key,opts,label,desc)=>`<div class="set">${label?`<div class="hd"><label>${label}</label></div>`:''}<div class="seg" data-set="${key}" data-type="seg" data-accent-group="${key}">${opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(S[key])===String(v)}">${l}</button>`).join('')}</div>${desc?`<div class="desc">${desc}</div>`:''}</div>`;
 function fontGrid(key){
   key=key||'font';
   /* "Book's font" appears only when this book brings its own font; otherwise "original" means Literata */
@@ -1900,7 +1902,7 @@ function fontGrid(key){
     const note= k==='original'? esc(String(bookName||fam).replace(/[-_]+/g,' ').slice(0,20)) : f.note;
     return `<button class="chip${k==='opendyslexic'?' wide':''}" type="button" data-v="${k}" aria-pressed="${cur===k}" style="font-family:${esc(css)}">${label}<small>${note}</small></button>`;
   });
-  return `<div class="fontgrid" data-set="${key}" data-type="seg">${same}${tiles.join('')}</div>`;
+  return `<div class="fontgrid" data-set="${key}" data-type="seg" data-accent-group="${key}">${same}${tiles.join('')}</div>`;
 }
 /* the Aa sheet: the few things you change most, with the rest folded away underneath */
 const AAOPEN=new Set();
@@ -1909,7 +1911,7 @@ function quickFonts(key){
   const cur=(S[key]==='original' && !R.bookFamily)?'literata':S[key];
   const pick=[cur]; for(const k of ['literata','newyork','georgia','lexend','atkinson']){ if(pick.length>=4) break; if(k!==cur && FONTS[k]) pick.push(k); }
   if(key==='speedFont' && !pick.includes('same')) pick[pick.length-1]='same';
-  return `<div class="fontrow" data-set="${key}" data-type="seg">${pick.map(k=>{ const f=k==='same'?{label:'Same',css:fontCSS()}:k==='original'?{label:'Book’s',css:`"${R.bookFamily}",Georgia,serif`}:FONTS[k]; return `<button type="button" data-v="${k}" aria-pressed="${(key==='speedFont'?S.speedFont:cur)===k}" style="font-family:${esc(f.css)}">${k==='opendyslexic'?'Dyslexic':f.label}</button>`; }).join('')}</div>`;
+  return `<div class="fontrow" data-set="${key}" data-type="seg" data-accent-group="${key}">${pick.map(k=>{ const f=k==='same'?{label:'Same',css:fontCSS()}:k==='original'?{label:'Book’s',css:`"${R.bookFamily}",Georgia,serif`}:FONTS[k]; return `<button type="button" data-v="${k}" aria-pressed="${(key==='speedFont'?S.speedFont:cur)===k}" style="font-family:${esc(f.css)}">${k==='opendyslexic'?'Dyslexic':f.label}</button>`; }).join('')}</div>`;
 }
 function panelHTML(){
   const m=S.mode;
@@ -1922,7 +1924,7 @@ function panelHTML(){
   let h=`<div class="panel-sec">${pSeg('mode',[['pages','Pages'],['scroll','Scroll'],['speed','Speed']])}</div>
   <div class="panel-sec aaquick">
     ${sizeRow}
-    <div class="themes" data-set="theme" data-type="seg">${themeKeys.map(k=>`<button type="button" data-v="${k}" aria-pressed="${S.theme===k}" style="${swatch(k)}" aria-label="${k==='auto'?'Match phone':THEMES[k].label}">${aa(k)}</button>`).join('')}
+    <div class="themes" data-set="theme" data-type="seg" data-accent-group="theme">${themeKeys.map(k=>`<button type="button" data-v="${k}" aria-pressed="${S.theme===k}" style="${swatch(k)}" aria-label="${k==='auto'?'Match phone':THEMES[k].label}">${aa(k)}</button>`).join('')}
       <div class="lbl">${themeKeys.map(k=>`<span>${k==='auto'?'Phone':THEMES[k].label}</span>`).join('')}</div></div>
     ${quickFonts(m==='speed'?'speedFont':'font')}
   </div>`;
@@ -1939,7 +1941,7 @@ function panelHTML(){
       </div>`);
   } else {
     h+=fold('word','Word display',`${fontGrid('speedFont')}<div class="group">
-      <div class="set"><div class="hd"><label>Focus letter color</label></div><div class="chips" data-set="focusColor" data-type="seg" style="align-items:center">${COLORS.map(([n,c])=>`<button class="swatch" type="button" data-v="${c}" aria-label="${n}" aria-pressed="${S.focusColor.toLowerCase()===c.toLowerCase()}" style="background:${c}"></button>`).join('')}<label class="note" style="display:flex;align-items:center;gap:8px">Custom <input type="color" data-set="focusColor" data-type="text" value="${esc(S.focusColor)}"></label></div></div>
+      <div class="set"><div class="hd"><label>Focus letter color</label></div><div class="chips" data-set="focusColor" data-type="seg" data-accent-group="focusColor" style="align-items:center">${COLORS.map(([n,c])=>`<button class="swatch" type="button" data-v="${c}" aria-label="${n}" aria-pressed="${S.focusColor.toLowerCase()===c.toLowerCase()}" style="background:${c}"></button>`).join('')}<label class="note" style="display:flex;align-items:center;gap:8px">Custom <input type="color" data-set="focusColor" data-type="text" value="${esc(S.focusColor)}"></label></div></div>
       ${pToggle('context','Show the sentence when paused')}
       ${pToggle('boldText','Bold text')}
       </div>

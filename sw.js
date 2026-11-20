@@ -2,8 +2,8 @@
    - The app's own files: network first, so updates arrive right away; cached copy when offline.
    - The EPUB/PDF readers, fonts and the natural-voice engine: cached after first download, so they work offline.
    - Everything else (articles you load by link) is left alone. */
-const CACHE = 'tooz-v43';
-const APP_VERSION = '2026.11.19.39-guide';
+const CACHE = 'tooz-v44';
+const APP_VERSION = '2026.11.19.40-source-blob';
 const CORE = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-512.png', 'piper-worker.js', 'mp3-worker.js'];
 const LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
