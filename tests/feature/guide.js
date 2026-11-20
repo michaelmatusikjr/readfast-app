@@ -653,8 +653,8 @@ const getRad=x=>x.split(' ')[0];
         showView('settings'); v.scrollTop=0; await sl(900);
         const s0=JSON.parse(JSON.stringify(guideState().wave)); const off0=document.querySelectorAll('.guide-off,.guide-wait').length;
         // slow scroll down to the chips (≈400px/s) → droplets, max 3 per wave, the rest fade
-        const target=fx.lastElementChild.offsetTop-v.clientHeight/2; 
-        await new Promise(res=>{ const f=()=>{ v.scrollTop=Math.min(target, v.scrollTop+7); if(v.scrollTop<target-1) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+        const target=Math.min(v.scrollHeight-v.clientHeight, fx.lastElementChild.offsetTop-v.clientHeight/2); /* never past the end (the loop must finish) */ 
+        await new Promise(res=>{ const f=()=>{ v.scrollTop=Math.min(target, v.scrollTop+7); if(v.scrollTop<target-1 && ++n7<600) requestAnimationFrame(f); else res(); }; let n7=0; requestAnimationFrame(f); });
         await sl(1400);
         const s1=JSON.parse(JSON.stringify(guideState().wave));
         // jiggle back and forth: once per visit, nothing new
@@ -662,7 +662,7 @@ const getRad=x=>x.split(' ')[0];
         const s2=JSON.parse(JSON.stringify(guideState().wave));
         // a new visit, fast fling (≈4000px/s) to the chips: they just fade in
         showView('library'); await sl(500); showView('settings'); v.scrollTop=0; await sl(700); const s3=JSON.parse(JSON.stringify(guideState().wave));
-        await new Promise(res=>{ const f=()=>{ v.scrollTop=Math.min(target, v.scrollTop+70); if(v.scrollTop<target-1) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+        await new Promise(res=>{ const f=()=>{ v.scrollTop=Math.min(target, v.scrollTop+70); if(v.scrollTop<target-1 && ++n8<200) requestAnimationFrame(f); else res(); }; let n8=0; requestAnimationFrame(f); });
         await sl(900); const s4=JSON.parse(JSON.stringify(guideState().wave));
         const left=document.querySelectorAll('.guide-off,.guide-wait').length; fx.remove(); v.scrollTop=0;
         return {s0, s1, s2, s3, s4, off0, left}; });
