@@ -158,7 +158,7 @@ function backPillGeom(){
     pillY0:+pr.top.toFixed(1), pillY1:+pr.bottom.toFixed(1), overlap, above: br.bottom<=pr.top+1};
 }
 
-const STY=['quiet','paper','lively'];
+const STY=process.env.STY?process.env.STY.split(','):['quiet','paper','lively'];
 function __rgba_node(s){ const m=String(s).match(/rgba?\(([^)]+)\)/); const p=m[1].split(/[ ,\/]+/).filter(Boolean).map(Number); return {r:p[0],g:p[1],b:p[2]}; }
 const SUG={quiet:'paper', paper:'sepia', lively:'white'};
 const DAY={quiet:'white', paper:'sepia', lively:'white'}; /* QA v37c: theme auto's day page per Style */
@@ -253,7 +253,9 @@ const PAGE_HELPERS=()=>{
   window.__gRest=()=>{ /* the resting blob vs its target */
     const s=guideState(); const r=GUIDE.rest; if(!r) return {s};
     const tb=guideBox(r.t); const el=r.t.el; const er=stillRect(el);
-    return {s, tb, er:{x:er.left,y:er.top,w:er.width,h:er.height}, erad:getComputedStyle(el).borderRadius, kind:r.t.kind, id:el.id, cls:typeof el.className==='string'?el.className:''};
+    const g=document.querySelector('#v-library:not([hidden]) .hero-go');
+    return {s, tb, er:{x:er.left,y:er.top,w:er.width,h:er.height}, erad:getComputedStyle(el).borderRadius, kind:r.t.kind, id:el.id, cls:typeof el.className==='string'?el.className:'', tab:!!el.closest('#tabs'), tabName:el.dataset&&el.dataset.tab,
+      kid:g?{off:g.classList.contains('guide-off'), extra:GUIDE.extras.some(x=>x.t.el===g), bg:getComputedStyle(g).backgroundColor, real:guideRawBg(g), split:GUIDE.splitOn, ex:GUIDE.extras.map(x=>guideName(x.t.el)), fl:GUIDE.flights.slice(-2).map(f=>f.target+'/'+f.kind)}:null};
   };
 };
 const near=(a,b,t=1)=>Math.abs(a-b)<=t;
@@ -265,12 +267,13 @@ async function restCheck(pg, label, expect){
   ok(`${label}: one guide layer, pointer-events none, aria-hidden`, s.layers===1 && s.pe==='none' && s.aria==='true', {layers:s.layers, pe:s.pe, aria:s.aria});
   const one=(s.visible + (s.realFill?1:0))===1;
   ok(`${label}: exactly one accent blob on screen`, one, {visible:s.visible, realFill:s.realFill, at:s.at});
-  ok(`${label}: rests on ${expect}`, expect==='continue'?/hero-go/.test(r.cls):expect==='play'?r.id==='ttsPlay':expect==='thumb'?(r.id==='rScrub'&&r.kind==='thumb'):expect==='strip'?(r.id==='runFoot'&&r.kind==='strip'):true, {id:r.id, cls:r.cls, kind:r.kind});
+  ok(`${label}: rests on ${expect}`, expect==='tab'?(r.tab && r.kind==='mark' && r.tabName==='library'):expect==='continue'?/hero-go/.test(r.cls):expect==='play'?r.id==='ttsPlay':expect==='thumb'?(r.id==='rScrub'&&r.kind==='thumb'):expect==='strip'?(r.id==='runFoot'&&r.kind==='strip'):true, {id:r.id, cls:r.cls, kind:r.kind});
   ok(`${label}: blob matches the target box (±1px)`, rectMatch(s.shape.rect, r.tb), {shape:s.shape.rect, box:r.tb});
   ok(`${label}: the character is one SVG soft-body path of 8-12 points, asleep (no rAF)`, s.path && s.path.inSvg && s.path.n>=8 && s.path.n<=12 && s.bodies>=1 && !s.raf && s.strands===0, {path:s.path, bodies:s.bodies, raf:s.raf, strands:s.strands});
   if(r.tb && r.tb.fill){
     ok(`${label}: matches the button's rect and radius and hands off to its real fill`, rectMatch(s.shape.rect, r.er) && s.shape.rad===getRad(r.erad) && s.realFill && s.shape.op<.05, {shape:s.shape, er:r.er, erad:r.erad});
   }
+  if(expect==='tab') ok(`${label}: Continue is a child: its own real fill shows (no blob over it, one accent)`, r.kid && !r.kid.off && r.kid.extra && r.kid.bg===r.kid.real, r.kid);
   return r;
 }
 const getRad=x=>x.split(' ')[0];
@@ -280,9 +283,11 @@ const getRad=x=>x.split(' ')[0];
   const ctx = await b.newContext({ viewport:{width:390, height:844}, deviceScaleFactor:2, serviceWorkers:'block', hasTouch:true, isMobile:true,
     recordVideo:{dir:SHOTS+'/video', size:{width:390, height:844}} });
   await ctx.addInitScript(voiceMock);
-  const errs=[];
+  await ctx.addInitScript(()=>{ window.__gListen=[]; const ae=EventTarget.prototype.addEventListener; EventTarget.prototype.addEventListener=function(t,f,o){ try{ if(/^(touchstart|touchmove|wheel|scroll)$/.test(t)) window.__gListen.push({type:t, passive:!!(o&&typeof o==='object'&&o.passive), stack:String(new Error().stack)}); }catch(e){} return ae.call(this,t,f,o); }; });
+  const errs=[], fav404=[];
   const pg = await ctx.newPage();
   pg.on('pageerror', e=>errs.push('page '+e.message));
+  pg.on('response', r=>{ if(/favicon/.test(r.url()) && r.status()>=400) fav404.push(r.url()); });
   pg.on('console', m=>{ if(m.type()==='error' && !/ERR_TUNNEL|ERR_FAILED|ERR_CONNECTION|Failed to load resource/.test(m.text())) errs.push('console '+m.text()); });
   await pg.goto(URL, {waitUntil:'domcontentloaded'});
   await pg.waitForFunction(()=> typeof renderLibrary==='function' && typeof guideTo==='function', {timeout:20000});
@@ -290,7 +295,7 @@ const getRad=x=>x.split(' ')[0];
   await pg.evaluate(()=>{ try{ tourEnd(); }catch(e){} try{ closeSheet(); }catch(e){} });
   await pg.evaluate(PAGE_HELPERS);
   const v=await pg.evaluate(()=>({v:APP_VERSION, html:$('#htmlVer')&&$('#htmlVer').textContent}));
-  ok('version 2026.11.19.39-guide and HTML stamp v18.39', v.v==='2026.11.19.39-guide' && /v18\.39/.test(v.html||''), v);
+  ok('version 2026.11.19.40-source-blob and HTML stamp v18.40', v.v==='2026.11.19.40-source-blob' && /v18\.40/.test(v.html||''), v);
   await seedBook(pg);
   const fpsAll={}, restStats={}, flightStats={}, dwellStats={}, DWELL_N=24;
 
@@ -300,7 +305,7 @@ const getRad=x=>x.split(' ')[0];
     await pg.evaluate(()=>{ document.scrollingElement.scrollTop=0; const l=$('#v-library'); if(l) l.scrollTop=0; guideScreen({snap:true}); });
     await wait(150);
     // a. library rest
-    await restCheck(pg, `${sty} library`, 'continue');
+    await restCheck(pg, `${sty} library`, 'tab');
     // a2. at rest it is still: no rAF callbacks at all
     { const z=await pg.evaluate(()=>new Promise(r=>{ const c0=GUIDE.rafCount; let g=0; const raf0=window.requestAnimationFrame; window.requestAnimationFrame=function(f){ g++; return raf0.call(window,f); };
         setTimeout(()=>{ window.requestAnimationFrame=raf0; r({guide:GUIDE.rafCount-c0, pending:!!GUIDE.raf, all:g}); }, 1500); }));
@@ -385,12 +390,13 @@ const getRad=x=>x.split(' ')[0];
     const bs=pg.evaluate(()=>__gSample(1100)), bd=pg.evaluate(()=>__gDwell(1100));
     await pg.click('#rBack');
     const bsr=await bs, BD=await bd; await settle(pg, 200);
-    const FB=await pg.evaluate(()=>GUIDE.flights.filter(f=>/hero-go/.test(f.target)).slice(-1)[0]);
-    flightStats[sty+' back']={total:FB?Math.round(FB.arrive-FB.start):null, toRest:FB?Math.round(FB.rest-FB.start):null};
-    ok(`${sty}: flight back to Continue under 550ms`, FB && FB.arrive-FB.start<550, flightStats[sty+' back']);
+    const FB=await pg.evaluate(()=>GUIDE.flights.filter(f=>f.target==='tab:library').slice(-1)[0]);
+    const KB=await pg.evaluate(()=>GUIDE.kidLog.filter(k=>/hero-go/.test(k.target)).slice(-1)[0]);
+    flightStats[sty+' back']={total:FB?Math.round(FB.arrive-FB.start):null, toRest:FB?Math.round(FB.rest-FB.start):null, child:KB&&KB.fill?Math.round(KB.fill-FB.start):null};
+    ok(`${sty}: Back: the Source flies home to the Library tab under 550ms, and a child pours into Continue (handed off under 550ms)`, FB && FB.arrive-FB.start<550 && KB && KB.fill && KB.fill-FB.start<550 && KB.ok, flightStats[sty+' back']);
     dwellStats[sty+' back']={frames:BD.frames, overFrames:BD.over, maxConsecutive:BD.maxRun, slowOverFrames:BD.slowOver};
     ok(`${sty}: the flight back never pauses over the text`, BD.maxRun<=DWELL_N && BD.slowOver===0, dwellStats[sty+' back']);
-    await restCheck(pg, `${sty} back in the library`, 'continue');
+    await restCheck(pg, `${sty} back in the library`, 'tab');
     ok(`${sty}: the flight back is transform/opacity only, and the buttons' own fills stay hidden in flight (one accent blob)`, bsr.props.every(p=>p==='transform'||p==='opacity') && bsr.props.length>0 && bsr.dup===0 && bsr.flyFrames>3, {props:bsr.props, dup:bsr.dup, flyFrames:bsr.flyFrames});
     const dts=bsr.dt.slice(1); fpsAll[sty]={frames:dts.length, avg:+(dts.reduce((a,b)=>a+b,0)/dts.length).toFixed(2), max:+Math.max(...dts).toFixed(1), over20:dts.filter(x=>x>20).length};
     // e. taps during a flight still work and the blob retargets
@@ -416,7 +422,7 @@ const getRad=x=>x.split(' ')[0];
     await pg.evaluate(()=>closeReader(true)); await settle(pg, 900);
     await pg.setViewportSize({width:360, height:780}); await wait(900); await settle(pg, 300);
     const rl=await pg.evaluate(()=>__gRest());
-    ok(`${sty}: resizing re-snaps the blob onto Continue`, /hero-go/.test(rl.cls) && rectMatch(rl.s.shape.rect, rl.er), {shape:rl.s.shape.rect, er:rl.er});
+    ok(`${sty}: resizing re-snaps the blob onto the Library tab (Continue keeps its real fill)`, rl.tab && rectMatch(rl.s.shape.rect, rl.tb) && rl.kid && !rl.kid.off, {shape:rl.s.shape.rect, tb:rl.tb, kid:rl.kid});
     await pg.setViewportSize({width:390, height:844}); await wait(700); await settle(pg, 300);
   }
 
@@ -449,7 +455,7 @@ const getRad=x=>x.split(' ')[0];
     ok(`${sty} tour: mitosis — each droplet buds on a strand that snaps, lands on its own target and comes to rest`, snaps>=4 && landed.length===4 && landed.every(x=>x.d<1.5 && x.op>.9 && x.still), {snaps, landed});
     await pg.evaluate(()=>tourEnd(false)); await settle(pg, 900);
     const e=await pg.evaluate(()=>__gRest());
-    ok(`${sty} tour end: back on Continue`, /hero-go/.test(e.cls) && e.s.realFill, {cls:e.cls});
+    ok(`${sty} tour end: back home on the Library tab, Continue showing its own fill`, e.tab && e.kid && !e.kid.off, {tab:e.tabName, kid:e.kid});
   }
 
   // h. v39 UI/UX check: the strip never meets the footer text, overlays hide it, tab mark under the label, one accent on
@@ -499,7 +505,11 @@ const getRad=x=>x.split(' ')[0];
     const ov=await pg.evaluate(async()=>{ setBack(R.pos); await new Promise(r=>setTimeout(r,250)); const a={under:document.documentElement.classList.contains('guide-under'), op:+getComputedStyle($('#guide')).opacity};
       $('#backPill').hidden=true; await new Promise(r=>setTimeout(r,250)); const b={under:document.documentElement.classList.contains('guide-under'), op:+getComputedStyle($('#guide')).opacity};
       toast('Hello'); await new Promise(r=>setTimeout(r,250)); const c={under:document.documentElement.classList.contains('guide-under'), op:+getComputedStyle($('#guide')).opacity}; return {back:a, after:b, toast:c}; });
-    ok(`${sty} hides under #backGo's chip and toasts, and comes back after`, ov.back.under && ov.back.op===0 && !ov.after.under && ov.after.op===1 && ov.toast.under && ov.toast.op===0, ov);
+    ov.toastHit=await pg.evaluate(()=>{ const t=$('#toast').getBoundingClientRect(), m=GUIDE.rest&&guideBox(GUIDE.rest.t); return !!(m && !$('#toast').hidden && m.x<t.right && m.x+m.w>t.left && m.y<t.bottom && m.y+m.h>t.top); });
+    ok(`${sty} hides under the Back chip; a toast hides it only where they overlap; it comes back after`, ov.back.under && ov.back.op===0 && !ov.after.under && ov.after.op===1 && ov.toast.under===ov.toastHit && (ov.toast.op===0)===ov.toastHit, ov);
+    { const o2=await pg.evaluate(async()=>{ toast('Overlap'); await new Promise(r=>setTimeout(r,200)); await guideTo([{el:$('#toast'), kind:'fill'}], {snap:true}); await new Promise(r=>setTimeout(r,60));
+        const a={under:document.documentElement.classList.contains('guide-under'), op:+getComputedStyle($('#guide')).opacity}; $('#toast').hidden=true; await guideScreen({snap:true}); await new Promise(r=>setTimeout(r,60)); a.after=document.documentElement.classList.contains('guide-under'); return a; });
+      ok(`${sty} a toast that does overlap the guide hides it (and it comes back after)`, o2.under && o2.op===0 && !o2.after, o2); }
     await pg.waitForFunction(()=>$('#toast').hidden, null, {timeout:9000}).catch(()=>{}); await wait(250);
     // 5. Play: its own fill is hidden from the pill's first frame until the blob lands; 6. labels keep their ink
     const pf=await pg.evaluate(()=>new Promise(res=>{ setChrome(true); const p=$('#ttsPlay'); const fr=[]; let n=0; const ink0=getComputedStyle($('#rTop')).color;
@@ -542,8 +552,9 @@ const getRad=x=>x.split(' ')[0];
     const firstFrames=await p2.evaluate(()=>new Promise(res=>{ const out=[]; let n=0; const f=()=>{ const a=$('#addBtn'); const s=guideState(); out.push({kind:s.target&&s.target.kind, off:a.classList.contains('guide-off'), sh:s.shapesVis, real:s.realFill}); if(++n<40) requestAnimationFrame(f); else res(out); }; f(); }));
     await p2.evaluate((sty)=>{ S.style=sty; saveSettings(); applyLook(); }, sty); await wait(700);
     const a1=await p2.evaluate(()=>{ const s=guideState(), a=$('#addBtn'); return {lib:LIB.length, hero:!!document.querySelector('.continue-hero'), kind:s.target&&s.target.kind, id:s.target&&s.target.id, shapesVis:s.shapesVis, pathsVis:s.pathsVis, real:s.realFill, bg:getComputedStyle(a).backgroundColor}; });
-    const dbl=firstFrames.filter(x=>x.kind==='mark' || (x.sh>0 && x.real));
-    ok(`${sty} empty library: Add to library is one accent (its own fill, no extra mark), from the first frame`, a1.kind==='fill' && a1.id==='addBtn' && a1.shapesVis===0 && a1.pathsVis===0 && a1.real && dbl.length===0, {a1, dbl:dbl.slice(0,3)});
+    const dbl=firstFrames.filter(x=>x.off);
+    const a1x=await p2.evaluate(()=>{ const a=$('#addBtn'); return {extra:GUIDE.extras.some(x=>x.t.el===a), off:a.classList.contains('guide-off'), tab:!!(GUIDE.rest&&GUIDE.rest.t.el.closest('#tabs'))}; });
+    ok(`${sty} empty library: the Source is on the Library tab and Add to library is its child fill (its own fill, no mark on it), from the first frame`, a1.kind==='mark' && a1x.tab && a1x.extra && !a1x.off && a1.shapesVis===1 && a1.pathsVis===0 && dbl.length===0, {a1, a1x, dbl:dbl.slice(0,3)});
     await c2.close();
     const c3=await b.newContext({ viewport:{width:390, height:844}, deviceScaleFactor:1, serviceWorkers:'block', hasTouch:true, isMobile:true });
     await c3.addInitScript(voiceMock);
@@ -553,12 +564,189 @@ const getRad=x=>x.split(' ')[0];
     for(let i=0;i<8;i++){ const on=await p3.evaluate(()=>TOUR.on); if(!on) break; const st=await p3.$('#tourStart'); if(st && await st.isVisible()){ await st.click(); break; } await p3.evaluate(()=>tourAdvance()); await wait(700); }
     await wait(1200);
     const a2=await p3.evaluate(()=>{ const s=guideState(); return {tour:TOUR.on, lib:LIB.length, kind:s.target&&s.target.kind, id:s.target&&s.target.id, cls:s.target?'':'', shapesVis:s.shapesVis, pathsVis:s.pathsVis, real:s.realFill, offs:document.querySelectorAll('.guide-off').length}; });
-    ok(`${sty} after the tour's Start reading: one accent (a fill, no mark on top), no leftover hidden fills`, !a2.tour && a2.kind==='fill' && a2.shapesVis===0 && a2.pathsVis===0 && a2.real && a2.offs===0, {tourOn, ...a2});
+    ok(`${sty} after the tour's Start reading: home on the tab, no mark on the fill, no leftover hidden fills`, !a2.tour && a2.kind==='mark' && a2.shapesVis===1 && a2.pathsVis===0 && a2.offs===0, {tourOn, ...a2});
     await c3.close();
   }
   console.log('CONTRAST:', JSON.stringify(contrast));
   console.log('FPS 4x (rAF deltas ms):', JSON.stringify(fps4));
 
+  // ---------- v40 slice 1: the unified liquid layer, home base, child fills, transfers, carry-overs ----------
+  { const V40=process.env.SHOTS40||'/workspace/impl-shots/v40'; try{ fs.mkdirSync(V40,{recursive:true}); }catch(e){}
+    await pg.setViewportSize({width:390, height:844}); await cdp.send('Emulation.setCPUThrottlingRate',{rate:1});
+    await pg.evaluate(()=>{ S.style='lively'; S.theme='white'; S.mode='pages'; saveSettings(); applyLook(); try{ closeReader(true); }catch(e){} showView('library'); }); await settle(pg, 900);
+    // 1. one SVG: the Source, a pool of 4 children, the tether path and the focus rect, made once
+    const L0=await pg.evaluate(()=>{ const L=$('#guide'), sv=L.querySelectorAll('svg'); const g=L.querySelector('svg.gsvg');
+      return {svgs:sv.length, gsvg:!!g, main:g.querySelectorAll('g.gbod.gmain').length, drops:g.querySelectorAll('g.gbod.gdrop').length, tether:g.querySelectorAll('path.gtether').length, focus:g.querySelectorAll('rect.gfocus').length,
+        goo:!!g.querySelector('filter#gGoo'), nodes:L.querySelectorAll('*').length, pool:GUIDE.pool.length, pe:getComputedStyle(L).pointerEvents}; });
+    ok('v40: one liquid <svg> holds the Source, a pool of 4 children, the tether path and the focus rect (pointer-events none)', L0.svgs===1 && L0.gsvg && L0.main===1 && L0.drops===4 && L0.tether===1 && L0.focus===1 && L0.goo && L0.pool===5 && L0.pe==='none', L0);
+    // 2. 50 flights: Back/Continue, tab hops, transfers: no DOM or animation leaks, pool fully free at rest
+    { const t0=Date.now();
+      for(let i=0;i<50;i++){
+        const k=i%5;
+        if(k===0){ await pg.evaluate(()=>document.querySelector('.hero-go').click()); await pg.waitForFunction(()=>!$('#v-reader').hidden && R.meta, null, {timeout:8000}); await wait(120); }
+        else if(k===1){ await pg.evaluate(()=>$('#rBack').click()); await wait(140); }
+        else if(k===2){ await pg.evaluate(()=>showView('settings')); await wait(120); }
+        else if(k===3){ await pg.evaluate(()=>{ const b=[...document.querySelectorAll('#idleSeg button')].find(x=>x.getAttribute('aria-pressed')!=='true'); if(b){ b.scrollIntoView({block:'center'}); b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})); b.click(); } }); await wait(120); }
+        else { await pg.evaluate(()=>showView('library')); await wait(140); }
+      }
+      await pg.evaluate(()=>showView('library')); await settle(pg, 1400);
+      const L1=await pg.evaluate(()=>{ const L=$('#guide'); return {svgs:L.querySelectorAll('svg').length, nodes:L.querySelectorAll('*').length, pool:GUIDE.pool.length, free:GUIDE.pool.filter(b=>b.free).length, bodies:GUIDE.bodies.length, kids:GUIDE.kids.size,
+        anims:document.getAnimations().filter(a=>L.contains(a.effect&&a.effect.target)).length, offs:document.querySelectorAll('.guide-off').length, waits:document.querySelectorAll('.guide-wait').length, raf:!!GUIDE.raf, inks:L.querySelectorAll('.gink').length, inkText:[...L.querySelectorAll('.gink')].map(x=>x.innerHTML).join('').length}; });
+      ok('v40: 50 flights (open, Back, tab hops, transfers): zero DOM/animation leaks, the child pool is all free again, the loop sleeps', L1.svgs===1 && L1.nodes===L0.nodes && L1.pool===5 && L1.free>=4 && L1.kids===0 && L1.anims===0 && L1.offs===0 && L1.waits===0 && !L1.raf && L1.inkText===0, {before:L0.nodes, ...L1, ms:Date.now()-t0}); }
+    // 3. home base: the Source rests on the active tab's mark on every tab; never on Continue
+    { const tabs=[]; for(const t of ['words','stats','settings','library']){ await pg.evaluate((t)=>showView(t), t); await settle(pg, 700);
+        tabs.push(await pg.evaluate((t)=>{ const r=GUIDE.rest; const el=r&&r.t.el; return {t, on:el&&el.dataset&&el.dataset.tab, kind:r&&r.t.kind}; }, t)); }
+      ok('v40: home base: the Source rests on the active tab mark on Library, Notes, Stats and Settings', tabs.every(x=>x.on===x.t && x.kind==='mark'), tabs); }
+    await pg.screenshot({path:V40+'/library-source-child.png'});
+    // 4. Back: Source home to the tab + a child pours into Continue; Continue never shows its own fill before the child lands; ink overlay on arrival
+    { await pg.evaluate(()=>document.querySelector('.hero-go').click()); await pg.waitForFunction(()=>!$('#v-reader').hidden && R.meta, null, {timeout:8000}); await settle(pg, 700);
+      const bk=await pg.evaluate(()=>new Promise(res=>{ const out=[]; let n=0; const t0=performance.now(); $('#rBack').click();
+        const f=()=>{ const g=document.querySelector('#v-library:not([hidden]) .hero-go'); if(g){ const ink=$('#guide').querySelector('.ginks .gink'); out.push({t:Math.round(performance.now()-t0), off:g.classList.contains('guide-off'), ink:[...$('#guide').querySelectorAll('.gink')].some(x=>x.innerHTML && +getComputedStyle(x).opacity>.5 && /Continue|Resume|Read/i.test(x.textContent)), kid:GUIDE.kids.size}); }
+          if(++n<60) requestAnimationFrame(f); else res(out); }; requestAnimationFrame(f); }));
+      await settle(pg, 300);
+      const firstOn=bk.findIndex(x=>!x.off), flick=bk.slice(firstOn).some(x=>x.off);
+      ok('v40 Back: Continue stays unfilled until its child pours in, then keeps its fill (no flicker), and the child carries the label ink on arrival', bk.length>10 && bk[0].off && firstOn>0 && !flick && bk.some(x=>x.ink), {frames:bk.length, firstOn:bk[firstOn]&&bk[firstOn].t, ink:bk.some(x=>x.ink)}); }
+    // 5. book-open stall: a hold longer than 150ms settles in (opacity + scale), never a long flight
+    { await pg.evaluate(()=>document.querySelector('.hero-go').click()); await pg.waitForFunction(()=>!$('#v-reader').hidden && R.meta, null, {timeout:8000}); await settle(pg, 700);
+      const st=await pg.evaluate(async()=>{ const s0=GUIDE.settles; GUIDE.flying=true; guideHold(); const t=performance.now(); while(performance.now()-t<220){} GUIDE.flying=false; const t1=performance.now(); await guideScreen(); const t2=performance.now();
+        await new Promise(r=>setTimeout(r,300)); const f=GUIDE.flights.slice(-1)[0]; return {settles:GUIDE.settles-s0, kind:f&&f.kind, ms:Math.round(t2-t1), target:f&&f.target}; });
+      ok('v40 book-open stall (>150ms hold): the Source settles in at its reader spot (opacity + scale, ~140ms), no late flight', st.settles===1 && st.kind==='settle' && st.target==='rScrub', st); }
+    // 6. per-style physics from CSS variables: stretch caps (Quiet 1.6, Paper 2.0, Lively 3.4), Paper +75ms weight, no overshoot in Quiet/Paper
+    { const cap={quiet:1.6, paper:2.0, lively:3.4}, sty={};
+      for(const s of STY){
+        sty[s]=await pg.evaluate(async(s)=>{ S.style=s; saveSettings(); applyLook(); await new Promise(r=>setTimeout(r,250)); const P=guideParams(); setChrome(true); await guideScreen({snap:true});
+          guideManual(true); $('#rBack').click(); await new Promise(r=>setTimeout(r,60)); const b=GUIDE.main; const F=b&&b.frames, pl=b&&b.plan;
+          let asp=0, over=0, out=0; if(F){ for(const f of F){ if(f.pre) asp=Math.max(asp,f.asp); const pr=(f.cx-pl.dst.x)*pl.dir.x+(f.cy-pl.dst.y)*pl.dir.y; over=Math.max(over,pr);
+            for(let q=0;q<f.pts.length;q+=2){ const x=f.cx+f.pts[q], y=f.cy+f.pts[q+1]; if(x<0||x>innerWidth||y<0||y>innerHeight) out++; } } }
+          const T=P.T; guideManual(false); await new Promise(r=>setTimeout(r,900));
+          document.querySelector('.hero-go').click(); await new Promise(r=>setTimeout(r,1300));
+          return {curve:P.curve, weight:P.weight, T:+T.toFixed(3), asp:+asp.toFixed(2), over:+over.toFixed(2), out, frames:F?F.length:0, xfade:P.xfade}; }, s);
+      }
+      ok('v40 stretch caps from --guide-curve: Quiet ≤1.6, Paper ≤2.0, Lively ≤3.4 (pre-arrival frames)', STY.every(s=>sty[s].frames>5 && sty[s].asp<=cap[s]+.02 && Math.abs(sty[s].curve-cap[s])<.01), sty);
+      ok('v40 Paper is heavier (+75ms weight), Quiet/Paper never overshoot, Lively crossfades colour in 120ms', sty.paper.weight===75 && sty.quiet.weight===0 && sty.paper.T>sty.quiet.T && sty.quiet.over<=1.5 && sty.paper.over<=1.5 && sty.lively.xfade===120, sty);
+      ok('v40 outline clamp: every stretched outline point stays inside the viewport', STY.every(s=>sty[s].out===0), sty); }
+    await pg.evaluate(()=>{ S.style='lively'; saveSettings(); applyLook(); }); await settle(pg, 400);
+    // 7. goo filter only in short strand windows, and the >24ms frame guard drops it
+    { const g=await pg.evaluate(async()=>{ showView('library'); await new Promise(r=>setTimeout(r,800)); showView('settings'); await new Promise(r=>setTimeout(r,700));
+        const v=$('#v-settings'); const b=[...document.querySelectorAll('#idleSeg button')].find(x=>x.getAttribute('aria-pressed')!=='true'); b.scrollIntoView({block:'center'}); await new Promise(r=>setTimeout(r,500));
+        GUIDE.gooUntil=0; const n0=GUIDE.gooOnFrames; let on=0, frames=0, first=null, last=null; const t0=performance.now();
+        // a child from the Source (strand) → goo window
+        guideChildFly(guideSourceAt(), b, {kind:'mark', linger:0});
+        await new Promise(res=>{ const f=()=>{ frames++; const any=GUIDE.bodies.some(x=>x.goo); if(any){ on++; const t=performance.now()-t0; if(first==null) first=t; last=t; } if(performance.now()-t0<900) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+        const win=first==null?null:Math.round(last-first);
+        // the guard: a long frame while goo is on turns it off for 3s
+        GUIDE.gooUntil=0; const tr0=GUIDE.gooTrips; let tripped=false, blocked=false, offAfter=false;
+        guideChildFly(guideSourceAt(), b, {kind:'mark', linger:0});
+        await new Promise(res=>{ let n=0; const f=()=>{ n++; if(GUIDE.bodies.some(x=>x.goo) && !tripped){ tripped=true; const t=performance.now(); while(performance.now()-t<40){} }
+          else if(tripped && !blocked){ blocked=guideGooBlocked(); offAfter=!GUIDE.bodies.some(x=>x.goo) && !$('#guide').querySelector('[filter]'); }
+          if(n<60) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+        await new Promise(r=>setTimeout(r,500));
+        return {on, win, frames, trips:GUIDE.gooTrips-tr0, blocked, offAfter, restFilter:!!$('#guide').querySelector('[filter]')}; });
+      ok('v40 goo filter: on only while a strand exists (a short window), off at rest', g.on>0 && g.win!=null && g.win<=160 && !g.restFilter, g);
+      ok('v40 goo guard: a frame over 24ms turns the filter off (pure-path strand) for 3s', g.trips>=1 && g.blocked && g.offAfter, g); }
+    // 8. settings waves: IntersectionObserver + velocity/settle gate, once per visit, at most 3 per wave
+    { const w=await pg.evaluate(async()=>{ const sl=ms=>new Promise(r=>setTimeout(r,ms));
+        showView('library'); await sl(600);
+        // six extra accented chips far down, to see the max-3 cap
+        const v=$('#v-settings'); let fx=$('#__gfx'); if(!fx){ fx=document.createElement('div'); fx.id='__gfx'; fx.style.cssText='padding:20px;display:flex;gap:8px;flex-wrap:wrap'; v.appendChild(fx); }
+        fx.innerHTML='<div style="height:1400px"></div>'+Array.from({length:6},(_,i)=>`<button class="chip" aria-pressed="true">C${i}</button>`).join('');
+        showView('settings'); v.scrollTop=0; await sl(900);
+        const s0=JSON.parse(JSON.stringify(guideState().wave)); const off0=document.querySelectorAll('.guide-off,.guide-wait').length;
+        // slow scroll down to the chips (≈400px/s) → droplets, max 3 per wave, the rest fade
+        const target=fx.lastElementChild.offsetTop-v.clientHeight/2; 
+        await new Promise(res=>{ const f=()=>{ v.scrollTop=Math.min(target, v.scrollTop+7); if(v.scrollTop<target-1) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+        await sl(1400);
+        const s1=JSON.parse(JSON.stringify(guideState().wave));
+        // jiggle back and forth: once per visit, nothing new
+        for(let i=0;i<6;i++){ v.scrollTop+= (i%2?-30:30); await sl(40); } await sl(700);
+        const s2=JSON.parse(JSON.stringify(guideState().wave));
+        // a new visit, fast fling (≈4000px/s) to the chips: they just fade in
+        showView('library'); await sl(500); showView('settings'); v.scrollTop=0; await sl(700); const s3=JSON.parse(JSON.stringify(guideState().wave));
+        await new Promise(res=>{ const f=()=>{ v.scrollTop=Math.min(target, v.scrollTop+70); if(v.scrollTop<target-1) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+        await sl(900); const s4=JSON.parse(JSON.stringify(guideState().wave));
+        const left=document.querySelectorAll('.guide-off,.guide-wait').length; fx.remove(); v.scrollTop=0;
+        return {s0, s1, s2, s3, s4, off0, left}; });
+      const d1={sent:w.s1.sent-w.s0.sent, faded:w.s1.faded-w.s0.faded, waves:w.s1.waves-w.s0.waves}, d2={sent:w.s2.sent-w.s1.sent, faded:w.s2.faded-w.s1.faded}, d4={sent:w.s4.sent-w.s3.sent, faded:w.s4.faded-w.s3.faded};
+      ok('v40 settings: accents scrolled into view slowly get child droplets after the settle, at most 3 per wave (the rest fade)', d1.waves>=1 && d1.sent>=3 && w.s1.maxWave<=3 && d1.faded>=3, {d1, maxWave:w.s1.maxWave});
+      ok('v40 settings: once per visit (scrolling back and forth sends nothing new)', d2.sent===0 && d2.faded===0, d2);
+      ok('v40 settings: a fast fling just fades accents in (no droplets), and nothing is left unfilled', d4.sent===0 && d4.faded>=1 && w.left===0, {d4, left:w.left}); }
+    await pg.evaluate(()=>{ $('#v-settings').scrollTop=0; }); await settle(pg, 500);
+    await pg.screenshot({path:V40+'/settings-wave.png'});
+    // 9. data-accent-group: picking another option sends the accent across as a child (a real tap)
+    { await pg.evaluate(()=>{ const b=[...document.querySelectorAll('#idleSeg button')].find(x=>x.getAttribute('aria-pressed')!=='true'); b.scrollIntoView({block:'center'}); }); await settle(pg, 500);
+      const sel=await pg.evaluate(()=>{ const bs=[...document.querySelectorAll('#idleSeg button')]; const i=bs.findIndex(x=>x.getAttribute('aria-pressed')!=='true'); return `#idleSeg button:nth-of-type(${i+1})`; });
+      const x0=await pg.evaluate(()=>({tr:GUIDE.transfers, kl:GUIDE.kidLog.length}));
+      const mid=pg.evaluate(()=>new Promise(res=>{ const out={vis:0, frames:0}; let n=0; const f=()=>{ n++; out.frames++; if(GUIDE.pool.some(b=>!b.free && b!==GUIDE.main && b.op>.3)) out.vis++; if(n<40) requestAnimationFrame(f); else res(out); }; requestAnimationFrame(f); }));
+      await pg.tap(sel); await wait(100); await pg.screenshot({path:V40+'/transfer-mid.png'}); const m=await mid; await settle(pg, 700);
+      const x1=await pg.evaluate(()=>({tr:GUIDE.transfers, last:GUIDE.kidLog.slice(-1)[0], offs:document.querySelectorAll('.guide-off').length, free:GUIDE.pool.filter(b=>b.free).length}));
+      ok('v40 data-accent-group: a tap on another option transfers the accent as a child blob (old → new), then cleans up', x1.tr===x0.tr+1 && x1.last && x1.last.kind && x1.last.ok && m.vis>3 && x1.offs===0 && x1.free>=4, {x0, x1, mid:m});
+      // the Style picker re-renders in a view transition: still transfers
+      const sp=await pg.evaluate(async()=>{ showView('settings'); await new Promise(r=>setTimeout(r,400)); const g=document.querySelector('[data-accent-group="style"]'); if(!g) return {none:true};
+        const o=[...g.querySelectorAll('[data-style-pick]')].find(x=>!x.matches('[aria-checked="true"],[aria-pressed="true"]')); if(!o) return {none:'opt'}; o.scrollIntoView({block:'center'}); await new Promise(r=>setTimeout(r,400));
+        const t0=GUIDE.transfers; o.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})); o.click(); await new Promise(r=>setTimeout(r,900)); return {tr:GUIDE.transfers-t0, style:S.style}; });
+      ok('v40 Style picker (data-accent-group="style", view transition): the accent transfers to the new tile', sp.tr===1, sp);
+      await pg.evaluate(()=>{ S.style='lively'; saveSettings(); applyLook(); showView('library'); }); await settle(pg, 700); }
+    // 10. carry-overs
+    await pg.evaluate(()=>document.querySelector('.hero-go').click()); await pg.waitForFunction(()=>!$('#v-reader').hidden && R.meta, null, {timeout:8000}); await settle(pg, 800);
+    { // P1-1: the Play blob mid-flight is the real --play-bg (never transparent), with the label ink over it
+      const pf=await pg.evaluate(async()=>{ setChrome(true); await new Promise(r=>setTimeout(r,400)); guideManual(true); $('#rTts').click(); await new Promise(r=>setTimeout(r,60));
+        const b=GUIDE.main; const real=guideRealStyle($('#ttsPlay')).bg; const out=[];
+        for(let i=0;i<40 && b.anim;i++){ guideTick(8); out.push({fill:getComputedStyle(b.path).fill, op:b.op, ink:[...$('#guide').querySelectorAll('.gink')].some(x=>x.innerHTML && /svg/i.test(x.innerHTML))}); }
+        guideManual(false); return {real, fills:[...new Set(out.map(x=>x.fill))], ink:out.some(x=>x.ink), n:out.length}; });
+      await settle(pg, 400); await pg.screenshot({path:V40+'/play-flight.png'});
+      ok('v40 P1: the Play blob is the real --play-bg in flight (never transparent) and carries the glyph ink on arrival', pf.n>5 && pf.fills.every(c=>!/rgba\(0, 0, 0, 0\)|transparent/.test(c)) && pf.fills.includes(pf.real) && pf.ink, pf);
+      // P2: Play's hidden fill keeps a contrasting glyph
+      const p2=await pg.evaluate(()=>{ const p=$('#ttsPlay'); p.classList.add('guide-off'); const cs=getComputedStyle(p); const r={bg:cs.backgroundColor, ink:cs.color}; p.classList.remove('guide-off'); return r; });
+      const cr=await pg.evaluate(({bg,ink})=>__cr(bg.replace(/rgba?\(([^)]*)\)/,(m,x)=>'rgb('+x.split(',').slice(0,3).join(',')+')'), ink), p2);
+      ok('v40 P2: Play\'s glyph stays ≥3:1 while its fill is handed to the blob', cr>=3, {...p2, cr:+cr.toFixed(2)});
+      await pg.evaluate(()=>{ try{ ttsModeOff(true); }catch(e){} }); await settle(pg, 600);
+      // P3: data-style / data-theme change mid-flight recolours the body to the new real colour
+      const p3=await pg.evaluate(async()=>{ setChrome(true); await new Promise(r=>setTimeout(r,300)); guideManual(true); $('#rTts').click(); await new Promise(r=>setTimeout(r,60)); guideTick(40);
+        S.theme='dark'; saveSettings(); applyLook(); await new Promise(r=>setTimeout(r,150)); const b=GUIDE.main; const real=guideRealStyle($('#ttsPlay')).bg; const got=getComputedStyle(b.path).fill;
+        guideManual(false); await new Promise(r=>setTimeout(r,700)); S.theme='white'; saveSettings(); applyLook(); try{ ttsModeOff(true); }catch(e){} return {real, got}; });
+      await settle(pg, 600);
+      ok('v40 P3: a theme/style change mid-flight recolours the blob to the new real colour', p3.real===p3.got, p3);
+      // P1 (QA): Back in the same tick as a chrome change still lands the reader rest correctly next time
+      const p1=await pg.evaluate(async()=>{ setChrome(true); $('#rBack').click(); await new Promise(r=>setTimeout(r,700)); document.querySelector('.hero-go').click(); await new Promise(r=>setTimeout(r,1200)); setChrome(false); await new Promise(r=>setTimeout(r,800)); return {kind:GUIDE.rest&&GUIDE.rest.t.kind, id:GUIDE.rest&&GUIDE.rest.t.el.id}; });
+      ok('v40 QA P1: the reader class observer keeps `was` up to date (strip after reopening with bars off)', p1.kind==='strip' && p1.id==='runFoot', p1);
+      // zero-inset strip: a continuous line above the footer text, no jump between 10% steps
+      const zs=await pg.evaluate(async()=>{ setChrome(false); await new Promise(r=>setTimeout(r,400)); const sc=$('#rScrub'), v0=sc.value, mn=+sc.min||0, mx=+sc.max||1, xs=[];
+        for(let f=0;f<=1.0001;f+=.1){ sc.value=String(mn+f*(mx-mn)); await guideTo([{el:$('#runFoot'), kind:'strip'}], {snap:true}); const m=GUIDE.shapes[GUIDE.cur].getBoundingClientRect(); xs.push({x:Math.round(m.left), y:Math.round(m.top), hit:__ix(m,__ftext())}); }
+        sc.value=v0; await guideScreen({snap:true}); return xs; });
+      const jumps=zs.slice(1).map((p,i)=>Math.abs(p.x-zs[i].x)); const ys=new Set(zs.map(p=>p.y));
+      ok('v40 zero-inset strip: one continuous line just above the footer text (no 241px jump, never on it)', Math.max(...jumps)<=60 && ys.size===1 && zs.every(p=>!p.hit) && zs[zs.length-1].x>zs[0].x, {xs:zs.map(p=>p.x), y:[...ys], maxJump:Math.max(...jumps)});
+    }
+    // P4: landscape 844×390 with a left notch: the 0% mark respects --sal; Speed's Play stays round; screenshot
+    { await pg.setViewportSize({width:844, height:390}); await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{top:0,bottom:21,left:47,right:47}}).catch(()=>{}); await pg.evaluate(()=>window.dispatchEvent(new Event('resize'))); await settle(pg, 900);
+      const p4=await pg.evaluate(async()=>{ setChrome(false); await new Promise(r=>setTimeout(r,400)); const sc=$('#rScrub'), v0=sc.value; sc.value=String(+sc.min||0); await guideTo([{el:$('#runFoot'), kind:'strip'}], {snap:true});
+        const m=GUIDE.shapes[GUIDE.cur].getBoundingClientRect(); sc.value=String(+sc.max||1); await guideTo([{el:$('#runFoot'), kind:'strip'}], {snap:true}); const m2=GUIDE.shapes[GUIDE.cur].getBoundingClientRect(); sc.value=v0; await guideScreen({snap:true});
+        return {left0:Math.round(m.left), right1:Math.round(m2.right), W:innerWidth, safe:guideSafe()}; });
+      ok('v40 P4: at 844×390 the 0% and 100% marks stay inside the left/right safe areas', p4.left0>=47 && p4.right1<=p4.W-47, p4);
+      await pg.evaluate(()=>setChrome(true)); await settle(pg, 400); await pg.screenshot({path:V40+'/landscape-844x390.png'});
+      const sp=await pg.evaluate(async()=>{ await switchMode('speed'); await new Promise(r=>setTimeout(r,700)); const b=$('#speedView #playBtn'); const r=b&&b.getBoundingClientRect(); const o={w:r&&Math.round(r.width), h:r&&Math.round(r.height), rad:b&&getComputedStyle(b).borderRadius}; await switchMode('pages'); return o; });
+      ok('v40: Speed Play is a circle at 844×390', sp.w && sp.w===sp.h, sp);
+      await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{top:0,bottom:0,left:0,right:0}}).catch(()=>{}); await pg.setViewportSize({width:390, height:844}); await settle(pg, 900); }
+    // footnote marks use --accent-text; the favicon is inline (no 404)
+    { const wn=await pg.evaluate(()=>{ const w=document.createElement('w'); w.className='n'; w.textContent='1'; const p=document.createElement('span'); p.style.color='var(--accent-text,var(--page-link))'; document.body.append(w,p); const r={w:getComputedStyle(w).color, want:getComputedStyle(p).color}; w.remove(); p.remove(); return r; });
+      ok('v40: footnote marks (w.n) use --accent-text', wn.w===wn.want, wn);
+      const fav=await pg.evaluate(()=>{ const l=document.querySelector('link[rel~="icon"]'); return {href:l&&l.getAttribute('href').slice(0,30)}; });
+      ok('v40: an inline favicon (no /favicon.ico 404)', fav.href && /^data:image\/svg/.test(fav.href) && !fav404.length, {fav, fav404}); }
+    // tour step 2: the mark lands on the settled icon (after its transition)
+    { await pg.evaluate(()=>{ try{ closeReader(true); }catch(e){} showView('library'); }); await settle(pg, 700);
+      const t2=await pg.evaluate(async()=>{ startTour({replay:true}); await new Promise(r=>setTimeout(r,900)); tourAdvance(); await new Promise(r=>setTimeout(r,1800));
+        const r=GUIDE.rest; const pts=GUIDE.extras.map(x=>({el:x.t.el, b:x.b})).concat(r?[{el:r.t.el, b:r.b}]:[]); const bad=[];
+        for(const p of pts){ const now=guideBox({el:p.el, kind:(GUIDE.extras.find(x=>x.t.el===p.el)||r).t.kind}); if(now && p.b && (Math.abs(now.x-p.b.x)>1.5 || Math.abs(now.y-p.b.y)>1.5)) bad.push({id:p.el.id||p.el.className, was:[p.b.x,p.b.y], now:[now.x,now.y]}); }
+        return {step:TOUR.step, n:pts.length, bad}; });
+      await pg.screenshot({path:V40+'/tour-step2.png'});
+      ok('v40 tour step 2 waits for the settled layout: every droplet sits on where its target finally is', t2.n>=2 && t2.bad.length===0, t2);
+      await pg.evaluate(()=>tourEnd(false)); await settle(pg, 900); }
+    // invariants: 0 rAF at rest on every tab and in the reader; no non-passive scroll/touch listeners from the guide
+    { const z={}; for(const t of ['library','words','stats','settings']){ await pg.evaluate((t)=>showView(t), t); await settle(pg, 900);
+        z[t]=await pg.evaluate(()=>new Promise(r=>{ const c0=GUIDE.rafCount; let g=0; const raf0=window.requestAnimationFrame; window.requestAnimationFrame=function(f){ g++; return raf0.call(window,f); }; setTimeout(()=>{ window.requestAnimationFrame=raf0; r({guide:GUIDE.rafCount-c0, all:g, pending:!!GUIDE.raf}); }, 1500); })); }
+      ok('v40 invariant: zero guide rAF at rest on Library, Notes, Stats and Settings (and nothing else asks for frames)', Object.values(z).every(x=>x.guide===0 && !x.pending && x.all===0), z);
+      const np=await pg.evaluate(()=>(window.__gListen||[]).filter(x=>!x.passive && /^(touchstart|touchmove|wheel|scroll)$/.test(x.type) && /guide/i.test(x.stack)));
+      ok('v40 invariant: the guide adds no non-passive touch/wheel/scroll listeners (native scroll and selection untouched)', np.length===0, np.slice(0,3)); }
+  }
   // g. reduced motion: fades only
   await pg.emulateMedia({reducedMotion:'reduce'});
   for(const sty of STY){
@@ -573,8 +761,13 @@ const getRad=x=>x.split(' ')[0];
     await pg.evaluate(()=>$('#rBack').click());
     const r2=await smp2; await settle(pg, 300);
     ok(`${sty} reduced motion: back to Continue is a fade (no rAF)`, r2.props.every(p=>p==='opacity') && r2.props.length>0 && r2.ticks-r2.raf0===0, {props:r2.props, rafTicks:r2.ticks-r2.raf0});
-    await restCheck(pg, `${sty} reduced motion library`, 'continue');
+    await restCheck(pg, `${sty} reduced motion library`, 'tab');
   }
+  { const rm=await pg.evaluate(async()=>{ showView('settings'); await new Promise(r=>setTimeout(r,600)); const bs=[...document.querySelectorAll('#idleSeg button')]; const b=bs.find(x=>x.getAttribute('aria-pressed')!=='true'); b.scrollIntoView({block:'center'}); await new Promise(r=>setTimeout(r,400));
+      const c0=GUIDE.rafCount; let drops=0, n=0; b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})); b.click();
+      await new Promise(res=>{ const f=()=>{ n++; if(GUIDE.pool.some(x=>!x.free && x!==GUIDE.main && x.op>.05)) drops++; if(n<40) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+      const fade=document.querySelectorAll('.guide-fadein').length; await new Promise(r=>setTimeout(r,300)); showView('library'); return {raf:GUIDE.rafCount-c0, drops, offs:document.querySelectorAll('.guide-off').length}; });
+    ok('reduced motion: a transfer is an opacity fade only (no droplet, no rAF)', rm.raf===0 && rm.drops===0 && rm.offs===0, rm); }
   await pg.emulateMedia({reducedMotion:'no-preference'});
   ok('no console errors', errs.length===0, errs.slice(0,6));
   console.log('FPS (flight back to Continue, rAF deltas ms):', JSON.stringify(fpsAll));

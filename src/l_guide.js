@@ -794,9 +794,12 @@ function guideTo(targets, opts){
   const P=guideParams();
   const prev=GUIDE.rest;
   const same=!GUIDE.flying && !GUIDE.lifted && prev && guideSame(prev.b, b) && prev.t.kind===main.kind;
-  if(same && !opts.snap && extras.length && !GUIDE.splitOn){ guideRest(main, b); return guideSplit(b, extras, tok).then(()=>true); }
+  if(GUIDE.splitOn && GUIDE.extras.length===extras.length) GUIDE.extras.forEach((o,i)=>{ const x=extras[i]; /* a re-render swapped the element: rebind */
+    if(o.t.el!==x.t.el && !o.t.el.isConnected && o.t.kind===x.t.kind && guideSame(o.b, x.b)){ o.t=x.t; o.b=x.b; } });
+  const sameKids=GUIDE.splitOn && GUIDE.extras.length===extras.length && extras.every((x,i)=>GUIDE.extras[i].t.el===x.t.el && guideSame(GUIDE.extras[i].b, x.b)); /* not a stale re-rendered control */
+  if(same && !opts.snap && extras.length && !sameKids){ guideRest(main, b); return guideSplit(b, extras, tok).then(()=>true); }
   if(opts.snap || same || (!prev && !GUIDE.flying && !GUIDE.lifted)){
-    const keepSplit=same && GUIDE.splitOn && extras.length;
+    const keepSplit=same && sameKids && extras.length;
     if(!keepSplit) guideMergeNow();
     guideRest(main, b);
     if(extras.length && !keepSplit){
