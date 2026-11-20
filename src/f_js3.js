@@ -38,7 +38,7 @@ function renderStats(){
     <div class="chart">
       <div class="topbar" style="padding:0"><h2>Daily reading goal</h2><span class="val" style="font-family:var(--f-mono);color:var(--accent-text,var(--accent))">${S.goalMins?S.goalMins+' min':'Off'}</span></div>
       ${S.goalMins?`<p class="note" style="margin:6px 0 0">${todayMin} of ${S.goalMins} minutes today${pct>=100?' · goal reached':''}</p><div class="goalbar"><i style="width:${pct}%"></i></div>`:'<p class="note" style="margin:6px 0 0">Pick a daily target. Time counts in every reading mode.</p>'}
-      <div class="chips" id="goalChips" style="margin-top:10px">${[0,10,15,20,30,45,60].map(v=>`<button class="chip" type="button" data-goal="${v}" aria-pressed="${(S.goalMins||0)===v}">${v?v+' min':'Off'}</button>`).join('')}</div>
+      <div class="chips" id="goalChips" data-accent-group="goal" style="margin-top:10px">${[0,10,15,20,30,45,60].map(v=>`<button class="chip" type="button" data-goal="${v}" aria-pressed="${(S.goalMins||0)===v}">${v?v+' min':'Off'}</button>`).join('')}</div>
     </div>
     <div class="tiles">
       <div class="tile"><div class="v">${todayMin}</div><div class="k">Minutes today</div></div>
@@ -68,12 +68,12 @@ function renderSettings(){
     <h2>Reading</h2>
     <div class="group"><div class="set">
       <div class="hd"><b>Count idle time for up to</b></div>
-      <div class="seg" id="idleSeg">${[3,5,10].map(v=>`<button type="button" data-v="${v}" aria-pressed="${(S.idleMins||5)===v}">${v} min</button>`).join('')}</div>
+      <div class="seg" id="idleSeg" data-accent-group="idle">${[3,5,10].map(v=>`<button type="button" data-v="${v}" aria-pressed="${(S.idleMins||5)===v}">${v} min</button>`).join('')}</div>
       <div class="desc">For your reading stats. If you don’t touch the screen for longer, Tooz counts only the time that text usually takes you.</div>
     </div>
     <div class="set">
       <div class="hd"><b>Bottom line shows</b></div>
-      <div class="seg" id="infoSeg">${[[0,'Chapter time'],[1,'Book time'],[2,'Location']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${(S.info||0)===v}">${l}</button>`).join('')}</div>
+      <div class="seg" id="infoSeg" data-accent-group="info">${[[0,'Chapter time'],[1,'Book time'],[2,'Location']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${(S.info||0)===v}">${l}</button>`).join('')}</div>
       <div class="desc">You can also tap that line in a book to switch.</div>
     </div>
     <div class="set"><button class="btn" type="button" id="resetBtn">Reset reading options</button>
@@ -95,7 +95,7 @@ function renderSettings(){
       <div class="desc">Tooz saves <b>tooz-backup.json</b> to this folder by itself: when you close or switch away from the app, and every few minutes while something has changed. It also keeps one dated copy per day for the last week.</div>
     </div>`:`<div class="set">
       <div class="hd"><b>Backup reminder</b></div>
-      <div class="seg" id="bkRemind">${[['0','Off'],['1','Daily'],['7','Weekly']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(S.bkRemind)===v}">${l}</button>`).join('')}</div>
+      <div class="seg" id="bkRemind" data-accent-group="bkRemind">${[['0','Off'],['1','Daily'],['7','Weekly']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(S.bkRemind)===v}">${l}</button>`).join('')}</div>
       <div class="desc">On iPhone, Apple doesn’t let web apps pick a folder or save files without a tap, so automatic backups aren’t possible here. Instead, Tooz reminds you when your library has changed and it’s been a while. When you tap <b>Save backup</b>, choose <b>Save to Files</b>; iPhone opens the folder you used last time.</div>
     </div>`}</details></div></div>
     <h2>Storage</h2>
@@ -180,9 +180,9 @@ function renderSettings(){
 /* Settings → Style: three live preview tiles, each a mini page drawn in that Style */
 function styleRowHTML(){
   return `<div class="group"><div class="set"><div class="hd"><b id="styleHd">Style</b></div>
-    <div class="stylepick" id="stylePick" role="radiogroup" aria-labelledby="styleHd">${Object.keys(STYLES).map(k=>{ const st=STYLES[k], T=THEMES[st.theme];
+    <div class="stylepick" id="stylePick" role="radiogroup" aria-labelledby="styleHd" data-accent-group="style">${Object.keys(STYLES).map(k=>{ const st=STYLES[k], T=THEMES[st.theme];
       return `<button type="button" class="stile" role="radio" aria-checked="${styleKey()===k}" tabindex="${styleKey()===k?0:-1}" data-style-pick="${k}" aria-label="${st.label}: ${esc(st.cap)}">
-        <span class="mini" data-style="${k}" style="--tile-bg:${T.bg};--tile-ink:${T.ink}" aria-hidden="true"><b>${st.label}</b><i></i><i></i><i class="s"></i><span class="mbtn"></span><span class="msheet"></span></span><span class="scheck" aria-hidden="true">✓</span>
+        <span class="mini" data-style="${k}" style="--tile-bg:${T.bg};--tile-ink:${T.ink}" aria-hidden="true"><b>${st.label}</b><i></i><i></i><i class="s"></i><span class="mbtn"></span><span class="msheet"></span></span><span class="scheck" data-accent-fill aria-hidden="true">✓</span>
         <span class="cap" aria-hidden="true">${esc(st.cap)}</span></button>`; }).join('')}</div></div></div>`;
 }
 /* apply a Style at once with a short crossfade and play its motion on the tile. Its suggested page colour is set only
@@ -1354,6 +1354,7 @@ function showView(v){
   positionSwUpdate();
   document.querySelectorAll('#tabs button').forEach(b=>{ if(b.dataset.tab===v) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   if(v==='stats') renderStats(); if(v==='settings') renderSettings(); if(v==='words') renderNotes(); if(v==='library'){ renderLibrary(); setTimeout(nearFinishCheck, 600); }
+  if(typeof guideView==='function') guideView(v); /* the Guide's once-per-visit memory resets on a tab switch */
   if(v==='reader' && typeof guideHold==='function') guideHold(); /* the Guide never waits over the page while it is laid out */
   if(v!=='reader' && typeof guideScreen==='function' && !(typeof TOUR!=='undefined' && TOUR.on)) guideScreen(); /* the reader calls it once its page is laid out */
 }
