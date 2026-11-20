@@ -5,11 +5,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 const fs=require('fs');
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', hasTouch:true, isMobile:true, acceptDownloads:true});
   await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await sleep(1500);
+  await pg.goto(__E.URL); await sleep(1500);
   await pg.evaluate(async()=>{ closeSheet(); S.mode='pages'; S.font='original'; saveSettings(); await openDoc(LIB.find(x=>x.kind==='sample').id); }); await sleep(900);
   await pg.evaluate(()=>{ R.bookFamily='TestBookFont'; R.text.font={family:'Test-Book_Font'}; openPanel(); document.querySelector('#sheet details[data-k="text"]').open=true; }); await sleep(500);
   const bf=await pg.evaluate(()=>{ const c=document.querySelector('#sheet .fontgrid [data-v="original"]'); return c&&[c.textContent, c.style.fontFamily]; });

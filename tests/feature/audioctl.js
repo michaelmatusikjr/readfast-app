@@ -6,7 +6,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 const fs=require('fs');
 (async()=>{
-  const b=await chromium.launch({args:['--autoplay-policy=no-user-gesture-required']});
+  const b=await chromium.launch(__E.launch({args:['--autoplay-policy=no-user-gesture-required']}));
   const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block', hasTouch:true, isMobile:true});
   await ctx.addInitScript(()=>{
     window.__toozKeepSample=true;
@@ -34,7 +34,7 @@ const fs=require('fs');
   await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/jszip/, r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',headers:cors}));
   await ctx.addInitScript(()=>{ try{ if(!localStorage.getItem('rf.kokGone')){ localStorage.setItem('rf.kokReady.webgpu','true'); } }catch(e){} });
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); pg.on('console',m=>{ if(m.type()==='error' && !/ERR_TUNNEL|ERR_FAILED|ERR_CONNECTION/.test(m.text())) errs.push('console '+m.text()); });
-  await pg.goto('http://localhost:8750/'); await sleep(300);
+  await pg.goto(__E.URL); await sleep(300);
   await pg.evaluate(async()=>{ const c=await caches.open('kokoro-voices'); await c.put('https://x/af_heart.bin', new Response('x')); localStorage.setItem('rf.kokReady.webgpu','true'); localStorage.removeItem('rf.kokGone'); });
   await pg.reload(); await sleep(1800);
   ok('kokoro leftovers cleared', await pg.evaluate(async()=>!(await caches.keys()).includes('kokoro-voices') && localStorage.getItem('rf.kokReady.webgpu')==null && LS.get('kokGone',false)));

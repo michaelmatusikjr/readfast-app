@@ -1,11 +1,12 @@
+const __E=require('../env');
 const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const pg=await (await b.newContext({serviceWorkers:'block'})).newPage(); await pg.addInitScript(()=>{window.__toozKeepSample=true});
   const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await sleep(1500);
+  await pg.goto(__E.URL); await sleep(1500);
   const r=await pg.evaluate(async()=>{
     closeSheet(); const txt='He paused . . . and then went on. She waited... Then she spoke. It faded … into silence. The end . . . . Next part here.';
     const words=txt.split(' '); const text={id:'el', words, ends:[words.length-1], blocks:[{s:0,e:words.length,t:'p'}], wf:null, notes:null, breaks:null, secs:null, dashSplit:1, rangeJoin:1};

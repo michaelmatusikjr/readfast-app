@@ -1,5 +1,8 @@
-// Shared paths for the tests. Override the scratch folder with TOOZ_SCRATCH=/some/dir.
-// Chromium: Playwright's own (npx playwright install chromium), or set PLAYWRIGHT_BROWSERS_PATH.
+// Shared paths and browser settings for the tests, so no test hard-codes a port, a folder or a Chromium build.
+//   TOOZ_URL=http://127.0.0.1:8891/ (full URL) or PORT=8891 (localhost)   default http://localhost:8750/
+//   TOOZ_SCRATCH=/some/dir                                                screenshots, downloads, profiles
+//   PLAYWRIGHT_CHROME=/path/to/chrome                                     a Chromium binary; otherwise the newest one
+//     found under ~/.cache/ms-playwright (or PLAYWRIGHT_BROWSERS_PATH), otherwise Playwright's own default.
 const path = require('path'), os = require('os'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
 const NM = path.join(ROOT, 'node_modules') + '/';                 // jszip, pdfjs-dist, onnxruntime-web, piper-wasm
@@ -7,6 +10,18 @@ const FIX = path.join(__dirname, 'fixtures') + '/';                // generated 
 const FEAT = path.join(__dirname, 'feature') + '/';                // small committed fixtures (rich.epub, fake-piper/)
 const SCRATCH = (process.env.TOOZ_SCRATCH || path.join(os.tmpdir(), 'tooz-tests')) + '/';   // screenshots, downloads, profiles
 fs.mkdirSync(SCRATCH, { recursive: true });
-// The build under test: TOOZ_URL=http://127.0.0.1:8762/ (full URL) or PORT=8762 (localhost); default http://localhost:8750/.
 const URL = process.env.TOOZ_URL || `http://localhost:${process.env.PORT || 8750}/`;
-module.exports = { ROOT, NM, FIX, FEAT, SCRATCH, URL };
+function findChrome(){
+  if (process.env.PLAYWRIGHT_CHROME && fs.existsSync(process.env.PLAYWRIGHT_CHROME)) return process.env.PLAYWRIGHT_CHROME;
+  const roots = [process.env.PLAYWRIGHT_BROWSERS_PATH, path.join(os.homedir(), '.cache', 'ms-playwright')].filter(Boolean);
+  for (const r of roots) {
+    let dirs = []; try { dirs = fs.readdirSync(r).filter(d => /^chromium-\d+$/.test(d)).sort((a, b) => +b.split('-')[1] - +a.split('-')[1]); } catch (e) {}
+    for (const d of dirs) for (const sub of ['chrome-linux64/chrome', 'chrome-linux/chrome', 'chrome-mac/Chromium.app/Contents/MacOS/Chromium'])
+      { const p = path.join(r, d, sub); if (fs.existsSync(p)) return p; }
+  }
+  return '';
+}
+const CHROME = findChrome();
+// chromium.launch(launch({args:[…]})): adds the Chromium found above (if any) to a test's own launch options
+const launch = (o) => Object.assign(CHROME ? { executablePath: CHROME } : {}, o || {});
+module.exports = { ROOT, NM, FIX, FEAT, SCRATCH, URL, CHROME, launch };

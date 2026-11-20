@@ -3,13 +3,13 @@ const { chromium } = require('playwright');
 const EP=(__E.SCRATCH+'redteam-epub/');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   for(const focus of [false,true]){
   const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:true, isMobile:true}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
   await ctx.route(/cdnjs/,r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',contentType:'application/javascript'}));
   await ctx.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await sleep(1200);
+  await pg.goto(__E.URL); await sleep(1200);
   await pg.evaluate(async(f)=>{ S.mode='pages'; S.focus=f; saveSettings(); await openDoc('shelf-orthodoxy'); },focus);
   await sleep(1500);
   for(let k=0;k<12;k++){ await pg.evaluate(()=>pgTurn(1)); await sleep(200); }

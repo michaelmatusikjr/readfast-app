@@ -1,11 +1,12 @@
+const __E=require('../env');
 const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const pg=await (await b.newContext({viewport:{width:393,height:852},serviceWorkers:'block'})).newPage(); await pg.addInitScript(()=>{window.__toozKeepSample=true});
   const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await sleep(1500);
+  await pg.goto(__E.URL); await sleep(1500);
   /* make an old-style book: pasted text with dash-joined words, highlight + bookmark + position after the dash */
   const res=await pg.evaluate(async()=>{
     closeSheet();

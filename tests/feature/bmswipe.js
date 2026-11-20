@@ -1,11 +1,12 @@
+const __E=require('../env');
 const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const pg=await (await b.newContext({viewport:{width:393,height:852},serviceWorkers:'block',hasTouch:true,isMobile:true})).newPage(); await pg.addInitScript(()=>{window.__toozKeepSample=true; try{ localStorage.setItem('rf.tourDone','1'); }catch(e){} });
   const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await sleep(1500);
+  await pg.goto(__E.URL); await sleep(1500);
   await pg.evaluate(()=>{ closeSheet(); const d=LIB.find(x=>x.kind==='sample'); d.bookmarks=[{i:10,name:'First',at:1},{i:50,name:'Second',at:2}]; touch(d); showView('words'); renderNotes(); });
   await sleep(1200);
   const swipe=async(sel,dx)=>pg.evaluate(([sel,dx])=>{ const el=document.querySelector(sel); const r=el.getBoundingClientRect(); const y=r.top+r.height/2, x=r.right-30;

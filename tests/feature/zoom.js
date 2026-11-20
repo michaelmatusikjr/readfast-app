@@ -3,12 +3,12 @@ const { chromium } = require('playwright');
 const EP=(__E.SCRATCH+'redteam-epub/');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:true, isMobile:true}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
   await ctx.route(/cdnjs/,r=>r.fulfill({path:__E.NM+'jszip/dist/jszip.min.js',contentType:'application/javascript'}));
   await ctx.route(/fonts\./,r=>r.abort());
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await sleep(500);
+  await pg.goto(__E.URL); await sleep(500);
   console.log('viewport', await pg.evaluate(()=>[document.querySelector('meta[name=viewport]').content, getComputedStyle(document.body).touchAction]));
   await pg.setInputFiles('#fileIn', __dirname+'/rich.epub'); await pg.waitForFunction(()=>LIB.some(m=>m.title==='Rich Test Book'),null,{timeout:20000});
   await pg.evaluate(()=>{ S.mode='scroll'; S.autoScroll=false; saveSettings(); }); await pg.evaluate(()=>openDoc(LIB.find(m=>m.title==='Rich Test Book').id)); await sleep(700);

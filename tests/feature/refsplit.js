@@ -1,11 +1,12 @@
+const __E=require('../env');
 const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const ok=(n,c,x)=>console.log((c?'PASS ':'FAIL ')+n+(x!==undefined?' '+JSON.stringify(x):''));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const ctx=await b.newContext({viewport:{width:393,height:852}, serviceWorkers:'block'}); await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await sleep(1500);
+  await pg.goto(__E.URL); await sleep(1500);
   await pg.evaluate(async()=>{ closeSheet(); await openDoc(LIB.find(x=>x.kind==='sample').id); }); await sleep(900);
   const res=await pg.evaluate(()=>{
     const txt='The well-lived life must be God-exalting and soul-satisfying because that is why God created us (Isa. 43:7; Ps. 90:14). That was the burden of chapter 2. And God commands us to love him with all our heart (Matt. 22:37), and Jesus reminds us that he spits lukewarm people out of his mouth (Rev. 3:16). The opposite of wasting your life is to live (1 Cor. 10:31). As C. S. Lewis said, see Dr. Smith.';

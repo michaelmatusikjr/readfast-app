@@ -1,10 +1,11 @@
+const __E=require('../env');
 const { chromium } = require('playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   for(const touch of [true,false]){
   const ctx=await b.newContext({viewport:{width:390,height:780}, serviceWorkers:'block', hasTouch:touch, isMobile:touch}); await ctx.addInitScript(()=>{window.__toozKeepSample=true});
-  const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); await pg.goto('http://localhost:8750/'); await sleep(1500);
+  const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); await pg.goto(__E.URL); await sleep(1500);
   for(const mode of ['pages','scroll']){
     await pg.evaluate(async m=>{ closeSheet(); S.mode=m; saveSettings(); if($('#v-reader').hidden) await openDoc(LIB.find(x=>x.kind==='sample').id); else switchMode(m); }, mode); await sleep(900);
     const r=await pg.evaluate(async()=>{ const h=hostEl(); const ws=[...h.querySelectorAll('w')].filter(e=>e.getBoundingClientRect().width>0); const w=ws[3];

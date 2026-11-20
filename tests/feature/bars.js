@@ -3,10 +3,10 @@ const { chromium } = require('playwright');
 const S=__E.SCRATCH;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
-  const b=await chromium.launch({});
+  const b=await chromium.launch(__E.launch());
   const ctx=await b.newContext({viewport:{width:393,height:852}, deviceScaleFactor:2, serviceWorkers:'block', hasTouch:true, isMobile:true}); await ctx.addInitScript(()=>{ window.__toozKeepSample=true; });
   const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message));
-  await pg.goto('http://localhost:8750/'); await sleep(1500); await pg.evaluate(()=>closeSheet()); await sleep(300);
+  await pg.goto(__E.URL); await sleep(1500); await pg.evaluate(()=>closeSheet()); await sleep(300);
   /* simulate the iPhone home-indicator inset (34px) */
   await pg.addStyleTag({content:'#tabs{padding-bottom:34px!important} #rFoot{padding-bottom:34px!important}'});
   console.log('tabs', await pg.evaluate(()=>$('#tabs').getBoundingClientRect().height));

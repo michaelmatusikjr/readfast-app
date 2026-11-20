@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Tooz">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#E9EDF2" id="themeColor">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%231F6FEB%27/%3E%3Cpath d=%27M16 18h32v8H36v24h-8V26H16z%27 fill=%27%23fff%27/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -279,7 +280,7 @@ input,textarea,[contenteditable],#pagesView,#scFlow,.lookup,#sheet .quote{-webki
 w{cursor:text}
 w.i,wd.i{font-style:italic} w.b,wd.b{font-weight:var(--bwb)} w.c{font-family:var(--f-mono);font-size:.86em} w.u{text-decoration:underline}
 w.p,w.s{font-size:.7em;line-height:0} w.p{vertical-align:super} w.s{vertical-align:sub}
-w.n{color:var(--page-link);font-size:.72em;vertical-align:super;line-height:0;cursor:pointer;padding:0 .12em;font-weight:var(--bwb)}
+w.n{color:var(--accent-text,var(--page-link));font-size:.72em;vertical-align:super;line-height:0;cursor:pointer;padding:0 .12em;font-weight:var(--bwb)}
 b.ws{font-weight:var(--bwb)}
 w.hl1,wd.hl1{--hc:var(--hl1)} w.hl2,wd.hl2{--hc:var(--hl2)} w.hl3,wd.hl3{--hc:var(--hl3)} w.hl4,wd.hl4{--hc:var(--hl4)}
 /* highlight colour is a band no taller than one line, so tall fonts don't spill onto the lines above and below */
@@ -380,6 +381,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px;margin:0}
   #playBtn{width:46px;height:46px}
   #playBtn svg{width:22px;height:22px}
   #speedView .icon-btn{height:36px}
+  #speedView #playBtn{width:46px;height:46px;flex:none;aspect-ratio:1} /* stays a circle (the row's 36px icon height doesn't squash it) */
   #speedView input[type=range]{height:24px}
 }
 /* Floating reader bits */
@@ -5036,7 +5038,8 @@ $('#ttsNatChip')&&$('#ttsNatChip').addEventListener('click',()=>{ ttsHideNatChip
 /* ---------- version and what's new ---------- */
 const APP_VERSION='2026.11.19.39-guide';
 const WHATSNEW=[
-  ['Meet the Guide','Your Style’s accent colour is now a small soft character that sits where you’d look or tap next. On the shelf it is the Continue button. Tap Continue and it squashes, peels off with a little sticky strand, hops into the book and lands with a jiggle as the faint progress mark at the bottom (or the Play button when read aloud is open). It never sits on the words, never wanders while you read, and only nudges once if you seem stuck on a screen. Go back and it hops home to Continue. In the first-run tour it splits into droplets to point at a few things, then merges again. Quiet is shy, Paper is heavy, Lively is bouncy; with Reduce Motion it simply fades. Your pages and place are unchanged.']
+  ['Meet the Guide','Your Style’s accent colour is now a small soft character that sits where you’d look or tap next. On the shelf it is the Continue button. Tap Continue and it squashes, peels off with a little sticky strand, hops into the book and lands with a jiggle as the faint progress mark at the bottom (or the Play button when read aloud is open). It never sits on the words, never wanders while you read, and only nudges once if you seem stuck on a screen. Go back and it hops home to Continue. In the first-run tour it splits into droplets to point at a few things, then merges again. Quiet is shy, Paper is heavy, Lively is bouncy; with Reduce Motion it simply fades. Your pages and place are unchanged.'],
+  ['Pick a Style','Settings now starts with three Styles. Quiet (calm and still, the one you have now), Paper (tactile and warm) and Lively (bouncy and bright) each change how Tooz looks, how buttons feel and how sheets and controls move. Picking one also picks a page colour to suit it; you can still change the page colour in Aa. Your pages, text and place in the book stay exactly the same.']
 ];
 function whatsNewSheet(){
   openSheet('What’s new in Tooz', `<p class="note" style="margin-top:0">Version ${APP_VERSION}</p>
