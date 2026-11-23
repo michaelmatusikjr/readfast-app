@@ -71,6 +71,15 @@ subagents" in the handbook); you are responsible for the result either way.
   raise `SAMPLE_V` so existing installs get the new copy.
 - He cancelled the daily scheduled review of pending changes (Nov 17, 2026). Don't set one up again unless asked.
 - Ask before anything that touches his calendar or sends email (his standing preference).
+- **Delegate by role (standing permission from Mick).** When the main session is Opus, Opus does the thinking
+  (interpreting notes, the 3 options, briefs, final review, decisions for Mick) and hands bounded work to cheaper
+  subagents with the Agent tool, using the `model` setting from the roster in `docs/HANDBOOK.md`:
+  - **Haiku:** copying notes into Pending changes, version/cache/What's new bumps, writing and running tests,
+    docs chores.
+  - **Sonnet:** building a change from a written brief in `docs/briefs/`.
+  - **Opus stays on:** interpreting notes, options for new features, debugging hard issues, reviewing Sonnet's diff.
+  Each delegation gives a tight brief (files, names, acceptance test, when to stop). Opus reviews the result before
+  anything goes to preview. Tiny edits (a few lines) Opus does itself; spinning up a subagent costs more than it saves.
 
 ## Build
 

@@ -70,6 +70,9 @@ files/names to look at (from the table above), what "done" looks like, and when 
 | **Tester** | Writing a Playwright test for a fixed bug, running test batches, reporting PASS/FAIL | haiku |
 | **Mechanic** | Version/cache/What's new bumps, doc updates, renames, search-and-list chores | haiku |
 
+Standing permission (CLAUDE.md, "Delegate by role"): when Opus is the main session, it delegates Haiku and Sonnet
+work itself. Briefs live in `docs/briefs/`. Opus reviews every delegated diff before preview.
+
 Small tasks (a one-line fix, a version bump) are faster done directly than briefed. Don't spawn a subagent to
 re-read files you already have in context.
 
