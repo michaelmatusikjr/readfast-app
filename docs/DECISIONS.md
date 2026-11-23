@@ -3,6 +3,13 @@
 Newest first. One short entry per decision: date, what was decided, why, who decided (Mick or Claude). Mick's
 feel-check feedback goes here too. Older history (before Nov 22) is summarized in `HISTORY.md` and `PRODUCT.md`.
 
+## 2026-11-23
+
+- **Mick — model workflow.** Haiku copies notes verbatim into Pending changes. Opus interprets, plans options and
+  writes briefs (`docs/briefs/`), and reviews. Sonnet builds from briefs. Haiku tests and does chores. Mick runs the
+  session on Opus; Opus delegates the cheaper work itself (standing permission in CLAUDE.md). Nothing ships to
+  preview without an Opus review.
+
 ## 2026-11-22
 
 - **Mick — overall direction.** The #1 goal is *delightful usefulness*: maximum usefulness with very little on
